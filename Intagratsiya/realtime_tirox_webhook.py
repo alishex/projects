@@ -1,0 +1,566 @@
+import os
+import time
+import json
+import random
+import sqlite3
+import hashlib
+from typing import Any, Dict, Optional, Tuple, List
+from datetime import datetime, timezone
+
+import requests
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
+
+TIROX_API_KEY = os.getenv("TIROX_API_KEY", "a39d742f74273491ffd081a034eedd8f")
+BITRIX_WEBHOOK_BASE = os.getenv("BITRIX_WEBHOOK_BASE", "https://allmax.bitrix24.kz/rest/67/pm2rn601c5zdss19/")
+
+HTTP_TIMEOUT = 60
+LOG_FILE = "tirox_webhook_runtime.log"
+
+SET_TIROX_STATUS = True
+BITRIX_TIROX_STATUS_ID = "UC_BBLL1F"  
+
+WRITE_CASHBACK_TO_OPPORTUNITY = True
+OPPORTUNITY_CURRENCY = "UZS"
+
+UF = {
+    "WALLET": "UF_CRM_1770996129",        # ✅ endi: bizdan nech pulga xarid qilgan (operationPurchaseSum)
+    "KESHBEK": "UF_CRM_1770996181",       # ✅ keshbek/balance
+    "LAST_VISIT": "UF_CRM_1770996218",    # ✅ oxirgi tashrif sanasi
+    "CARD_ID": "UF_CRM_1770996247",       # ✅ serial_number
+    "CUSTOMER_ID": "UF_CRM_1770996280",  # ✅ cardholder_id
+    "VISITS": "UF_CRM_1770996319",        # ✅ countVisits
+}
+
+# =========================================================
+# ✅ DB: idempotency + state + card_install(first seen)
+# =========================================================
+DB_PATH = "realtime_seen.sqlite"
+
+def db_init():
+    con = sqlite3.connect(DB_PATH)
+    cur = con.cursor()
+    cur.execute("CREATE TABLE IF NOT EXISTS processed (event_key TEXT PRIMARY KEY, created_at INTEGER)")
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS card_state (
+            phone TEXT PRIMARY KEY,
+            last_visit TEXT,
+            cashback REAL,
+            updated_at INTEGER
+        )
+    """)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS card_install (
+            card_serial TEXT PRIMARY KEY,
+            first_seen_at INTEGER
+        )
+    """)
+    con.commit()
+    con.close()
+
+def db_seen(event_key: str) -> bool:
+    con = sqlite3.connect(DB_PATH)
+    cur = con.cursor()
+    cur.execute("SELECT 1 FROM processed WHERE event_key=?", (event_key,))
+    row = cur.fetchone()
+    con.close()
+    return row is not None
+
+def db_mark(event_key: str):
+    con = sqlite3.connect(DB_PATH)
+    cur = con.cursor()
+    cur.execute("INSERT OR IGNORE INTO processed(event_key, created_at) VALUES(?, strftime('%s','now'))", (event_key,))
+    con.commit()
+    con.close()
+
+def state_get(phone: str) -> Tuple[str, Optional[float]]:
+    con = sqlite3.connect(DB_PATH)
+    cur = con.cursor()
+    cur.execute("SELECT last_visit, cashback FROM card_state WHERE phone=?", (phone,))
+    row = cur.fetchone()
+    con.close()
+    if row:
+        return (row[0] or "", row[1])
+    return ("", None)
+
+def state_set(phone: str, last_visit: str, cashback: Optional[float]):
+    con = sqlite3.connect(DB_PATH)
+    cur = con.cursor()
+    cur.execute(
+        "INSERT OR REPLACE INTO card_state(phone, last_visit, cashback, updated_at) VALUES(?,?,?,?)",
+        (phone, last_visit or "", cashback, int(time.time()))
+    )
+    con.commit()
+    con.close()
+
+def card_install_get_or_set(card_serial: str, ts_fallback: int) -> int:
+    """
+    Karta ochilgan sana webhookda bo‘lmasa, birinchi marta ko‘rilgan vaqtni saqlaymiz.
+    """
+    if not card_serial:
+        return int(ts_fallback)
+
+    con = sqlite3.connect(DB_PATH)
+    cur = con.cursor()
+    cur.execute("SELECT first_seen_at FROM card_install WHERE card_serial=?", (card_serial,))
+    row = cur.fetchone()
+    if row and row[0]:
+        con.close()
+        return int(row[0])
+
+    cur.execute(
+        "INSERT OR IGNORE INTO card_install(card_serial, first_seen_at) VALUES(?, ?)",
+        (card_serial, int(ts_fallback))
+    )
+    con.commit()
+    con.close()
+    return int(ts_fallback)
+
+db_init()
+
+app = FastAPI(title="Tirox → Bitrix Realtime (Full Final)")
+
+# =========================================================
+# ✅ LOG
+# =========================================================
+def log_line(text: str):
+    try:
+        print(text, flush=True)
+    except Exception:
+        pass
+    try:
+        with open(LOG_FILE, "a", encoding="utf-8") as f:
+            f.write(text + "\n")
+    except Exception:
+        pass
+
+# =========================================================
+# ✅ HELPERS
+# =========================================================
+def safe_str(x: Any) -> str:
+    return ("" if x is None else str(x)).strip()
+
+def to_number(v: Any) -> Optional[float]:
+    if v is None:
+        return None
+    try:
+        return float(str(v).replace(",", ".").strip())
+    except Exception:
+        return None
+
+def normalize_phone(phone: Any) -> str:
+    """
+    Juda robust:
+    - bo'sh joy, '-', '()' tozalaydi
+    - 9 xonali bo'lsa +998 qo'shadi
+    - 998********* bo'lsa +998 qiladi
+    - faqat raqam bo'lsa + qo'shadi
+    """
+    if not phone:
+        return ""
+    p = str(phone).strip()
+    for ch in [" ", "-", "(", ")", ".", "\t", "\n"]:
+        p = p.replace(ch, "")
+
+    digits = "".join([c for c in p if c.isdigit()])
+    if not digits:
+        return ""
+
+    if len(digits) == 9:
+        return "+998" + digits
+
+    if len(digits) >= 12 and digits.startswith("998"):
+        return "+" + digits
+
+    return "+" + digits
+
+def phone_variants(phone: str) -> List[str]:
+    p = normalize_phone(phone)
+    if not p:
+        return []
+    v = set([p])
+    if p.startswith("+"):
+        v.add(p[1:])
+    if p.startswith("+998") and len(p) >= 13:
+        core = p[4:]
+        v.add("998" + core)
+        v.add("0" + core)
+    digits = "".join([c for c in p if c.isdigit()])
+    if digits:
+        v.add(digits)
+        v.add("+" + digits)
+    return list(v)
+
+def ts_to_iso(ts: Any) -> str:
+    try:
+        t = int(float(ts))
+        return datetime.fromtimestamp(t, tz=timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+    except Exception:
+        return safe_str(ts)
+
+def sha1_of(obj: Any) -> str:
+    try:
+        raw = json.dumps(obj, ensure_ascii=False, sort_keys=True).encode("utf-8")
+    except Exception:
+        raw = str(obj).encode("utf-8", "ignore")
+    return hashlib.sha1(raw).hexdigest()
+
+def deep_find_first(payload: Any, keys: Tuple[str, ...]) -> str:
+    if isinstance(payload, dict):
+        for k in keys:
+            if k in payload and payload.get(k) not in (None, "", [], {}):
+                return safe_str(payload.get(k))
+        for v in payload.values():
+            found = deep_find_first(v, keys)
+            if found:
+                return found
+    elif isinstance(payload, list):
+        for item in payload:
+            found = deep_find_first(item, keys)
+            if found:
+                return found
+    return ""
+
+def pick_event_key(payload: Any) -> str:
+    """
+    Idempotency: timestamp + event + serial + phone bo'lsa ishlatamiz
+    """
+    if isinstance(payload, dict):
+        ts = safe_str(payload.get("timestamp")) or deep_find_first(payload, ("timestamp",))
+        ev = safe_str(payload.get("event")) or deep_find_first(payload, ("event",))
+        serial = deep_find_first(payload, ("serial_number", "serialNumber"))
+        phone = deep_find_first(payload, ("cardholder_phone", "phone", "Телефон", "msisdn", "mobile"))
+        if ts and ev and (serial or phone):
+            return f"ts:{ts}|ev:{ev}|serial:{serial}|phone:{phone}"
+    return f"hash:{sha1_of(payload)}"
+
+# =========================================================
+# ✅ BITRIX (retry + upsert + verify)
+# =========================================================
+def bitrix_post_with_retry(url: str, payload: dict, max_retries: int = 10) -> dict:
+    delay = 1.0
+    last_data = None
+    for _ in range(max_retries):
+        r = requests.post(url, json=payload, timeout=HTTP_TIMEOUT)
+        try:
+            data = r.json()
+        except Exception:
+            data = {"error": "non_json", "status": r.status_code, "text": r.text[:800]}
+        last_data = data
+
+        if not (isinstance(data, dict) and data.get("error") == "QUERY_LIMIT_EXCEEDED"):
+            return data
+
+        jitter = random.uniform(0, 0.5)
+        time.sleep(delay + jitter)
+        delay = min(delay * 2, 20)
+
+    return last_data or {"error": "unknown"}
+
+def bitrix_call(method: str, payload: dict) -> dict:
+    url = BITRIX_WEBHOOK_BASE + method
+    return bitrix_post_with_retry(url, payload)
+
+def bitrix_find_lead_id_by_phone(phone: str) -> Optional[int]:
+    variants = phone_variants(phone)
+    if not variants:
+        return None
+
+    resp = bitrix_call("crm.duplicate.findbycomm", {
+        "type": "PHONE",
+        "values": variants,
+        "entity_type": "LEAD"
+    })
+
+    res = resp.get("result")
+    if isinstance(res, dict):
+        leads = res.get("LEAD")
+        if isinstance(leads, list) and leads:
+            try:
+                return int(leads[0])
+            except Exception:
+                return None
+    return None
+
+def bitrix_lead_add(fields: dict) -> dict:
+    return bitrix_call("crm.lead.add", {"fields": fields})
+
+def bitrix_lead_update(lead_id: int, fields: dict) -> dict:
+    return bitrix_call("crm.lead.update", {"id": lead_id, "fields": fields})
+
+def bitrix_lead_get(lead_id: int) -> dict:
+    return bitrix_call("crm.lead.get", {"id": lead_id})
+
+def bitrix_force_set_amount_verified(lead_id: int, amount: float, currency: str = "UZS", tries: int = 6):
+    """
+    Robot 0 qilib yuborsa ham - tekshiradi va qayta yozadi
+    """
+    for i in range(tries):
+        bitrix_lead_update(lead_id, {"OPPORTUNITY": amount, "CURRENCY_ID": currency})
+        time.sleep(0.4 + 0.4 * i)
+        got = bitrix_lead_get(lead_id)
+        res = got.get("result") if isinstance(got, dict) else None
+        if isinstance(res, dict):
+            cur = to_number(res.get("OPPORTUNITY"))
+            if cur is not None and abs(cur - amount) < 0.0001:
+                return
+
+def bitrix_add_timeline_comment(lead_id: int, text: str) -> dict:
+    return bitrix_call("crm.timeline.comment.add", {
+        "fields": {
+            "ENTITY_TYPE": "lead",
+            "ENTITY_ID": lead_id,
+            "COMMENT": text
+        }
+    })
+
+# =========================================================
+# ✅ WEBHOOK -> EXTRACT (SIZNING EVENTLAR + ROBUST)
+# =========================================================
+def extract_from_payload(payload: dict):
+    """
+    Returns:
+      phone, customer_id, card_id, first_name, dob, cashback_value, visits, purchase_sum, event_type, ts_int
+    """
+    d = payload.get("data") if isinstance(payload.get("data"), dict) else {}
+
+    event_type = safe_str(payload.get("event")) or deep_find_first(payload, ("event",))
+    ts_raw = safe_str(payload.get("timestamp")) or deep_find_first(payload, ("timestamp",))
+    ts_int = int(float(ts_raw)) if ts_raw else int(time.time())
+
+    # PHONE (priority: cardholder_phone -> custom_fields -> deep search)
+    phone_raw = (
+        d.get("cardholder_phone")
+        or deep_find_first(d, ("cardholder_phone", "phone", "Телефон", "msisdn", "mobile"))
+    )
+    if not phone_raw:
+        phone_raw = deep_find_first(d.get("custom_fields"), ("Телефон", "phone", "Phone", "mobile", "msisdn"))
+    if not phone_raw:
+        phone_raw = deep_find_first(payload, ("cardholder_phone", "phone", "Телефон", "msisdn", "mobile"))
+
+    phone = normalize_phone(phone_raw)
+
+    # IDS
+    customer_id = safe_str(
+        d.get("cardholder_id")
+        or d.get("customerId")
+        or deep_find_first(payload, ("cardholder_id", "customerId", "customer_id"))
+    )
+
+    card_id = safe_str(
+        d.get("serial_number")
+        or d.get("cardId")
+        or deep_find_first(payload, ("serial_number", "cardId", "card_id"))
+        or d.get("short_link")
+    )
+
+    # NAME
+    first_name = safe_str(d.get("cardholder_first_name"))
+    if not first_name:
+        first_name = safe_str(deep_find_first(d.get("custom_fields"), ("Имя", "name", "Name")))
+    if not first_name:
+        first_name = "Client"
+
+    # DOB
+    dob = safe_str(d.get("cardholder_birth_date"))
+    if not dob:
+        dob = safe_str(deep_find_first(d.get("custom_fields"), ("Дата рождения", "birth", "dob", "dateOfBirth")))
+
+    # VISITS
+    visits = None
+    if d.get("countVisits") is not None:
+        try:
+            visits = int(d.get("countVisits"))
+        except Exception:
+            visits = None
+
+    # CASHBACK (bonus_balance bo‘lsa o‘sha, bo‘lmasa balance)
+    cashback_value = to_number(d.get("bonus_balance"))
+    if cashback_value is None:
+        cashback_value = to_number(d.get("balance"))
+
+    # WALLET = operationPurchaseSum (bizdan nech pulga xarid qilgan)
+    purchase_sum = to_number(d.get("operationPurchaseSum"))
+
+    return phone, customer_id, card_id, first_name, dob, cashback_value, visits, purchase_sum, event_type, ts_int
+
+def build_fields(
+    phone: str,
+    customer_id: str,
+    card_id: str,
+    first_name: str,
+    dob: str,
+    cashback_value: Optional[float],
+    visits: Optional[int],
+    purchase_sum: Optional[float],
+    last_visit_iso: str
+) -> Tuple[dict, Optional[float]]:
+    fields: Dict[str, Any] = {
+        "TITLE": f"Tirox realtime: {first_name}",
+        "NAME": first_name,
+        "PHONE": [{"VALUE": phone, "VALUE_TYPE": "WORK"}],
+        "SOURCE_ID": "WEB",
+    }
+
+    # TIROX status
+    if SET_TIROX_STATUS and BITRIX_TIROX_STATUS_ID:
+        fields["STATUS_ID"] = BITRIX_TIROX_STATUS_ID
+
+    # DOB
+    if dob:
+        fields["BIRTHDATE"] = dob
+
+    # IDs
+    if customer_id:
+        fields[UF["CUSTOMER_ID"]] = customer_id
+    if card_id:
+        fields[UF["CARD_ID"]] = card_id
+
+    # VISITS
+    if visits is not None:
+        fields[UF["VISITS"]] = visits
+
+    # LAST VISIT
+    if last_visit_iso:
+        fields[UF["LAST_VISIT"]] = last_visit_iso
+
+    # ✅ WALLET = xarid summasi
+    if purchase_sum is not None:
+        fields[UF["WALLET"]] = purchase_sum
+
+    opp_value: Optional[float] = None
+
+    # ✅ KESHBEK + OPPORTUNITY
+    if cashback_value is not None:
+        fields[UF["KESHBEK"]] = cashback_value
+        if WRITE_CASHBACK_TO_OPPORTUNITY:
+            fields["OPPORTUNITY"] = cashback_value
+            fields["CURRENCY_ID"] = OPPORTUNITY_CURRENCY
+            opp_value = cashback_value
+
+    return fields, opp_value
+
+# =========================================================
+# ✅ ROUTES
+# =========================================================
+@app.get("/health")
+def health():
+    return {"ok": True}
+
+async def handle_webhook(request: Request):
+    try:
+        payload = await request.json()
+    except Exception:
+        raw = await request.body()
+        return JSONResponse(status_code=400, content={
+            "ok": False,
+            "error": "invalid_json",
+            "raw_first": raw[:500].decode("utf-8", "ignore")
+        })
+
+    event_key = pick_event_key(payload)
+    if db_seen(event_key):
+        return {"ok": True, "status": "duplicate_ignored", "event_key": event_key}
+
+    phone, customer_id, card_id, first_name, dob, cashback_value, visits, purchase_sum, event_type, ts_int = extract_from_payload(payload)
+
+    if not phone:
+        db_mark(event_key)
+        log_line(f"[SKIP] no phone | event={event_type} | key={event_key}")
+        return {"ok": True, "status": "skipped_no_phone", "event": event_type, "event_key": event_key}
+
+    # LAST_VISIT = webhook timestamp (ISO)
+    last_visit_iso = ts_to_iso(ts_int)
+
+    # old state: cashback None bo'lsa 0 yubormaslik uchun
+    _, prev_cb = state_get(phone)
+    if cashback_value is None and prev_cb is not None:
+        cashback_value = prev_cb
+
+    fields, opp_value = build_fields(
+        phone=phone,
+        customer_id=customer_id,
+        card_id=card_id,
+        first_name=first_name,
+        dob=dob,
+        cashback_value=cashback_value,
+        visits=visits,
+        purchase_sum=purchase_sum,
+        last_visit_iso=last_visit_iso
+    )
+
+    # UPSERT
+    lead_id = bitrix_find_lead_id_by_phone(phone)
+
+    action = ""
+    resp: dict = {}
+
+    if lead_id:
+        resp = bitrix_lead_update(lead_id, fields)
+        action = "updated"
+        if WRITE_CASHBACK_TO_OPPORTUNITY and opp_value is not None:
+            time.sleep(0.2)
+            bitrix_force_set_amount_verified(lead_id, opp_value, OPPORTUNITY_CURRENCY, tries=6)
+    else:
+        resp = bitrix_lead_add(fields)
+        action = "created"
+        new_id = resp.get("result")
+        if isinstance(new_id, int):
+            lead_id = new_id
+            if WRITE_CASHBACK_TO_OPPORTUNITY and opp_value is not None:
+                time.sleep(0.2)
+                bitrix_force_set_amount_verified(new_id, opp_value, OPPORTUNITY_CURRENCY, tries=6)
+
+    # Save state
+    state_set(phone, last_visit_iso, opp_value)
+
+    # Timeline comment: karta ochilgan + oxirgi tashrif + xarid/keshbek
+    if lead_id:
+        card_open_ts = card_install_get_or_set(card_id, ts_int)
+        card_open_iso = ts_to_iso(card_open_ts)
+
+        comment_text = (
+            f"TIROX event: {event_type}\n"
+            f"Oxirgi tashrif: {last_visit_iso}\n"
+            f"Karta ochilgan (first seen): {card_open_iso}\n"
+            f"Xarid summasi (WALLET): {purchase_sum if purchase_sum is not None else '—'} UZS\n"
+            f"Keshbek (KESHBEK/OPPORTUNITY): {opp_value if opp_value is not None else '—'} UZS\n"
+            f"Visits: {visits if visits is not None else '—'}\n"
+            f"Serial (CARD_ID): {card_id}\n"
+            f"Customer (CUSTOMER_ID): {customer_id}\n"
+            f"Phone: {phone}"
+        )
+        bitrix_add_timeline_comment(lead_id, comment_text)
+
+    db_mark(event_key)
+
+    if isinstance(resp, dict) and (resp.get("error") or resp.get("error_description")):
+        log_line(f"[BITRIX_ERROR] event={event_type} phone={phone} resp={resp}")
+        return {"ok": False, "status": "bitrix_error", "action": action, "event": event_type, "event_key": event_key, "bitrix": resp}
+
+    log_line(f"[OK] {action} event={event_type} phone={phone} lead_id={lead_id} wallet={purchase_sum} opp={opp_value} visits={visits}")
+    return {
+        "ok": True,
+        "status": f"lead_{action}",
+        "event": event_type,
+        "event_key": event_key,
+        "lead_id": lead_id,
+        "phone": phone,
+        "name": first_name,
+        "wallet_purchase_sum": purchase_sum,
+        "cashback_value": opp_value,
+        "last_visit": last_visit_iso,
+        "visits": visits,
+    }
+
+@app.post("/tirox/webhook")
+async def tirox_webhook(request: Request):
+    return await handle_webhook(request)
+
+@app.post("/tirox-webhook")
+async def tirox_webhook_alt(request: Request):
+    return await handle_webhook(request)
+
+@app.post("/")
+async def root(request: Request):
+    return await handle_webhook(request)

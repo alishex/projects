@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls -d /home/azamat1796/Desktop/Code/*/)",
+      "Bash(find /home/azamat1796/Desktop/Code/Ali -type f \\\\\\( -name \"*.py\" -o -name \"*.yml\" -o -name \"*.yaml\" -o -name \"*.toml\" -o -name \"*.ini\" \\\\\\) -exec ls -lh {} \\\\;)",
+      "Bash(gh auth:*)"
+    ]
+  }
+}
