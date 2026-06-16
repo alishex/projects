@@ -3,6 +3,8 @@ import re
 import asyncio
 import logging
 import time
+import sqlite3 as _sqlite3
+from pathlib import Path
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from typing import Optional
@@ -13,6 +15,33 @@ from telethon import TelegramClient, events
 from telethon.errors import FloodWaitError, SessionPasswordNeededError
 import anthropic
 import json
+
+# =========================
+# ANALYTICS LOGGING
+# =========================
+_ANALYTICS_DB = Path(__file__).parent / "analytics" / "telegram_dm_log.sqlite3"
+
+def _init_analytics_db():
+    _ANALYTICS_DB.parent.mkdir(exist_ok=True)
+    con = _sqlite3.connect(_ANALYTICS_DB)
+    con.execute("""
+        CREATE TABLE IF NOT EXISTS dm_events (
+            id    INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            ts    TEXT NOT NULL DEFAULT (datetime('now'))
+        )
+    """)
+    con.commit()
+    con.close()
+
+def _log_dm_event(user_id: int):
+    try:
+        con = _sqlite3.connect(_ANALYTICS_DB)
+        con.execute("INSERT INTO dm_events (user_id, ts) VALUES (?, datetime('now'))", (user_id,))
+        con.commit()
+        con.close()
+    except Exception as exc:
+        logging.warning("Analytics log xatosi: %s", exc)
 
 load_dotenv()
 
@@ -1046,6 +1075,8 @@ async def handle_new_private_message(event):
         if should_ignore_message(event, sender, text):
             return
 
+        _log_dm_event(user_id)
+
         if user_id not in user_queues:
             user_queues[user_id] = asyncio.Queue()
 
@@ -1116,6 +1147,7 @@ async def login_if_needed():
 # MAIN
 # =========================
 async def main():
+    _init_analytics_db()
     ok = await login_if_needed()
     if ok is False:
         return
