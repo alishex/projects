@@ -46,9 +46,13 @@ class ContactParser:
                 if name:
                     break
 
-        if not name:
-            before_phone = without_phone.split("\n")[-1]
-            name = clean_name(before_phone)
+        if not name and phone:
+            # Har bir qatorni oxiridan tekshirib, birinchi mos kelgan ismni olamiz
+            for line in reversed(without_phone.split("\n")):
+                candidate = clean_name(line.strip())
+                if candidate:
+                    name = candidate
+                    break
 
         confidence = 0.85 if phone and name else 0.65 if phone else 0.0
         return ContactInfo(
@@ -113,12 +117,20 @@ class ContactParser:
             return None
 
         system_prompt = (
-            "Extract only the customer's name and Uzbekistan phone number from this Instagram DM history. "
-            "Return valid JSON only with keys: name, phone, confidence. "
-            "Phone must be normalized like +998901234567. If not found, use null. "
-            "Do not write anything else, only JSON."
+            "You extract contact info from Instagram DM customer messages.\n"
+            "Return ONLY valid JSON with keys: name, phone, confidence.\n\n"
+            "Rules:\n"
+            "- name: Customer's REAL personal name (e.g. 'Alisher', 'Nodira Karimova'). "
+            "ONLY if the customer explicitly stated their name. "
+            "Do NOT use: greetings (salom, assalomu alaykum, hi, hello), "
+            "system words (incoming, outgoing), product names, or vague phrases. "
+            "If no real name is present, use null.\n"
+            "- phone: Uzbekistan phone number normalized to +998XXXXXXXXX format. "
+            "If not found, use null.\n"
+            "- confidence: float 0.0-1.0\n"
+            "Return ONLY the JSON object, nothing else."
         )
-        user_prompt = "DM history:\n" + text[:4000]
+        user_prompt = "Customer messages:\n" + text[:4000]
 
         try:
             client = anthropic.Anthropic(api_key=api_key)

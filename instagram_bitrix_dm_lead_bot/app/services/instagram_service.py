@@ -92,6 +92,24 @@ class InstagramService:
                 )
         return messages
 
+
+    def get_user_profile(self, igsid: str) -> dict:
+        """Instagram foydalanuvchi profilini API orqali oladi (name, username)."""
+        token = self.settings.instagram_access_token
+        if not token or token == "replace_me":
+            return {}
+        try:
+            with httpx.Client(timeout=self.settings.http_timeout) as client:
+                resp = client.get(
+                    f"{self.base_url}/{igsid}",
+                    params={"fields": "name,username", "access_token": token},
+                )
+                resp.raise_for_status()
+                return resp.json()
+        except Exception as exc:  # noqa: BLE001
+            log.debug("Instagram user profile fetch failed for igsid=%s: %s", igsid, exc)
+            return {}
+
     def send_message(self, igsid: str, text: str) -> bool:
         ig_business_id = self.ensure_ig_business_id()
         token = self.settings.instagram_access_token

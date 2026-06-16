@@ -48,3 +48,15 @@ def history_to_text(history: list[dict[str, Any]], max_items: int = 30) -> str:
         if text:
             lines.append(f"{role}: {text}")
     return "\n".join(lines)
+
+
+def history_to_incoming_text(history: list[dict[str, Any]], max_items: int = 30) -> str:
+    """Faqat mijoz (incoming) xabarlarini qaytaradi. Bot/outgoing xabarlarni o'tkazib yuboradi."""
+    tail = history[-max_items:]
+    lines = []
+    for item in tail:
+        role = item.get("role", "in")
+        text = item.get("text", "")
+        if text and role not in ("outgoing", "outgoing_sync"):
+            lines.append(text)
+    return "\n".join(lines)

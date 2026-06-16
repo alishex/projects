@@ -9,8 +9,6 @@ import httpx
 
 from app.config import Settings
 from app.models import ContactInfo, IncomingMessage, TargetInfo
-from app.utils.phone import format_phone_local
-from app.utils.text import compact_text
 from app.utils.time_utils import format_for_telegram
 
 log = logging.getLogger(__name__)
@@ -77,7 +75,7 @@ class BitrixService:
             log.warning("Bitrix crm.lead.list duplicate check failed: %s", exc)
         return None
 
-    def create_lead(self, contact: ContactInfo, msg: IncomingMessage, history_text: str) -> str | None:
+    def create_lead(self, contact: ContactInfo, msg: IncomingMessage, history_text: str = "") -> str | None:
         if not self.enabled():
             return None
         target = msg.target
@@ -86,14 +84,15 @@ class BitrixService:
             self.settings.bitrix_target_lead_status_id if target.detected else self.settings.bitrix_lead_status_id,
         )
         phone = contact.phone or ""
-        title_parts = [self.settings.bitrix_lead_title_prefix, contact.name or "Instagram mijoz", phone]
-        if self.settings.bitrix_use_instagram_nick_in_title and msg.username:
-            title_parts.insert(1, f"@{msg.username.lstrip('@')}")
+        nick = msg.full_name or (f"@{msg.username.lstrip('@')}" if msg.username else "")
+        title_parts = [self.settings.bitrix_lead_title_prefix, contact.name or nick or "Instagram mijoz", phone]
+        if self.settings.bitrix_use_instagram_nick_in_title and nick:
+            title_parts.insert(1, nick)
         title = " | ".join([p for p in title_parts if p])
-        comments = self._build_comments(contact, msg, history_text, target)
+        comments = self._build_comments(contact, msg, target)
         fields: dict[str, Any] = {
             "TITLE": title,
-            "NAME": contact.name or "Instagram mijoz",
+            "NAME": contact.name or nick or "Instagram mijoz",
             "PHONE": [{"VALUE": phone, "VALUE_TYPE": "WORK"}],
             "SOURCE_ID": self.settings.bitrix_source_id,
             "SOURCE_DESCRIPTION": self.settings.bitrix_source_description,
@@ -107,13 +106,13 @@ class BitrixService:
         log.info("Bitrix lead created: %s", lead_id)
         return lead_id
 
-    def create_task(self, contact: ContactInfo, msg: IncomingMessage, history_text: str, lead_id: str | None) -> str | None:
+    def create_task(self, contact: ContactInfo, msg: IncomingMessage, history_text: str = "", lead_id: str | None = None) -> str | None:
         if not (self.enabled() and self.settings.bitrix_project_enable):
             return None
         target = msg.target
         title_prefix = self.settings.bitrix_target_task_title_prefix if target.detected else self.settings.bitrix_project_task_title_prefix
         stage_id = self.settings.bitrix_target_project_stage_id if target.detected and self.settings.bitrix_target_project_stage_id else self.settings.bitrix_project_stage_id
-        description = self._build_task_description(contact, msg, history_text, target, lead_id)
+        description = self._build_task_description(contact, msg, target, lead_id)
         fields: dict[str, Any] = {
             "TITLE": f"{title_prefix} | {contact.name or 'Instagram mijoz'} | {contact.phone or ''}",
             "DESCRIPTION": description,
@@ -157,32 +156,36 @@ class BitrixService:
             return None
         return f"{parsed.scheme}://{parsed.netloc}"
 
-    def _build_comments(self, contact: ContactInfo, msg: IncomingMessage, history_text: str, target: TargetInfo) -> str:
+    def _build_comments(self, contact: ContactInfo, msg: IncomingMessage, target: TargetInfo) -> str:
+        nick = msg.full_name or (f"@{msg.username.lstrip('@')}" if msg.username else "—")
+        phone_display = contact.phone or "—"
         lines = [
             "Instagram DM orqali kelgan lead",
-            f"Ism: {contact.name or 'Instagram mijoz'}",
-            f"Telefon: {format_phone_local(contact.phone)}",
-            f"Instagram username: @{msg.username}" if msg.username else "Instagram username: —",
+            f"Ism: {contact.name or '—'}",
+            f"Telefon: {phone_display}",
+            f"Instagram nick: {nick}",
             f"Instagram ID: {msg.igsid}",
-            f"Target/reklama: {target.name}" if target.detected else "Target/reklama: aniqlanmadi",
-            f"Yaratilgan vaqt: {format_for_telegram(offset_hours=self.settings.lead_telegram_timezone_offset_hours)}",
-            "",
-            "Xabar tarixi:",
-            compact_text(history_text, 7000),
         ]
+        if target.detected:
+            lines.append(f"Target/reklama: {target.name}")
+        else:
+            lines.append("Target/reklama: aniqlanmadi")
+        lines.append(f"Yaratilgan vaqt: {format_for_telegram(offset_hours=self.settings.lead_telegram_timezone_offset_hours)}")
         return "\n".join(lines)
 
-    def _build_task_description(self, contact: ContactInfo, msg: IncomingMessage, history_text: str, target: TargetInfo, lead_id: str | None) -> str:
+    def _build_task_description(self, contact: ContactInfo, msg: IncomingMessage, target: TargetInfo, lead_id: str | None) -> str:
         lead_link = self.build_lead_link(lead_id) or "—"
+        nick = msg.full_name or (f"@{msg.username.lstrip('@')}" if msg.username else "—")
+        phone_display = contact.phone or "—"
         lines = [
-            f"Mijoz ismi: {contact.name or 'Instagram mijoz'}",
-            f"Telefon: {format_phone_local(contact.phone)}",
-            f"Instagram username: @{msg.username}" if msg.username else "Instagram username: —",
+            f"Mijoz ismi: {contact.name or '—'}",
+            f"Telefon: {phone_display}",
+            f"Instagram nick: {nick}",
             f"Instagram ID: {msg.igsid}",
             f"Bitrix CRM lead: {lead_link}",
-            f"Target/reklama: {target.name}" if target.detected else "Target/reklama: aniqlanmadi",
-            "",
-            "Xabar matnlari:",
-            compact_text(history_text, 7000),
         ]
+        if target.detected:
+            lines.append(f"Target/reklama: {target.name}")
+        else:
+            lines.append("Target/reklama: aniqlanmadi")
         return "\n".join(lines)
