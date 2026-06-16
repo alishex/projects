@@ -6,7 +6,6 @@ import httpx
 
 from app.config import Settings
 from app.models import ContactInfo, IncomingMessage
-from app.utils.phone import format_phone_local
 from app.utils.text import html_escape
 from app.utils.time_utils import format_for_telegram
 
@@ -53,18 +52,19 @@ class TelegramService:
             return False
 
     def _build_message(self, contact: ContactInfo, msg: IncomingMessage, bitrix_lead_link: str | None, bitrix_task_link: str | None) -> str:
-        phone = format_phone_local(contact.phone) if self.settings.lead_telegram_phone_format == "local" else (contact.phone or "")
+        phone = contact.phone or "—"
         status_text = self.settings.lead_telegram_target_status_text if msg.target.detected else self.settings.lead_telegram_status_text
         responsible = self.settings.lead_telegram_responsible_name or str(self.settings.bitrix_assigned_by_id)
+        nick = msg.full_name or (f"@{msg.username.lstrip('@')}" if msg.username else "—")
         lines = [
             "🆕 <b>Yangi Instagram lead</b>",
             "",
-            f"👤 <b>Ism:</b> {html_escape(contact.name or 'Instagram mijoz')}",
+            f"👤 <b>Ism:</b> {html_escape(contact.name or '—')}",
             f"📞 <b>Telefon:</b> {html_escape(phone)}",
             f"📌 <b>Manba:</b> {html_escape(self.settings.lead_telegram_source_text)}",
             f"📊 <b>Status:</b> {html_escape(status_text)}",
-            f"🙋 <b>Mas’ul:</b> {html_escape(responsible)}",
-            f"🔗 <b>Instagram:</b> {html_escape('@' + msg.username.lstrip('@')) if msg.username else '—'}",
+            f"🙋 <b>Mas'ul:</b> {html_escape(responsible)}",
+            f"🔗 <b>Instagram nick:</b> {html_escape(nick)}",
             f"🆔 <b>Instagram ID:</b> {html_escape(msg.igsid)}",
         ]
         if msg.target.detected:

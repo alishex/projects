@@ -15,7 +15,7 @@ from app.services.instagram_service import InstagramService
 from app.services.meta_signature import verify_meta_signature
 from app.services.openai_parser import ContactParser
 from app.services.telegram_service import TelegramService
-from app.utils.text import history_to_text
+from app.utils.text import history_to_text, history_to_incoming_text
 from app.utils.time_utils import parse_iso, utc_now_iso
 
 log = logging.getLogger(__name__)
@@ -82,6 +82,14 @@ def process_message(msg: IncomingMessage, settings: Settings, db: Database, inst
         log.info("Manual outgoing/echo event marked for igsid=%s", msg.igsid)
         return
 
+    # Instagram profildan ism va usernameni olish (webhook da ko'pincha bo'lmaydi)
+    if not msg.full_name and not msg.username:
+        profile = instagram.get_user_profile(msg.igsid)
+        if profile:
+            msg.full_name = profile.get("name") or msg.full_name
+            msg.username = profile.get("username") or msg.username
+            log.info("Instagram profile fetched for igsid=%s full_name=%s username=%s", msg.igsid, msg.full_name, msg.username)
+
     row = db.upsert_conversation(
         msg.igsid,
         username=msg.username,
@@ -91,12 +99,14 @@ def process_message(msg: IncomingMessage, settings: Settings, db: Database, inst
     )
     db.append_history(msg.igsid, "incoming", msg.text or "", settings.max_history_items, {"event_id": msg.event_id})
     history = db.get_history(msg.igsid)
-    history_text = history_to_text(history, settings.max_history_items)
+
+    # Parser faqat INCOMING (mijoz) xabarlarini o'qiydi — bot templatelaridan telefon olmaydi
+    incoming_text = history_to_incoming_text(history, settings.max_history_items)
 
     parser = ContactParser(settings)
-    contact = parser.parse(history_text)
+    contact = parser.parse(incoming_text)
     if contact.phone and not contact.name:
-        contact.name = msg.full_name or (msg.username.lstrip("@") if msg.username else None) or "Instagram mijoz"
+        contact.name = msg.full_name or (msg.username.lstrip("@") if msg.username else None)
 
     if not contact.phone:
         maybe_send_template(settings, db, instagram, msg)
@@ -113,11 +123,11 @@ def process_message(msg: IncomingMessage, settings: Settings, db: Database, inst
 
     lead_id = duplicate.bitrix_lead_id if duplicate.duplicate and settings.bitrix_duplicate_skip_crm_lead else None
     if not lead_id:
-        lead_id = bitrix.create_lead(contact, msg, history_text)
+        lead_id = bitrix.create_lead(contact, msg)
 
     task_id = None
     if not (duplicate.duplicate and settings.bitrix_duplicate_skip_project_task):
-        task_id = bitrix.create_task(contact, msg, history_text, lead_id)
+        task_id = bitrix.create_task(contact, msg, lead_id=lead_id)
 
     bitrix_lead_link = bitrix.build_lead_link(lead_id)
     bitrix_task_link = bitrix.build_task_link(task_id)
@@ -144,7 +154,7 @@ def process_message(msg: IncomingMessage, settings: Settings, db: Database, inst
 
 
 def maybe_send_template(settings: Settings, db: Database, instagram: InstagramService, msg: IncomingMessage) -> None:
-    
+
     if not settings.contact_template.strip():
         log.info("Instagram auto-reply disabled because CONTACT_TEMPLATE is empty")
         return
