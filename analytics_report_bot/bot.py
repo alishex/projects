@@ -19,16 +19,24 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
-BOT_TOKEN       = os.getenv("BOT_TOKEN", "")
-CHAT_ID         = os.getenv("CHAT_ID", "")
+# ── Config ──────────────────────────────────────────────
+BOT_TOKEN         = os.getenv("BOT_TOKEN", "")
+CHAT_ID           = os.getenv("CHAT_ID", "")
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
-ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-opus-4-8")
-TZ_OFFSET       = int(os.getenv("TIMEZONE_OFFSET", "5"))
+ANTHROPIC_MODEL   = os.getenv("ANTHROPIC_MODEL", "claude-opus-4-8")
+TZ_OFFSET         = int(os.getenv("TIMEZONE_OFFSET", "5"))
 
+# Instagram Graph API
+IG_BUSINESS_ID  = os.getenv("META_IG_BUSINESS_ID", "")
+IG_ACCESS_TOKEN = os.getenv("META_IG_USER_ACCESS_TOKEN", "")
+GRAPH_VERSION   = os.getenv("GRAPH_API_VERSION", "v20.0")
+
+# Fallback SQLite
 TELEGRAM_DB  = Path(os.getenv("TELEGRAM_DB",  "/opt/AllmaxProjects/allmax_telethon/analytics/telegram_dm_log.sqlite3"))
 INSTAGRAM_DB = Path(os.getenv("INSTAGRAM_DB", "/opt/AllmaxProjects/instagram_bitrix_dm_lead_bot/data/instagram_dm_bot.sqlite3"))
 
 
+# ── Telegram stats (SQLite) ─────────────────────────────
 def get_telegram_stats(start_utc: datetime, end_utc: datetime) -> dict:
     if not TELEGRAM_DB.exists():
         return {"unique_users": 0, "total_messages": 0}
@@ -44,13 +52,81 @@ def get_telegram_stats(start_utc: datetime, end_utc: datetime) -> dict:
         con.close()
         return {"unique_users": row[0] or 0, "total_messages": row[1] or 0}
     except Exception as exc:
-        log.warning("Telegram stats xatosi: %s", exc)
+        log.warning("Telegram SQLite xatosi: %s", exc)
         return {"unique_users": 0, "total_messages": 0}
 
 
+# ── Instagram stats (Graph API → SQLite fallback) ───────
 def get_instagram_stats(start_utc: datetime, end_utc: datetime) -> dict:
+    if IG_BUSINESS_ID and IG_ACCESS_TOKEN:
+        result = _instagram_via_api(start_utc, end_utc)
+        if result is not None:
+            return result
+    return _instagram_via_sqlite(start_utc, end_utc)
+
+
+def _instagram_via_api(start_utc: datetime, end_utc: datetime) -> dict | None:
+    try:
+        url = f"https://graph.facebook.com/{GRAPH_VERSION}/{IG_BUSINESS_ID}/conversations"
+        params = {
+            "platform": "instagram",
+            "fields": "participants,messages.limit(100){from,created_time}",
+            "limit": 100,
+            "access_token": IG_ACCESS_TOKEN,
+        }
+
+        all_convs = []
+        with httpx.Client(timeout=30) as client:
+            while url:
+                resp = client.get(url, params=params)
+                data = resp.json()
+                if "error" in data:
+                    log.warning("Instagram API xatosi: %s", data["error"].get("message"))
+                    return None
+                all_convs.extend(data.get("data", []))
+                url = (data.get("paging") or {}).get("next")
+                params = {}
+
+        new_convs = 0
+        total_msgs = 0
+
+        for conv in all_convs:
+            participants = (conv.get("participants") or {}).get("data", [])
+            customer_id = next(
+                (str(p["id"]) for p in participants if str(p.get("id")) != str(IG_BUSINESS_ID)),
+                None,
+            )
+            if not customer_id:
+                continue
+
+            conv_counted = False
+            for msg in (conv.get("messages") or {}).get("data", []):
+                raw_time = msg.get("created_time", "")
+                from_id = str((msg.get("from") or {}).get("id", ""))
+                try:
+                    mt = datetime.fromisoformat(raw_time.replace("Z", "+00:00"))
+                    if mt.tzinfo is None:
+                        mt = mt.replace(tzinfo=timezone.utc)
+                except Exception:
+                    continue
+
+                if start_utc <= mt < end_utc and from_id != str(IG_BUSINESS_ID):
+                    total_msgs += 1
+                    if not conv_counted:
+                        new_convs += 1
+                        conv_counted = True
+
+        log.info("Instagram API: new_convs=%s, msgs=%s", new_convs, total_msgs)
+        return {"total": new_convs, "total_messages": total_msgs, "contacts": 0, "targets": 0, "source": "api"}
+
+    except Exception as exc:
+        log.warning("Instagram API so'rovi xatosi: %s", exc)
+        return None
+
+
+def _instagram_via_sqlite(start_utc: datetime, end_utc: datetime) -> dict:
     if not INSTAGRAM_DB.exists():
-        return {"total": 0, "contacts": 0, "targets": 0}
+        return {"total": 0, "total_messages": 0, "contacts": 0, "targets": 0, "source": "empty"}
     try:
         con = sqlite3.connect(INSTAGRAM_DB)
         s = start_utc.strftime("%Y-%m-%d %H:%M:%S")
@@ -62,125 +138,121 @@ def get_instagram_stats(start_utc: datetime, end_utc: datetime) -> dict:
         )
         row = cur.fetchone()
         con.close()
-        return {"total": row[0] or 0, "contacts": row[1] or 0, "targets": row[2] or 0}
+        log.info("Instagram SQLite fallback: total=%s", row[0])
+        return {"total": row[0] or 0, "total_messages": 0, "contacts": row[1] or 0, "targets": row[2] or 0, "source": "sqlite"}
     except Exception as exc:
-        log.warning("Instagram stats xatosi: %s", exc)
-        return {"total": 0, "contacts": 0, "targets": 0}
+        log.warning("Instagram SQLite xatosi: %s", exc)
+        return {"total": 0, "total_messages": 0, "contacts": 0, "targets": 0, "source": "error"}
 
 
-async def send_message(text: str):
+# ── Telegram xabar yuborish ──────────────────────────────
+async def send_message(text: str) -> bool:
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
     async with httpx.AsyncClient(timeout=15) as client:
         resp = await client.post(url, json={"chat_id": CHAT_ID, "text": text})
         if resp.status_code != 200:
-            log.warning("Telegram send xatosi: %s %s", resp.status_code, resp.text[:200])
+            log.warning("Telegram send xatosi: %s", resp.text[:200])
+            return False
+        return True
 
 
-def build_report_with_claude(tg: dict, ig: dict, start_local: datetime, end_local: datetime) -> str:
-    months_uz = [
-        "", "Yanvar", "Fevral", "Mart", "Aprel", "May", "Iyun",
-        "Iyul", "Avgust", "Sentabr", "Oktabr", "Noyabr", "Dekabr",
-    ]
+# ── Claude hisobot ──────────────────────────────────────
+def build_report(tg: dict, ig: dict, start_local: datetime, end_local: datetime) -> str:
+    months_uz = ["", "Yanvar", "Fevral", "Mart", "Aprel", "May", "Iyun",
+                 "Iyul", "Avgust", "Sentabr", "Oktabr", "Noyabr", "Dekabr"]
     days_uz = ["Dushanba", "Seshanba", "Chorshanba", "Payshanba", "Juma", "Shanba", "Yakshanba"]
 
-    date_str = f"{start_local.day} {months_uz[start_local.month]} {start_local.year}"
-    day_str  = days_uz[start_local.weekday()]
+    date_str  = f"{start_local.day} {months_uz[start_local.month]} {start_local.year}"
+    day_str   = days_uz[start_local.weekday()]
     start_str = start_local.strftime("%H:%M")
     end_str   = end_local.strftime("%H:%M")
 
-    total_all = tg["unique_users"] + ig["total"]
+    tg_unique   = tg.get("unique_users", 0)
+    tg_total    = tg.get("total_messages", 0)
+    ig_convs    = ig.get("total", 0)
+    ig_msgs     = ig.get("total_messages", 0)
+    ig_contacts = ig.get("contacts", 0)
+    ig_targets  = ig.get("targets", 0)
+    ig_source   = ig.get("source", "")
 
-    if tg["unique_users"] > ig["total"]:
-        top_channel = "Telegram"
-    elif ig["total"] > tg["unique_users"]:
-        top_channel = "Instagram"
-    else:
-        top_channel = None
+    total_all = tg_unique + ig_convs
+    top = "Telegram" if tg_unique > ig_convs else ("Instagram" if ig_convs > tg_unique else "Teng")
+
+    ig_source_note = " (API)" if ig_source == "api" else " (DB)"
 
     client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
-
     prompt = f"""Quyidagi raqamlar asosida ALLMAX kompaniyasi uchun soatlik hisobot yoz.
 
-Hisobot uchun ma'lumotlar:
-  Sana: {date_str}, {day_str}
-  Soat: {start_str} dan {end_str} gacha (UTC+5, Toshkent vaqti)
+Sana: {date_str}, {day_str}
+Soat: {start_str} dan {end_str} gacha (UTC+5, Toshkent vaqti)
 
-  Telegram DM:
-    Yangi murojaat (unique odamlar): {tg["unique_users"]} ta
-    Jami xabarlar: {tg["total_messages"]} ta
+Telegram DM:
+  Yangi murojaat (unique odamlar): {tg_unique} ta
+  Jami xabarlar: {tg_total} ta
 
-  Instagram DM:
-    Yangi suhbatlar: {ig["total"]} ta
-    Kontakt (ism va telefon) qoldirdi: {ig["contacts"]} ta
-    Target reklama orqali keldi: {ig["targets"]} ta
+Instagram DM{ig_source_note}:
+  Yangi suhbatlar: {ig_convs} ta
+  Jami xabarlar: {ig_msgs} ta
+  Kontakt (ism/telefon) qoldirdi: {ig_contacts} ta
+  Target reklama orqali keldi: {ig_targets} ta
 
-  Jami murojaat: {total_all} ta
-  Eng faol kanal: {top_channel if top_channel else "Teng"}
+Jami murojaat: {total_all} ta
+Eng faol kanal: {top}
 
-Qoidalar (MUHIM):
-  1. Faqat Telegram oddiy matn formati ishlatilsin
-  2. Hech qanday # (xeshteg), * (yulduzcha), _ (pastki chiziq) ISHLATMA
-  3. Chiroyli ko'rinish uchun faqat EMOJI va oddiy harflar ishlatilsin
-  4. O'zbek tilida yoz
-  5. Professional va qisqa bo'lsin
-  6. Agar jami 0 bo'lsa: "Bu soatda murojaat kelmadi" deb yoz, lekin baribir chiroyli qilib
-  7. Boshida katta sarlavha bo'lsin, keyin kanallar bo'yicha ma'lumot, oxirida jami
-  8. Har bir bo'lim orasida bo'sh qator bo'lsin"""
+Qoidalar:
+1. Faqat oddiy Telegram matn formati
+2. Hech qanday # * _ belgi ishlatma
+3. Faqat EMOJI va oddiy harflar
+4. O'zbek tilida, professional va qisqa
+5. Agar 0 bo'lsa ham chiroyli qilib yoz
+6. Boshida sarlavha, keyin kanallar, oxirida jami
+7. Har bo'lim orasida bo'sh qator"""
 
-    resp = client.messages.create(
-        model=ANTHROPIC_MODEL,
-        max_tokens=600,
-        messages=[{"role": "user", "content": prompt}],
-    )
-    return (resp.content[0].text or "").strip()
+    try:
+        resp = client.messages.create(
+            model=ANTHROPIC_MODEL,
+            max_tokens=700,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        return (resp.content[0].text or "").strip()
+    except Exception as exc:
+        log.error("Claude xatosi: %s", exc)
+        return (
+            f"Soatlik hisobot {start_str} — {end_str}\n\n"
+            f"Telegram: {tg_unique} ta\nInstagram: {ig_convs} ta\nJami: {total_all} ta"
+        )
 
 
+# ── Asosiy hisobot ──────────────────────────────────────
 async def run_report():
-    now_utc   = datetime.now(timezone.utc)
-    local_off = timedelta(hours=TZ_OFFSET)
-    now_local = now_utc + local_off
-
+    local_off   = timedelta(hours=TZ_OFFSET)
+    now_utc     = datetime.now(timezone.utc)
+    now_local   = now_utc + local_off
     end_local   = now_local.replace(minute=0, second=0, microsecond=0)
     start_local = end_local - timedelta(hours=1)
+    end_utc     = end_local - local_off
+    start_utc   = start_local - local_off
 
-    end_utc   = end_local   - local_off
-    start_utc = start_local - local_off
-
-    log.info("Hisobot tayyorlanmoqda: %s — %s", start_local.strftime("%H:%M"), end_local.strftime("%H:%M"))
+    log.info("Hisobot: %s — %s", start_local.strftime("%H:%M"), end_local.strftime("%H:%M"))
 
     tg = get_telegram_stats(start_utc, end_utc)
     ig = get_instagram_stats(start_utc, end_utc)
 
-    log.info("Telegram: %s users, %s msgs | Instagram: %s convs", tg["unique_users"], tg["total_messages"], ig["total"])
+    log.info("TG: unique=%s msgs=%s | IG: convs=%s msgs=%s src=%s",
+             tg["unique_users"], tg["total_messages"],
+             ig["total"], ig.get("total_messages", 0), ig.get("source"))
 
-    try:
-        text = build_report_with_claude(tg, ig, start_local, end_local)
-    except Exception as exc:
-        log.error("Claude xatosi: %s", exc)
-        text = (
-            f"Soatlik hisobot\n"
-            f"{start_local.strftime('%H:%M')} — {end_local.strftime('%H:%M')}\n\n"
-            f"Telegram: {tg['unique_users']} ta murojaat\n"
-            f"Instagram: {ig['total']} ta murojaat\n"
-            f"Jami: {tg['unique_users'] + ig['total']} ta"
-        )
-
+    text = build_report(tg, ig, start_local, end_local)
     await send_message(text)
     log.info("Hisobot yuborildi")
 
 
 async def main():
     log.info("Analytics report bot ishga tushmoqda...")
-
     scheduler = AsyncIOScheduler(timezone="UTC")
     scheduler.add_job(run_report, "cron", minute=0)
     scheduler.start()
-
     log.info("Scheduler yoqildi — har soat :00 da hisobot yuboriladi")
-
-    # Birinchi testni darhol yuborish uchun:
-    # await run_report()
-
     while True:
         await asyncio.sleep(60)
 
