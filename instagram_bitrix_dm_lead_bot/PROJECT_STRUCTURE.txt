@@ -1,0 +1,46 @@
+instagram_bitrix_dm_lead_bot/
+├── app/
+│   ├── __init__.py
+│   ├── main.py
+│   ├── config.py
+│   ├── database.py
+│   ├── models.py
+│   ├── logger.py
+│   ├── routes/
+│   │   ├── __init__.py
+│   │   └── webhook.py
+│   ├── services/
+│   │   ├── __init__.py
+│   │   ├── instagram_service.py
+│   │   ├── meta_signature.py
+│   │   ├── openai_parser.py
+│   │   ├── bitrix_service.py
+│   │   ├── telegram_service.py
+│   │   ├── duplicate_service.py
+│   │   └── target_detector.py
+│   ├── utils/
+│   │   ├── __init__.py
+│   │   ├── phone.py
+│   │   ├── text.py
+│   │   ├── time_utils.py
+│   │   └── retry.py
+│   └── workers/
+│       ├── __init__.py
+│       └── conversation_sync.py
+├── data/.gitkeep
+├── logs/.gitkeep
+├── tests/
+│   ├── test_phone.py
+│   ├── test_contact_parser.py
+│   ├── test_duplicate.py
+│   └── test_target_detector.py
+├── .env.example
+├── requirements.txt
+├── README_UZ.md
+├── README_RU.md
+├── start_linux.sh
+├── start_windows.bat
+├── Dockerfile
+├── docker-compose.yml
+├── .gitignore
+└── run.py
