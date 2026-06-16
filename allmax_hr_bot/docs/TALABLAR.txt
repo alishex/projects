@@ -1,0 +1,785 @@
+SENIOR PYTHON / AIOGRAM / OPENAI / HR AUTOMATION DEVELOPER SIFATIDA ISHLA.
+
+Menga ALLMAX erkaklar kiyim do‘koni uchun mukammal Telegram HR bot-agent ishlab ber. Natijada menga tayyor ishlaydigan loyiha `.zip` holatda berilishi kerak.
+
+Menda oldindan mavjud bot zip strukturasi bor. Agar zip ichida tayyor struktura bo‘lsa, shu strukturadan asos sifatida foydalan. Lekin kodni to‘liq yangilab, quyidagi talablar bo‘yicha mukammal HR agent darajasiga olib chiq.
+
+LOYIHA MAQSADI:
+Bot ALLMAX kompaniyasi uchun HR-agent bo‘lib ishlaydi. Bot nomzodlarni kutib oladi, til tanlatadi, kompaniya haqida ma’lumot beradi, bo‘sh ish o‘rinlarini ko‘rsatadi, rezume/anketa to‘ldirtiradi, lavozim reglamentlari asosida OpenAI orqali 10 ta savol-javob intervyu o‘tkazadi, 0 dan 100 ballgacha baholaydi, PDF anketa yaratadi, admin panelga yuboradi, intervyu vaqtini boshqaradi, intervyudan 24 soat o‘tgach natijani so‘raydi, ishga qabul qilinganlarni bo‘limga biriktiradi, Excelga yozadi va 7 kunlik stajirovka davomida 20 ta dars + har darsdan keyin 10 talik test + yakuniy 30 talik test o‘tkazadi.
+
+MUHIM:
+Bot real ishlashi kerak. Menga faqat nazariy tushuntirish emas, tayyor `.zip` loyiha ber.
+
+TEXNOLOGIYA:
+- Python 3.10+
+- aiogram 3.x
+- SQLite yoki aiosqlite
+- OpenAI API
+- python-docx
+- reportlab
+- openpyxl
+- APScheduler
+- python-dotenv
+- pydantic yoki qat’iy JSON schema
+- logging
+
+HR VA XAVFSIZLIK QOIDALARI:
+- Bot nomzodni jins, millat, din, tashqi ko‘rinish, siyosiy qarash yoki boshqa shaxsiy belgilar asosida avtomatik rad qilmasin.
+- Baholash faqat ishga mos mezonlarga asoslansin:
+  - lavozimga mos tajriba
+  - reglamentni tushunish
+  - mas’uliyat
+  - intizom
+  - mijoz bilan muloqot
+  - halollik
+  - jamoada ishlash
+  - stressga chidamlilik
+  - o‘rganishga tayyorlik
+  - javoblar sifati
+- AI bahosi final qaror emas, admin uchun tavsiya sifatida saqlansin.
+- 60 balldan past nomzodga bot muloyim rad javobi beradi, lekin admin panelda saqlaydi.
+- Nomzodga AI ball ko‘rsatilmasin. Ball va xulosa faqat admin panelda ko‘rinsin.
+- Shaxsiy ma’lumotlarni saqlashdan oldin rozilik olinishi shart.
+
+TILLAR:
+Bot boshida til tanlatadi:
+- 🇺🇿 O‘zbek tili
+- 🇷🇺 Русский язык
+
+Til tanlangandan keyin userga shu tilda javob beriladi.
+Admin panel o‘zbek tilida bo‘lishi mumkin.
+
+START FLOW:
+1. User `/start` bosadi.
+2. Til tanlash chiqadi.
+3. Til tanlagandan keyin bot salom beradi.
+4. ALLMAX haqida qisqa ma’lumot beradi:
+   - ALLMAX erkaklar kiyim do‘koni
+   - sifatli xizmat
+   - tartib-intizom
+   - halollik
+   - mijozga hurmat
+   - mas’uliyat
+   - o‘sish va o‘rganish muhiti
+5. Keyin pastki keyboardda bitta asosiy tugma tursin:
+   - `💼 Bo‘sh ish o‘rinlari`
+
+BO‘SH ISH O‘RINLARI:
+User `💼 Bo‘sh ish o‘rinlari` tugmasini bosganda quyidagi lavozimlar chiqsin:
+
+1. Merchendayzer-konsultant
+2. WMS xodimi
+3. Dazmollash bo‘limi
+4. Storis Maker
+5. Mobilograf
+6. Dizayner
+7. Brand Face
+8. Kassa
+9. Copywriter
+10. Community Manager
+11. Call Centre / Call operator
+
+LAVOZIM REGLAMENTLARI:
+Bot quyidagi reglament fayllarni o‘qib ishlashi kerak. Har bir lavozim uchun savol, baholash, dars va testlar shu reglamentlardan tuzilsin.
+
+1. Savdo reglamenti.docx
+   - Merchendayzer-konsultant
+
+2. WMS.docx
+   - WMS xodimi
+
+3. WMS mikro menejment 1.docx
+   - WMS xodimi
+   - Dazmollash bo‘limi
+
+4. Omborxona Xavfsizlik Texnikasi Reglamenti.docx
+   - WMS xodimi
+   - Dazmollash bo‘limi
+
+5. Kassa xodimlari uchun reglament.docx
+   - Kassa
+
+6. ALLMAX STORIS MAKER REGLAMENTI.docx
+   - Storis Maker
+
+7. mobilograf reglament new.docx
+   - Mobilograf
+
+8. grafik dizayner reglament.docx
+   - Dizayner
+
+9. BRAND FACE STANDARTLARI.docx
+   - Brand Face
+
+10. Ijtimoiy tarmoq profil standarti.docx
+   - Storis Maker
+   - Mobilograf
+   - Dizayner
+   - Brand Face
+   - Copywriter
+   - Community Manager
+
+11. MAHSULOT NOMLASH STANDARTI.docx
+   - WMS
+   - Dizayner
+   - Mobilograf
+   - Storis Maker
+   - Copywriter
+   - Community Manager
+
+12. Community manager reglament2.docx
+   - Community Manager
+   - Asosiy yo‘nalishlar:
+     - platformalarga o‘z vaqtida javob berish
+     - mijoz bilan samarali muloqot
+     - sotuv sonini oshirish
+     - raqam qoldirgan mijozlarga aloqaga chiqish
+     - javob bermagan mijozlarga qayta yozish
+     - operator bilan integratsiyada ishlash
+     - kunlik hisobot topshirish
+     - feedbackni to‘g‘ri qabul qilish
+
+13. Call operator Reglament 15.docx
+   - Call Centre / Call operator
+   - Asosiy yo‘nalishlar:
+     - Bitrix, PBX, Microcip ilovalarini bilish
+     - savdo ssenariysini o‘qish
+     - PBX orqali qo‘ng‘iroq qilganlarga qayta aloqa qilish
+     - ko‘tarmagan mijozlarga 3 soatdan keyin qayta chiqish
+     - Instagram va Telegramdan raqam qoldirganlarga aloqaga chiqish
+     - dostavka qilgan mijozlarga qayta aloqa
+     - Bitrixdagi neobrabotka mijozlardan kuniga 50 tasiga aloqaga chiqish
+     - tug‘ilgan kun mijozlarini tabriklash
+     - o‘zini tahlil qilish
+     - kun oxirida hisobot topshirish
+
+14. Copywriter uchun:
+   Agar alohida Copywriter reglamenti fayl berilgan bo‘lsa, shu faylni asos qilib ishlat.
+   Agar alohida reglament bo‘lmasa, quyidagi universal talablar asosida ishlat:
+   - mahsulot va brend uchun matn yozish
+   - reklama postlari, story matnlari, scriptlar
+   - mijozni jalb qiluvchi savdo matnlari
+   - grammatik to‘g‘rilik
+   - qisqa, aniq va sotuvga yo‘naltirilgan matn
+   - brend ohangini saqlash
+   - mahsulot nomlash standartiga rioya qilish
+   - deadline va tartib-intizom
+   - AI yoki boshqa vositalardan foydalansa ham yakuniy matn sifatini o‘zi tekshirishi
+
+LAVOZIM TANLANGANDAN KEYIN:
+Bot tanlangan lavozim haqida reglament asosida qisqa ma’lumot chiqarsin:
+- Lavozim nomi
+- Asosiy vazifalar
+- Asosiy talablar
+- Ish grafigi, agar reglamentda bo‘lsa
+- Ichki intizom
+- Stajirovka borligi
+- `Anketa to‘ldirishni boshlash` tugmasi
+
+REZUME / ANKETA FLOW:
+Anketa savollarining 90% button orqali bo‘lsin. Faqat kerakli joylarda matn kiritilsin.
+
+Asosiy savollar:
+1. F.I.SH.
+2. Tug‘ilgan sana
+3. Telefon raqam — Telegram contact tugmasi orqali
+4. Telegram username
+5. Yashash hududi
+6. Tuman
+7. Manzil
+8. Tanlangan lavozim
+9. Oilaviy holat:
+   - Uylanmagan / Turmush qurmagan
+   - Oilali
+   - Boshqa
+10. Talabamisiz?
+   - Ha
+   - Yo‘q
+11. Agar talaba bo‘lsa:
+   - O‘qish shakli: Kunduzgi / Sirtqi / Kechki / Masofaviy
+   - Ta’lim muassasasi
+   - Kurs
+   - Dars vaqti
+12. Ta’lim darajasi:
+   - O‘rta
+   - O‘rta maxsus
+   - Tugallanmagan oliy
+   - Oliy
+13. O‘zbek tili:
+   - Erkin
+   - O‘rtacha
+   - Boshlang‘ich
+14. Rus tili:
+   - Erkin
+   - O‘rtacha
+   - Boshlang‘ich
+   - Bilmayman
+15. Ingliz tili:
+   - Erkin
+   - O‘rtacha
+   - Boshlang‘ich
+   - Bilmayman
+16. Kompyuter bilish darajasi:
+   - Yaxshi
+   - O‘rtacha
+   - Boshlang‘ich
+   - Bilmayman
+17. Ish grafigiga tayyormisiz?
+   - Ha
+   - Yo‘q
+   - Kelishib olsam bo‘ladi
+18. Oylik kutilmasi
+19. Bo‘sh ish joyi haqida qayerdan bildingiz?
+   - Telegram
+   - Instagram
+   - OLX
+   - Do‘st/tanish
+   - Boshqa
+20. O‘zingizni 3 ta kuchli tomoningiz
+21. O‘zingizni rivojlantirmoqchi bo‘lgan 1–2 tomoningiz
+22. Nega aynan ALLMAXda ishlamoqchisiz?
+23. Qachondan ish boshlay olasiz?
+
+OLDINGI ISH TAJRIBASI FLOW:
+Bot so‘rasin:
+- Oldin ishlaganmisiz?
+  - Ha
+  - Yo‘q
+
+Agar “Yo‘q” bo‘lsa:
+Bot shunchaki keyingi savolga o‘tsin.
+
+Agar “Ha” bo‘lsa:
+1. Nechta ish joyida ishlagansiz?
+2. Har bir ish joyi uchun:
+   - Kompaniya nomi
+   - Qaysi yil oralig‘ida ishlagan
+   - Lavozimi
+   - Asosiy mas’uliyati
+   - Qo‘l ostida odam ishlaganmi?
+      - Ha
+      - Yo‘q
+   - Agar ha bo‘lsa: nechta odam?
+   - Nima sababdan ketgan?
+   - Ishlaganini tasdiqlovchi shaxs F.I.SH.
+   - Tasdiqlovchi shaxs telefon raqami
+
+Har bir ish tajribasi alohida JSON sifatida saqlansin.
+
+FOTO VA ROZILIK:
+Bot userdan rasm yuklashni so‘rasin.
+Rasm talablari:
+- yuz aniq ko‘rinsin
+- filter bo‘lmasin
+- yaxshi yoritilgan bo‘lsin
+- bosh va yelka qismi ko‘rinsin
+
+Keyin rozilik olinadi:
+- `✅ Roziman`
+- `❌ Rozimasman`
+
+Rozilik matni:
+“Siz yuborgan ma’lumotlar ALLMAX HR bo‘limi tomonidan arizangizni ko‘rib chiqish, intervyu jarayonini tashkil qilish va ishga qabul qilish bosqichlarini yuritish uchun saqlanadi. Rozimisiz?”
+
+Agar rozilik bo‘lmasa, anketa yuborilmasin.
+
+OPENAI 10 TALIK INTERVYU:
+Anketa tugagandan keyin bot tanlangan lavozim reglamenti asosida 10 ta savol tuzadi.
+
+Savol tuzilishi:
+- 4 ta vaziyatli savol
+- 3 ta reglament/bilim savoli
+- 2 ta intizom/mas’uliyat savoli
+- 1 ta motivatsion savol
+
+Savollar birma-bir berilsin.
+Har bir javob DBda saqlansin.
+
+OPENAI QUESTION GENERATION SYSTEM PROMPT:
+“Siz ALLMAX HR intervyu assistentisiz. Siz faqat tanlangan lavozim reglamenti va nomzod anketasi asosida savollar tuzasiz. Savollar ishga mos, adolatli, aniq va lavozimga tegishli bo‘lishi kerak. Diskriminatsion yoki shaxsiy hayotga noo‘rin aralashuvchi savollar bermang.”
+
+JSON OUTPUT:
+{
+  "questions": [
+    {
+      "number": 1,
+      "type": "situation|knowledge|discipline|motivation",
+      "question": "...",
+      "what_it_checks": "..."
+    }
+  ]
+}
+
+OPENAI BAHOLASH:
+10 ta intervyu javobidan keyin OpenAI nomzodni 0 dan 100 ballgacha baholaydi.
+
+Baholash mezonlari:
+- lavozimga moslik
+- reglamentni tushunish
+- tajriba
+- mijoz bilan muloqot
+- intizom
+- mas’uliyat
+- halollik
+- stressga chidamlilik
+- jamoada ishlash
+- o‘rganishga tayyorlik
+- kommunikatsiya
+- xavfli signallar
+
+Ball:
+- 0–59: past baho / mos emas
+- 60–79: o‘rta baho
+- 80–100: a’lo baho
+
+JSON OUTPUT:
+{
+  "score": 0,
+  "grade": "low|medium|excellent",
+  "summary": "Qisqa HR xulosa",
+  "strengths": ["..."],
+  "risks": ["..."],
+  "admin_recommendation": "reject|review|invite_interview",
+  "polite_candidate_message": "Nomzodga yuboriladigan muloyim xabar",
+  "reasoning_for_admin": "Admin uchun aniq sabablar"
+}
+
+Agar 60 dan past bo‘lsa:
+- Userga muloyim rad javobi yuborilsin.
+- Admin panelda `AI rad etganlar` bo‘limiga tushsin.
+
+Agar 60–79 bo‘lsa:
+- Admin panelda `O‘rta baho` bo‘limiga tushsin.
+
+Agar 80–100 bo‘lsa:
+- Admin panelda `A’lo baho` bo‘limiga tushsin.
+
+PDF ANKETA:
+Bot PDF yaratishi kerak.
+PDF ichida:
+- F.I.SH.
+- Telefon
+- Telegram ID
+- Username
+- Tug‘ilgan sana
+- Hudud
+- Tuman
+- Manzil
+- Tanlangan lavozim
+- Ta’lim
+- Talabami yoki yo‘q
+- Til darajalari
+- Kompyuter darajasi
+- Ish tajribasi
+- Oldingi ish joylari
+- Tasdiqlovchi kontaktlar
+- Foto bor/yo‘qligi
+- AI 10 ta savol-javob
+- AI score
+- AI grade
+- AI xulosa
+- Admin uchun tavsiya
+- Ariza sanasi
+
+ADMIN PANEL:
+`/admin` komandasi orqali ochilsin.
+Faqat `.env` ichidagi `ADMIN_IDS` userlari kira olsin.
+
+Admin panel bo‘limlari:
+1. Yangi arizalar
+2. AI rad etganlar
+3. O‘rta baho: 60–79
+4. A’lo baho: 80–100
+5. Intervyuga chaqirilganlar
+6. Qabul qilinganlar
+7. Ishga qabul qilinmaganlar
+8. Stajirovkadagilar
+9. Xodimlar bazasi
+10. Excel eksport
+11. Statistika
+12. Dars progressi
+13. Yakuniy test natijalari
+
+Nomzod kartochkasida:
+- PDF anketani olish
+- AI xulosasini ko‘rish
+- Intervyuga chaqirish
+- Qabul qilish
+- Rad etish
+- Zaxiraga olish
+- Admin izohi yozish
+- Statusni o‘zgartirish
+- Excelga eksport qilish
+
+INTERVYUGA CHAQIRISH:
+Admin “Intervyuga chaqirish” tugmasini bosganda bot adminlardan:
+- sana
+- vaqt
+- manzil
+so‘rasin.
+
+Format:
+`2026-05-20 15:00 | Chilonzor filiali`
+
+Bot userga yuboradi:
+- intervyu sanasi
+- intervyu vaqti
+- manzil
+- tayyorgarlik eslatmasi
+
+DBga yoziladi:
+- interview_datetime
+- interview_location
+- scheduled_by_admin
+- followup_due_at = interview_datetime + 24 soat
+
+24 SOATLIK FOLLOW-UP:
+Intervyu vaqtidan roppa-rosa 24 soat o‘tgach bot userdan so‘rasin:
+“Assalomu alaykum. Intervyu qanday o‘tdi? Sizni ishga qabul qilishdimi yoki hali javob kutyapsizmi?”
+
+User matn yozadi.
+OpenAI matnni klassifikatsiya qiladi:
+- accepted
+- rejected
+- waiting
+- unclear
+
+Agar unclear bo‘lsa, bot tugmalar chiqaradi:
+- `✅ Ishga qabul qilindim`
+- `❌ Qabul qilinmadim`
+- `⏳ Hali javob kutyapman`
+
+Agar qabul qilinmagan bo‘lsa:
+Bot yaxshi kayfiyat bilan omad tilaydi.
+
+Agar ishga qabul qilingan bo‘lsa:
+Bot bo‘lim tanlatadi:
+1. Merchendayzer-konsultant
+2. WMS xodimi
+3. Dazmollash bo‘limi
+4. Storis Maker
+5. Mobilograf
+6. Dizayner
+7. Brand Face
+8. Kassa
+9. Copywriter
+10. Community Manager
+11. Call Centre / Call operator
+
+Tanlangan bo‘lim:
+- candidates jadvalida `accepted_department`
+- employees jadvalida `department`
+- Excel faylda alohida ustun sifatida saqlansin.
+
+7 KUNLIK STAJIROVKA:
+Ishga qabul qilingan user uchun tanlangan bo‘lim reglamenti asosida 7 kunlik stajirovka boshlansin.
+
+20 ta dars 7 kunga bo‘linsin:
+- 1-kun: 1, 2, 3-dars
+- 2-kun: 4, 5, 6-dars
+- 3-kun: 7, 8, 9-dars
+- 4-kun: 10, 11, 12-dars
+- 5-kun: 13, 14, 15-dars
+- 6-kun: 16, 17, 18-dars
+- 7-kun: 19, 20-dars + yakuniy 30 talik test
+
+Har bir dars chiroyli Telegram dizaynda bo‘lsin:
+- 🎯 Dars maqsadi
+- 📘 Asosiy tushuncha
+- ✅ Amaliy vazifa
+- ⚠️ E’tibor berish kerak
+- 🧠 Eslab qolish kerak
+- `✅ Darsni boshlash`
+- `✅ Darsni tugatdim`
+
+HAR BIR DARSDAN KEYIN 10 TALIK TEST:
+Har bir dars tugagandan keyin bot 10 ta test savol beradi.
+Testlar aynan o‘tilgan dars asosida bo‘lsin.
+
+Test formati:
+- 10 ta savol
+- Har bir savolda 4 ta variant:
+  A, B, C, D
+- Faqat bitta to‘g‘ri javob
+- Test tugagach darhol natija chiqsin:
+  - nechta to‘g‘ri
+  - foiz
+  - qisqa izoh
+
+Masalan:
+“Natija: 8/10 — 80%. Yaxshi. Siz mavzuni yaxshi tushundingiz.”
+
+Agar dars testi 60% dan past bo‘lsa:
+- Bot userga mavzuni qayta o‘qishni maslahat beradi.
+- Admin panelda ogohlantirish chiqadi.
+- Shu dars qayta yuborish tugmasi bo‘lsin.
+
+Agar dars testi 80% dan yuqori bo‘lsa:
+- Bot userni rag‘batlantiradi.
+- Admin panelda yaxshi progress sifatida ko‘rsatiladi.
+
+DARS TESTI JSON OUTPUT:
+{
+  "lesson_number": 1,
+  "questions": [
+    {
+      "question": "...",
+      "options": {
+        "A": "...",
+        "B": "...",
+        "C": "...",
+        "D": "..."
+      },
+      "correct_answer": "A",
+      "explanation": "..."
+    }
+  ]
+}
+
+YAKUNIY 30 TALIK TEST:
+20 ta dars tugagandan keyin bot umumiy 30 ta test oladi.
+Bu test barcha o‘tilgan darslar va reglamentlar asosida bo‘lsin.
+
+Yakuniy test:
+- 30 ta savol
+- 4 ta variant
+- faqat bitta to‘g‘ri javob
+- har bir savol reglament va darslar asosida bo‘lsin
+- natija 100% mezonida hisoblanadi
+
+Natija:
+- 0–59%: past o‘zlashtirish
+- 60–79%: o‘rtacha o‘zlashtirish
+- 80–100%: zo‘r o‘zlashtirish
+
+Userga natija:
+“Yakuniy test natijangiz: 24/30 — 80%. Tabriklaymiz, siz stajirovka materiallarini yaxshi o‘zlashtirdingiz.”
+
+Adminga xabar:
+Agar 80% dan yuqori bo‘lsa:
+“✅ Tavsiya: xodim reglamentlarni yaxshi o‘zlashtirgan. Ish jarayonida mustaqil ishlashga tayyorligi yuqori ko‘rinmoqda.”
+
+Agar 60–79% bo‘lsa:
+“⚠️ Tavsiya: xodim asosiy mavzularni o‘zlashtirgan, lekin ayrim joylarda qo‘shimcha nazorat va qayta o‘rgatish kerak.”
+
+Agar 60% dan past bo‘lsa:
+“❌ Ogohlantirish: xodim materiallarni yetarli o‘zlashtirmagan. Mas’uliyat va e’tibor darajasini qayta tekshirish, qo‘shimcha o‘qitish va nazorat zarur.”
+
+Yakuniy test natijasi admin panelda saqlansin:
+- employee_id
+- department
+- correct_answers
+- total_questions
+- percentage
+- ai_summary
+- admin_recommendation
+- completed_at
+
+OPENAI YAKUNIY BAHOLASH:
+Yakuniy testdan keyin AI quyidagilarni tahlil qilsin:
+- darslarni tugatish tezligi
+- har bir dars test natijalari
+- yakuniy test natijasi
+- past chiqqan mavzular
+- kuchli tomonlar
+- mas’uliyat darajasi
+- admin uchun tavsiya
+
+JSON OUTPUT:
+{
+  "final_score_percent": 0,
+  "level": "low|medium|excellent",
+  "strong_topics": ["..."],
+  "weak_topics": ["..."],
+  "responsibility_comment": "...",
+  "admin_recommendation": "continue_training|supervise_more|ready_for_work",
+  "message_to_admin": "..."
+}
+
+ADMIN DARS MONITORING:
+Admin panelda:
+- xodim ro‘yxati
+- qaysi bo‘limda
+- nechta dars tugatgan
+- har bir dars testi
+- o‘rtacha ball
+- yakuniy 30 test balli
+- kechikkanlar
+- darsni qayta yuborish
+- stajirovkani tugatish
+- xodimni aktiv/noaktiv qilish
+- admin izohi
+
+EXCEL EXPORT:
+Excel faylda quyidagi ustunlar bo‘lsin:
+- ID
+- F.I.SH.
+- Telegram ID
+- Username
+- Telefon
+- Tug‘ilgan sana
+- Hudud
+- Tuman
+- Manzil
+- Tanlangan lavozim
+- Qabul qilingan bo‘lim
+- Ta’lim
+- Talabami
+- Til darajalari
+- Kompyuter darajasi
+- Ish tajribasi bor/yo‘q
+- Ish joylari soni
+- Oldingi lavozimlar
+- Ketish sabablari
+- Tasdiqlovchi kontaktlar
+- AI interview score
+- AI interview grade
+- AI summary
+- Status
+- Intervyu sanasi
+- Intervyu manzili
+- Stajirovka statusi
+- Tugallangan darslar soni
+- Har bir dars test o‘rtacha bali
+- Yakuniy 30 test natijasi
+- Yakuniy AI tavsiya
+- Admin izohi
+- Ariza sanasi
+
+DATABASE:
+Kamida quyidagi jadvallar bo‘lsin:
+- candidates
+- candidate_answers
+- work_experiences
+- ai_interviews
+- ai_interview_answers
+- admins
+- interviews
+- employees
+- onboarding_lessons
+- onboarding_progress
+- lesson_tests
+- lesson_test_answers
+- final_tests
+- final_test_answers
+- candidate_drafts
+- audit_logs
+
+DRAFT:
+Agar user anketani tugatmasdan chiqib ketsa, keyingi `/start` da:
+- `Davom ettirish`
+- `Yangi ariza boshlash`
+tugmalari chiqsin.
+
+DUPLICATE CHECK:
+Telefon raqam bo‘yicha oldin ariza berganlarni aniqlasin.
+Admin kartada ogohlantirish chiqsin:
+“Bu telefon raqam oldin ham ariza bergan.”
+
+OPENAI TALABLARI:
+- OpenAI javoblari har doim qat’iy JSON formatda olinishi kerak.
+- JSON noto‘g‘ri kelsa, 2–3 marta qayta urinsin.
+- Baribir xato bo‘lsa fallback ishlasin.
+- OpenAI reglamentdan tashqariga chiqib ketmasin.
+- Savol va darslar aynan reglament asosida bo‘lsin.
+
+LOGGING:
+- Har bir muhim harakat audit_logs jadvaliga yozilsin.
+- Xatolar logs/bot.log faylga tushsin.
+- Bot token va OpenAI API key kod ichida yozilmasin.
+- Faqat `.env` orqali ishlasin.
+
+.ENV EXAMPLE:
+BOT_TOKEN=
+OPENAI_API_KEY=
+ADMIN_IDS=
+DB_PATH=data/database.db
+EXPORT_DIR=exports
+LOG_FILE=logs/bot.log
+DEFAULT_SHOP_ADDRESS=
+DEFAULT_BRANCH=
+TIMEZONE=Asia/Tashkent
+
+LOYIHA STRUKTURASI:
+Quyidagiga o‘xshash toza struktura qil:
+
+allmax_hr_bot/
+  app/
+    bot.py
+    config.py
+    database.py
+    keyboards/
+      user_keyboards.py
+      admin_keyboards.py
+    handlers/
+      start.py
+      vacancies.py
+      resume.py
+      interview.py
+      admin.py
+      onboarding.py
+      tests.py
+      followup.py
+    services/
+      openai_service.py
+      docx_reader.py
+      pdf_service.py
+      excel_service.py
+      scheduler_service.py
+      scoring_service.py
+      lesson_service.py
+    utils/
+      texts.py
+      validators.py
+      logger.py
+  data/
+    database.db
+  reglamentlar/
+    ...
+  exports/
+  logs/
+  .env.example
+  requirements.txt
+  README.md
+  main.py
+
+NATIJADA BER:
+1. Tayyor `.zip` loyiha
+2. To‘liq ishlaydigan kod
+3. requirements.txt
+4. .env.example
+5. README.md
+6. O‘rnatish va ishga tushirish instruksiyasi
+7. Admin panel ishlashi
+8. PDF eksport ishlashi
+9. Excel eksport ishlashi
+10. OpenAI savol-javob va baholash ishlashi
+11. 24 soatlik follow-up ishlashi
+12. 7 kunlik stajirovka ishlashi
+13. Har darsdan keyingi 10 talik test ishlashi
+14. Yakuniy 30 talik test ishlashi
+15. Admin xabarnomalari ishlashi
+
+KOD YOZISH TALABI:
+- Pseudo-code yozma.
+- Real ishlaydigan kod yoz.
+- Aiogram 3.x sintaksisini to‘g‘ri ishlat.
+- Har bir handler alohida modulda bo‘lsin.
+- Har bir service alohida modulda bo‘lsin.
+- Xatoliklarda bot yiqilib ketmasin.
+- Telegram 4096 belgi limitidan oshsa, xabarni bo‘lib yubor.
+- Callback data qisqa va tushunarli bo‘lsin.
+- Markdown/HTML format xatolaridan himoya qil.
+- Kodni toza, tushunarli va productionga yaqin yoz.
+
+ENG MUHIM:
+Menga yakunda tayyor `.zip` fayl ber. Botni men `.env` to‘ldirib ishga tushira oladigan holatda topshir.
+
+
+
+
+
+
+
+
+

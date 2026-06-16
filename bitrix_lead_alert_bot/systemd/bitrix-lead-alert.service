@@ -1,0 +1,14 @@
+[Unit]
+Description=Bitrix24 Lead Alert Telegram Bot
+After=network.target
+
+[Service]
+WorkingDirectory=/opt/bitrix_lead_alert_bot
+ExecStart=/opt/bitrix_lead_alert_bot/.venv/bin/python run.py
+Restart=always
+RestartSec=5
+User=root
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target
