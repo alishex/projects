@@ -8,7 +8,7 @@
 
 ---
 
-## Loyihalar ro'yxati
+## Loyihalar royxati
 
 | # | Loyiha | Tavsif | Port |
 |---|---|---|---|
@@ -19,6 +19,7 @@
 | 5 | [marketing_task_control_bot](#5-marketing_task_control_bot) | Marketing jamoasi vazifalar boti | — |
 | 6 | [instagram_bitrix_dm_lead_bot](#6-instagram_bitrix_dm_lead_bot) | Instagram DM lead boti | 8002 |
 | 7 | [telegram_ai_assistant](#7-telegram_ai_assistant) | Claude AI shaxsiy Telegram assistenti | — |
+| 8 | [analytics_report_bot](#8-analytics_report_bot) | Soatlik Telegram+Instagram statistika boti | — |
 
 ---
 
@@ -27,30 +28,37 @@
 > Telegram shaxsiy akkauntga kelgan DM xabarlardan avtomatik lead yaratadi
 
 ### Nima qiladi
-1. Telegram DM ga yangi xabar kelganda mijozdan **ism va telefon** so'raydi
+1. Telegram DM ga yangi xabar kelganda mijozdan **ism va telefon** soradi
 2. Matndan kontaktni **Regex + Claude AI** yordamida ajratib oladi
 3. **Bitrix24 CRM** ga yangi lead yaratadi (dublikat tekshiruvi bilan)
-4. **Bitrix24 Projects** ga avtomatik task ochadi (lead ga bog'liq)
-5. **Telegram guruhiga** lead ma'lumotini yuboradi
+4. **Bitrix24 Projects** ga avtomatik task ochadi (lead ga bogliq)
+5. **Telegram guruhiga** lead malumotini yuboradi
+6. Har bir DM ni **SQLite** ga yozadi (analytics uchun)
 
 ### Qanday ishlaydi
 
 ```
-Yangi DM → Burst collector (1.8s) → Contact parser → Shablon yuborish
-                                              ↓ (ism+telefon topilsa)
+Yangi DM -> Burst collector (1.8s) -> Contact parser -> Shablon yuborish
+                                              |
+                                   (ism+telefon topilsa)
                                     Bitrix CRM lead + Projects task + Guruh xabar
+                                              |
+                                    SQLite analytics log (dm_events)
 ```
 
 - **Burst protection:** 1.8 soniya oynada kelgan 5 tagacha xabarni birlashtiradi
 - **Per-user queue:** Har foydalanuvchi uchun alohida asyncio worker
 - **FloodWait handler:** Telegram limit berilsa kutadi
 - **Dublikat himoya:** Bir telefon raqami uchun ikkinchi lead ochmaydi
+- **Analytics:** `dm_events` jadvalida user_id va timestamp saqlanadi
 
 ### Fayl strukturasi
 
 ```
 allmax_telethon/
-└── main_ready_project.pyw   # Asosiy fayl (barcha logika shu yerda)
+├── main_ready_project.pyw
+└── analytics/
+    └── telegram_dm_log.sqlite3
 ```
 
 ### Texnologiyalar
@@ -59,7 +67,8 @@ allmax_telethon/
 |---|---|
 | `telethon` | Telegram user-account client |
 | `anthropic` | Claude AI — kontakt parsing |
-| `requests` | Bitrix24 API so'rovlari |
+| `requests` | Bitrix24 API sorovlari |
+| `sqlite3` | Analytics logging |
 | `python-dotenv` | .env konfiguratsiya |
 
 ### Asosiy sozlamalar (.env)
@@ -71,7 +80,7 @@ PHONE_NUMBER=+998...
 SESSION_NAME=allmax_cm_session
 ANTHROPIC_API_KEY=...
 ANTHROPIC_MODEL=claude-opus-4-8
-LEAD_GROUP=-100...              # Lead xabarlari yuboriladigan guruh
+LEAD_GROUP=-100...
 BITRIX_ENABLE=true
 BITRIX_WEBHOOK_URL=https://...
 BITRIX_PROJECT_ENABLE=true
@@ -89,7 +98,7 @@ service: allmax-telethon
 
 ## 2. allmax_hr_bot
 
-> Yangi xodimlarni onboarding qilish, intervyu o'tkazish va reglamentlarni boshqarish
+> Yangi xodimlarni onboarding qilish, intervyu otkazish va reglamentlarni boshqarish
 
 ### Nima qiladi
 - Yangi xodimga **reglament va materiallar** yuboradi
@@ -102,55 +111,44 @@ service: allmax-telethon
 ### Qanday ishlaydi
 
 ```
-Foydalanuvchi /start → Ro'yxatdan o'tish → Intervyu bosqichlari
-                                                    ↓
+Foydalanuvchi /start -> Royxatdan otish -> Intervyu bosqichlari
+                                                    |
                               Claude AI javoblarni baholaydi (0-100 ball)
-                                                    ↓
-                              Admin natijani ko'radi → Onboarding tasdiqlash
+                                                    |
+                              Admin natijani koradi -> Onboarding tasdiqlash
 ```
 
 ### Fayl strukturasi
 
 ```
 allmax_hr_bot/
-├── main.py                        # Entry point
+├── main.py
 ├── app/
-│   ├── bot.py                     # Bot yaratish va dispatcher
-│   ├── config.py                  # Konfiguratsiya (.env)
-│   ├── database.py                # SQLite ulanish
-│   ├── states.py                  # FSM holatlari
+│   ├── bot.py
+│   ├── config.py
+│   ├── database.py
+│   ├── states.py
 │   ├── handlers/
-│   │   ├── start.py               # /start handler
-│   │   ├── interview.py           # Intervyu oqimi
-│   │   ├── onboarding.py          # Onboarding bosqichlari
-│   │   ├── resume.py              # Rezyume qabul qilish
-│   │   ├── vacancies.py           # Vakansiyalar
-│   │   ├── admin.py               # Admin panel
-│   │   ├── dynamic_admin.py       # Dinamik admin funksiyalar
-│   │   └── followup.py            # Kuzatuv xabarlari
+│   │   ├── start.py
+│   │   ├── interview.py
+│   │   ├── onboarding.py
+│   │   ├── resume.py
+│   │   ├── vacancies.py
+│   │   ├── admin.py
+│   │   ├── dynamic_admin.py
+│   │   └── followup.py
 │   ├── keyboards/
-│   │   ├── user_keyboards.py      # Foydalanuvchi tugmalari
-│   │   ├── admin_keyboards.py     # Admin tugmalari
-│   │   └── dynamic_admin_keyboards.py
 │   ├── services/
-│   │   ├── openai_service.py      # Claude AI integratsiya
-│   │   ├── scoring_service.py     # Intervyu balllash
-│   │   ├── scheduler_service.py   # APScheduler vazifalar
-│   │   ├── clockster_service.py   # Davomat tizimi
-│   │   ├── docx_reader.py         # Word fayl o'qish
-│   │   ├── pdf_service.py         # PDF fayl o'qish
-│   │   ├── excel_service.py       # Excel hisobotlar
-│   │   ├── lesson_service.py      # Darslar boshqaruvi
-│   │   ├── material_service.py    # Materiallar boshqaruvi
-│   │   └── dynamic_service.py     # Dinamik kontent
+│   │   ├── openai_service.py
+│   │   ├── scoring_service.py
+│   │   ├── scheduler_service.py
+│   │   ├── clockster_service.py
+│   │   ├── docx_reader.py
+│   │   ├── pdf_service.py
+│   │   ├── excel_service.py
+│   │   └── lesson_service.py
 │   └── utils/
-│       ├── logger.py              # Logging
-│       ├── texts.py               # Matnlar
-│       └── validators.py          # Tekshiruvlar
-├── reglamentlar/                  # Reglament .docx fayllar (14 ta)
-├── tests/
-│   ├── smoke_test.py
-│   └── openai_parameter_guard_test.py
+├── reglamentlar/
 └── requirements.txt
 ```
 
@@ -162,7 +160,7 @@ allmax_hr_bot/
 | `anthropic` | Claude AI — baholash va tahlil |
 | `aiosqlite` | Async SQLite |
 | `apscheduler` | Avtomatik vazifalar |
-| `python-docx` | Word fayllarni o'qish |
+| `python-docx` | Word fayllarni oqish |
 | `openpyxl` | Excel hisobotlar |
 
 ### Systemd
@@ -176,24 +174,23 @@ bot: @allmax_jbot
 
 ## 3. feedback_bot
 
-> Mijozlardan baho va fikr-mulohaza yig'ish boti
+> Mijozlardan baho va fikr-mulohaza yigish boti
 
 ### Nima qiladi
-- Mijoz **1 dan 5 gacha baho** beradi (yulduzchalar bilan)
+- Mijoz **1 dan 5 gacha baho** beradi
 - Matn, rasm, video, ovoz xabar qabul qiladi
-- Xabarlarni **paket** shaklida to'plab adminga yuboradi
+- Xabarlarni **paket** shaklida toplab adminga yuboradi
 - **JSON faylda** saqlaydi (atomic write, race condition himoyasi)
-- Eski xabarlarni avtomatik o'chiradi
 
 ### Qanday ishlaydi
 
 ```
-/start → Asosiy menyu → Fikr qoldirish tugmasi
-                               ↓
-                    Reyting tanlash (⭐ 1-5)
-                               ↓
+/start -> Asosiy menyu -> Fikr qoldirish tugmasi
+                               |
+                    Reyting tanlash (1-5 yulduz)
+                               |
                     Matn/Media qabul qilish
-                               ↓
+                               |
               Admin guruhiga paket yuborish + JSON saqlash
 ```
 
@@ -201,17 +198,17 @@ bot: @allmax_jbot
 
 ```
 feedback_bot/
-├── bot.py                    # Entry point, polling
-├── config.py                 # Token va sozlamalar
-├── states.py                 # FSM holatlari
+├── bot.py
+├── config.py
+├── states.py
 ├── handlers/
-│   ├── start.py              # /start va asosiy menyu
-│   └── feedback.py           # Feedback oqimi (lock + atomic write)
+│   ├── start.py
+│   └── feedback.py
 ├── keyboards/
-│   ├── menu.py               # Asosiy menyu
-│   └── rating.py             # Yulduzcha tugmalar
+│   ├── menu.py
+│   └── rating.py
 └── storage/
-    └── feedbacks.json        # Saqlangan feedbacklar
+    └── feedbacks.json
 ```
 
 ### Texnologiyalar
@@ -219,10 +216,10 @@ feedback_bot/
 | Kutubxona | Vazifasi |
 |---|---|
 | `aiogram 3.x` | Telegram Bot API |
-| `aiofiles` | Async fayl o'qish/yozish |
+| `aiofiles` | Async fayl oqish/yozish |
 
 ### Muhim texnik detallar
-- `asyncio.Lock` — bir vaqtda bir nechtasi JSON yozsa conflict bo'lmasin
+- `asyncio.Lock` — bir vaqtda bir nechtasi JSON yozsa conflict bolmasin
 - `os.replace()` — atomic write (yarim yozilgan fayl qolmaydi)
 
 ### Systemd
@@ -243,17 +240,16 @@ bot: @allmax_feedback_bot
 - Yangi lead aniqlanganda **formatlangan xabar** yuboradi
 - **Checkpoint tizimi** — bir lead ikki marta yuborilmaydi
 - SQLite da yuborilgan leadlarni saqlaydi
-- FastAPI webhook server orqali ishlaydi
 
 ### Qanday ishlaydi
 
 ```
-APScheduler (har 60s) → Bitrix24 API so'rov (crm.item.list)
-                                ↓
+APScheduler (har 60s) -> Bitrix24 API sorov (crm.item.list)
+                                |
                     Yangi lead ID lar checkpoint bilan taqqoslanadi
-                                ↓
-                    Yangi leadlar → Telegram guruhiga xabar
-                                ↓
+                                |
+                    Yangi leadlar -> Telegram guruhiga xabar
+                                |
                     Checkpoint yangilanadi (SQLite)
 ```
 
@@ -261,19 +257,19 @@ APScheduler (har 60s) → Bitrix24 API so'rov (crm.item.list)
 
 ```
 bitrix_lead_alert_bot/
-├── run.py                    # Entry point (uvicorn)
+├── run.py
 ├── app/
-│   ├── main.py               # FastAPI app
-│   ├── config.py             # Konfiguratsiya
-│   ├── database.py           # SQLite (checkpoint saqlash)
-│   ├── scheduler.py          # APScheduler — polling loop
-│   ├── processor.py          # Lead qayta ishlash logikasi
-│   ├── bitrix.py             # Bitrix24 API wrapper
-│   ├── telegram_client.py    # Telegram xabar yuborish
-│   ├── lead_utils.py         # Lead formatlash
-│   └── logger.py             # Logging
+│   ├── main.py
+│   ├── config.py
+│   ├── database.py
+│   ├── scheduler.py
+│   ├── processor.py
+│   ├── bitrix.py
+│   ├── telegram_client.py
+│   ├── lead_utils.py
+│   └── logger.py
 └── scripts/
-    └── get_chat_id.py        # Chat ID topish yordamchi skript
+    └── get_chat_id.py
 ```
 
 ### Texnologiyalar
@@ -284,7 +280,7 @@ bitrix_lead_alert_bot/
 | `uvicorn` | ASGI server |
 | `apscheduler` | Har daqiqa polling |
 | `aiosqlite` | Checkpoint saqlash |
-| `httpx` | Bitrix24 API so'rovlari |
+| `httpx` | Bitrix24 API sorovlari |
 
 ### Systemd
 
@@ -304,64 +300,42 @@ port: 8000
 - **Deadline eslatmalari** avtomatik yuboriladi
 - Xodim **bajarilgan deb belgilaydi**
 - **Grafik hisobotlar** (PNG matritsa shaklida) yuboradi
-- **9 ta marketing xodim** uchun sozlangan
-- Prioritet tizimi: Yuqori / O'rta / Past
+- Prioritet tizimi: Yuqori / Orta / Past
 
 ### Qanday ishlaydi
 
 ```
-Admin → Vazifa yaratish → Xodim tayinlash → Deadline belgilash
-                                                    ↓
+Admin -> Vazifa yaratish -> Xodim tayinlash -> Deadline belgilash
+                                                    |
                               APScheduler (har daqiqa deadline tekshiradi)
-                                                    ↓
+                                                    |
                                     Deadline yaqinlashsa eslatma
-                                                    ↓
-                              Xodim "Bajarildi" bosadi → Hisobot
+                                                    |
+                              Xodim "Bajarildi" bosadi -> Hisobot
 ```
 
 ### Fayl strukturasi
 
 ```
 marketing_task_control_bot/
-├── bot.py                         # Entry point
-├── config.py                      # Konfiguratsiya
+├── bot.py
+├── config.py
 ├── database/
-│   ├── database.py                # SQLite ulanish
-│   ├── models.py                  # Jadval modellari
-│   └── repositories.py           # DB so'rovlari
+│   ├── database.py
+│   ├── models.py
+│   └── repositories.py
 ├── handlers/
-│   ├── admin.py                   # Admin panel
-│   ├── employee.py                # Xodim interfeysi
-│   ├── task_creation.py           # Vazifa yaratish oqimi
-│   ├── task_management.py         # Vazifa boshqarish
-│   ├── graph_reports.py           # Grafik hisobotlar
-│   ├── settings.py                # Sozlamalar
-│   └── common.py                  # Umumiy handlerlar
-├── keyboards/
-│   ├── admin_keyboards.py
-│   ├── employee_keyboards.py
-│   └── inline_keyboards.py
+│   ├── admin.py
+│   ├── employee.py
+│   ├── task_creation.py
+│   ├── task_management.py
+│   └── graph_reports.py
 ├── services/
-│   ├── task_service.py            # Vazifa biznes logikasi
-│   ├── reminder_service.py        # Eslatma yuborish
-│   ├── notification_service.py    # Bildirishnomalar
-│   ├── priority_service.py        # Prioritet hisoblash
-│   ├── matrix_image_service.py    # PNG hisobot generatsiya
-│   └── cleanup_service.py         # Eski ma'lumotlarni tozalash
-├── middlewares/
-│   └── auth_middleware.py         # Foydalanuvchi ruxsati
-├── states/
-│   └── task_states.py             # FSM holatlari
-├── utils/
-│   ├── constants.py
-│   ├── datetime_utils.py
-│   ├── text_utils.py
-│   └── logger.py
-├── assets/
-│   └── toliq_ish_vazifalar_template.png
-└── tests/
-    ├── test_matrix_image_service.py
-    └── test_priority_service.py
+│   ├── task_service.py
+│   ├── reminder_service.py
+│   ├── matrix_image_service.py
+│   └── cleanup_service.py
+└── utils/
 ```
 
 ### Texnologiyalar
@@ -391,23 +365,24 @@ bot: @allmax_vazifalarbot
 2. Mijoz xabaridan **ism va telefon** ajratadi (Regex + Claude AI)
 3. Kontakt topilmasa, Instagram DM da **shablon xabar** yuboradi
 4. **Bitrix24 CRM** ga lead yaratadi
-5. **Bitrix24 Projects** ga task ochadi (CRM ga bog'liq)
+5. **Bitrix24 Projects** ga task ochadi
 6. **Telegram guruhiga** HTML formatlangan xabar yuboradi
 7. **Target/reklama** orqali kelgan leadlarni alohida belgilaydi
+8. Barcha muloqotlarni **SQLite** da saqlaydi (analytics uchun)
 
 ### Qanday ishlaydi
 
 ```
-Instagram DM → Meta Webhook (POST /webhook)
-                      ↓
+Instagram DM -> Meta Webhook (POST /webhook)
+                      |
             Signature tekshiruvi (X-Hub-Signature-256)
-                      ↓
+                      |
             Conversation sync worker (har 45s)
-                      ↓
-        Regex parser → Claude AI parser (fallback)
-                      ↓
+                      |
+        Regex parser -> Claude AI parser (fallback)
+                      |
     Dublikat tekshiruvi (3 qatlam: DB + Bitrix + SQLite)
-                      ↓
+                      |
     Bitrix CRM lead + Projects task + Telegram xabar
 ```
 
@@ -416,46 +391,30 @@ Instagram DM → Meta Webhook (POST /webhook)
 2. `sent_leads` + `conversations` — bir telefon bir martadan lead
 3. Bitrix24 `crm.duplicate.findbycomm` — CRM da ham tekshiriladi
 
-### Target reklama aniqlash
-Payload ichidan `referral`, `ad_id`, `ad_title` yoki kalit so'zlar (`target`, `reklama`, `ads`) topilsa:
-- Lead alohida Bitrix24 stage ga tushadi
-- Telegram xabarida 🎯 belgisi qo'shiladi
-
 ### Fayl strukturasi
 
 ```
 instagram_bitrix_dm_lead_bot/
-├── run.py                              # Entry point (uvicorn)
+├── run.py
 ├── app/
-│   ├── main.py                         # FastAPI app, startup/shutdown
-│   ├── config.py                       # Settings dataclass (.env)
-│   ├── database.py                     # SQLite init va migration
-│   ├── models.py                       # Pydantic modellari
-│   ├── logger.py                       # Logging sozlash
+│   ├── main.py
+│   ├── config.py
+│   ├── database.py
+│   ├── models.py
 │   ├── routes/
-│   │   └── webhook.py                  # GET/POST /webhook endpointlari
+│   │   └── webhook.py
 │   ├── services/
-│   │   ├── instagram_service.py        # Instagram DM yuborish
-│   │   ├── bitrix_service.py           # Bitrix24 CRM + Projects
-│   │   ├── telegram_service.py         # Telegram lead xabarlari
-│   │   ├── duplicate_service.py        # Dublikat tekshiruvi
-│   │   ├── target_detector.py          # Reklama/target aniqlash
-│   │   ├── meta_signature.py           # Webhook imzo tekshiruvi
-│   │   └── openai_parser.py            # Claude AI kontakt parser
-│   ├── workers/
-│   │   └── conversation_sync.py        # Background sync worker
-│   └── utils/
-│       ├── phone.py                    # Telefon normalizatsiya
-│       ├── text.py                     # Matn tozalash
-│       ├── time_utils.py               # Vaqt formatlash
-│       └── retry.py                    # HTTP retry logika
-├── tests/
-│   ├── test_contact_parser.py
-│   ├── test_duplicate.py
-│   ├── test_phone.py
-│   └── test_target_detector.py
-├── Dockerfile
-├── docker-compose.yml
+│   │   ├── instagram_service.py
+│   │   ├── bitrix_service.py
+│   │   ├── telegram_service.py
+│   │   ├── duplicate_service.py
+│   │   ├── target_detector.py
+│   │   ├── meta_signature.py
+│   │   └── openai_parser.py
+│   └── workers/
+│       └── conversation_sync.py
+├── data/
+│   └── instagram_dm_bot.sqlite3
 └── requirements.txt
 ```
 
@@ -468,7 +427,7 @@ instagram_bitrix_dm_lead_bot/
 | `anthropic` | Claude AI — kontakt parsing |
 | `httpx` | Meta Graph API, Bitrix24 |
 | `aiosqlite` | Conversation state, dublikat DB |
-| `pydantic` | Ma'lumot modellari |
+| `pydantic` | Malumot modellari |
 
 ### Systemd
 
@@ -486,52 +445,51 @@ port: 8002
 ### Nima qiladi
 - Telegram Bot (`@Claude_ai_oBot`) orqali **erkin tilda** topshiriq berish
 - Claude AI **tool-use** orqali real Telegram akkaunt nomidan harakatlar bajaradi:
-  - Barcha chatlar va guruhlar ro'yxatini ko'radi
-  - Istalgan chatning xabarlar tarixini o'qiydi
-  - Xabar qidiradi
-  - Xabar yuboradi
-  - Chat ma'lumotlarini oladi
-- **Ovoz xabarlarni** matnга aylantiradi (`faster-whisper`)
+  - Barcha chatlar va guruhlar royxatini koradi
+  - Istalgan chatning xabarlar tarixini oqiydi
+  - Xabar qidiradi va yuboradi
+  - Chat malumotlarini oladi
+- **Ovoz xabarlarni** matnga aylantiradi (`faster-whisper` + `ffmpeg`)
 - **Suhbat tarixi** saqlanadi (oxirgi 20 ta almashuv)
 
 ### Qanday ishlaydi
 
 ```
-Bot foydalanuvchisi → @Claude_ai_oBot ga xabar yozadi
-                                ↓
+Bot foydalanuvchisi -> @Claude_ai_oBot ga xabar yozadi
+                                |
                     Claude AI (claude-sonnet-4-6)
                     tool-use agentic loop (max 25 qadam)
-                                ↓
+                                |
             list_dialogs / get_chat_history / search_messages
             send_message / get_chat_info
-                                ↓
+                                |
                     Telethon — real Telegram akkaunt orqali bajaradi
-                                ↓
-                    Natija → foydalanuvchiga javob
+                                |
+                    Natija -> foydalanuvchiga javob
 ```
 
 ### Fayl strukturasi
 
 ```
 telegram_ai_assistant/
-├── bot.py                  # Entry point — aiogram bot (OWNER ga restricted)
-├── claude_agent.py         # Anthropic tool-use agentic loop
-├── telegram_client.py      # TelegramToolset: 5 ta tool
-├── config.py               # .env konfiguratsiya
-├── memory_store.py         # Suhbat tarixi (conversation_history.json)
-├── media_transcriber.py    # Ovoz → matn (faster-whisper)
-└── login_session.py        # Bir martalik session yaratish
+├── bot.py
+├── claude_agent.py
+├── telegram_client.py
+├── config.py
+├── memory_store.py
+├── media_transcriber.py
+└── login_session.py
 ```
 
 ### Claude AI toollar
 
 | Tool | Vazifasi |
 |---|---|
-| `list_dialogs` | Barcha chatlar ro'yxati (limit bilan) |
+| `list_dialogs` | Barcha chatlar royxati |
 | `get_chat_history` | Chat xabarlar tarixi |
-| `search_messages` | Kalit so'z bo'yicha qidirish |
+| `search_messages` | Kalit soz boyicha qidirish |
 | `send_message` | Xabar yuborish |
-| `get_chat_info` | Chat haqida ma'lumot |
+| `get_chat_info` | Chat haqida malumot |
 
 ### Texnologiyalar
 
@@ -541,6 +499,7 @@ telegram_ai_assistant/
 | `telethon` | Telegram user-account client |
 | `anthropic` | Claude AI tool-use agent |
 | `faster-whisper` | Ovoz transkriptsiya |
+| `ffmpeg` | Audio konvertatsiya |
 
 ### Systemd
 
@@ -552,49 +511,126 @@ user-session: @Anvar_Abdurahmon
 
 ---
 
+## 8. analytics_report_bot
+
+> Telegram va Instagram murojaatlarini har soatda tahlil qilib chiroyli hisobot yuboradigan bot
+
+### Nima qiladi
+- Har soat **:00 da** (10:00, 11:00, 12:00 ...) avtomatik ishga tushadi
+- **Telegram DM** statistikasini `allmax_telethon` analytics DB dan oladi
+- **Instagram DM** statistikasini `instagram_bitrix_dm_lead_bot` DB dan oladi
+- Claude AI yordamida **chiroyli hisobot** matni yaratadi (emoji, uzbek tili, # * - yoq)
+- Belgilangan **Telegram guruhiga** hisobot yuboradi
+- Barcha vaqtlar **UTC+5 (Toshkent)** vaqt zonasida
+
+### Qanday ishlaydi
+
+```
+APScheduler (har soat :00)
+        |
+Telegram DB sorov (dm_events) + Instagram DB sorov (conversations)
+        |
+Claude AI -> Chiroyli hisobot matni
+        |
+Telegram guruhiga xabar yuborish
+```
+
+### Malumot manbalari
+
+| Kanal | DB fayl | Jadval | Malumot |
+|---|---|---|---|
+| Telegram | `allmax_telethon/analytics/telegram_dm_log.sqlite3` | `dm_events` | unique_users, total_messages |
+| Instagram | `instagram_bitrix_dm_lead_bot/data/instagram_dm_bot.sqlite3` | `conversations` | total, contacts, targets |
+
+### Hisobot tarkibi
+- Sana, kun nomi va soat oraligi (UTC+5)
+- Telegram DM: yangi murojaat soni, jami xabarlar
+- Instagram DM: suhbatlar, kontakt qoldirganlar, target reklama orqali kelganlar
+- Jami murojaat va eng faol kanal
+- Emoji bilan bezatilgan sof matn formatida
+
+### Fayl strukturasi
+
+```
+analytics_report_bot/
+├── bot.py
+└── requirements.txt
+```
+
+### Texnologiyalar
+
+| Kutubxona | Vazifasi |
+|---|---|
+| `anthropic` | Claude AI — hisobot matni generatsiya |
+| `apscheduler` | Har soat :00 da cron task |
+| `httpx` | Telegram Bot API sorovlari |
+| `sqlite3` | Analytics DB dan malumot oqish |
+| `python-dotenv` | .env konfiguratsiya |
+
+### Asosiy sozlamalar (.env)
+
+```env
+BOT_TOKEN=...
+CHAT_ID=-100...
+ANTHROPIC_API_KEY=...
+ANTHROPIC_MODEL=claude-opus-4-8
+TIMEZONE_OFFSET=5
+TELEGRAM_DB=/opt/AllmaxProjects/allmax_telethon/analytics/telegram_dm_log.sqlite3
+INSTAGRAM_DB=/opt/AllmaxProjects/instagram_bitrix_dm_lead_bot/data/instagram_dm_bot.sqlite3
+```
+
+### Systemd
+
+```
+service: analytics-report-bot
+```
+
+---
+
 ## Infratuzilma
 
 ### Server holati
 
 | Servis | Status | Port | Texnologiya |
 |---|---|---|---|
-| `allmax-telethon` | ✅ active | — | Telethon + Claude |
-| `allmax-hr-bot` | ✅ active | — | aiogram + Claude |
-| `feedback-bot` | ✅ active | — | aiogram |
-| `bitrix-lead-alert-bot` | ✅ active | 8000 | FastAPI + APScheduler |
-| `marketing-task-control-bot` | ✅ active | — | aiogram + APScheduler |
-| `instagram-dm-lead-bot` | ✅ active | 8002 | FastAPI + Claude |
-| `telegram-ai-assistant` | ✅ active | — | aiogram + Telethon + Claude |
+| `allmax-telethon` | active | — | Telethon + Claude |
+| `allmax-hr-bot` | active | — | aiogram + Claude |
+| `feedback-bot` | active | — | aiogram |
+| `bitrix-lead-alert-bot` | active | 8000 | FastAPI + APScheduler |
+| `marketing-task-control-bot` | active | — | aiogram + APScheduler |
+| `instagram-dm-lead-bot` | active | 8002 | FastAPI + Claude |
+| `telegram-ai-assistant` | active | — | aiogram + Telethon + Claude |
+| `analytics-report-bot` | active | — | APScheduler + Claude |
 
-Hammasi `systemctl enable`, `Restart=always` — server reboot bo'lsa avtomatik qayta ishga tushadi.
+Hammasi `systemctl enable`, `Restart=always` — server reboot bolsa avtomatik qayta ishga tushadi.
 
 ### Deploy qilish
 
 ```bash
-# Fayllarni serverga yuborish
 rsync -avz \
   --exclude venv --exclude __pycache__ --exclude .env \
-  --exclude "*.session" --exclude "*.db" --exclude "*.sqlite3" \
+  --exclude "*.session" --exclude "*.sqlite3" \
   ./loyiha_nomi/ root@209.38.239.245:/opt/AllmaxProjects/loyiha_nomi/
 
-# Paketlarni o'rnatish
 ssh root@209.38.239.245 "
   cd /opt/AllmaxProjects/loyiha_nomi
   venv/bin/pip install -r requirements.txt
   systemctl restart <service-name>
 "
+```
 
-# Loglarni ko'rish
+### Loglarni korish
+
+```bash
 journalctl -u <service-name> -f
 ```
 
 ### Git workflow
 
 ```bash
-# Serverda
 cd /opt/AllmaxProjects
 git add -A
-git commit -m "o'zgarish tavsifi"
+git commit -m "ozgarish tavsifi"
 git push origin master
 ```
 
@@ -602,15 +638,13 @@ git push origin master
 
 ## .gitignore (umumiy)
 
-Quyidagi fayllar **hech qachon** commitlanmaydi:
-
 ```
-.env          # API kalitlar va tokenlar
-*.session     # Telegram session fayllar
-*.db / *.sqlite3  # Ma'lumotlar bazasi
-venv/ / .venv/    # Virtual muhit
-__pycache__/      # Python cache
-*.log             # Log fayllar
+.env
+*.session
+*.db / *.sqlite3
+venv/ / .venv/
+__pycache__/
+*.log
 ```
 
 ---
