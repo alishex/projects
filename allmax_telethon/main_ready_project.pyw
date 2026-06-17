@@ -923,7 +923,9 @@ def merge_burst_texts(events_batch: list) -> tuple[str, int]:
 # =========================
 # COMMUNITY AGENT HANDLER
 # =========================
-CHAT_HISTORY_LIMIT = int(os.getenv("COMMUNITY_HISTORY_LIMIT", "60"))
+CHAT_HISTORY_LIMIT         = int(os.getenv("COMMUNITY_HISTORY_LIMIT", "60"))
+CHAT_HISTORY_DAYS          = int(os.getenv("COMMUNITY_HISTORY_DAYS", "30"))   # Matn tarixi oynasi
+CHAT_MEDIA_TRANSCRIBE_HOURS = int(os.getenv("COMMUNITY_MEDIA_HOURS", "48"))   # Ovoz transkripsiya oynasi
 
 
 def _sender_display(sender, user_id: int) -> tuple[str, str]:
@@ -939,11 +941,19 @@ async def build_chat_history(chat_id: int, my_id: int) -> list[dict]:
     Telethon orqali to'liq DM tarixini o'qiydi.
     Har bir xabar Claude API formatiga (role + content) o'giriladi.
     Ovozli/video → transkribatsiya, rasm → base64 (faqat so'nggi 3 ta rasm).
+    Faqat oxirgi CHAT_HISTORY_DAYS kun ichidagi xabarlar qayta ishlanadi.
     """
+    cutoff        = datetime.now(timezone.utc) - timedelta(days=CHAT_HISTORY_DAYS)
+    media_cutoff  = datetime.now(timezone.utc) - timedelta(hours=CHAT_MEDIA_TRANSCRIBE_HOURS)
     raw_messages = []
     async for msg in client.iter_messages(chat_id, limit=CHAT_HISTORY_LIMIT):
         if getattr(msg, "action", None) is not None:
             continue
+        msg_date = msg.date
+        if msg_date.tzinfo is None:
+            msg_date = msg_date.replace(tzinfo=timezone.utc)
+        if msg_date < cutoff:
+            break  # iter_messages yangilikdan eskiga — eski xabar topilsa to'xtaymiz
         raw_messages.append(msg)
 
     raw_messages.reverse()  # Eskidan yangiga
@@ -969,7 +979,12 @@ async def build_chat_history(chat_id: int, my_id: int) -> list[dict]:
         # ── Ovoz / video_note / video / audio ──
         kind = get_media_kind(msg)
         if kind:
-            transcribed = await transcribe_message(client, msg)
+            if msg_date >= media_cutoff:
+                transcribed = await transcribe_message(client, msg)
+            else:
+                from media_handler import get_duration, media_label
+                dur = get_duration(msg)
+                transcribed = f"[{media_label(kind)}{f' — {dur}s' if dur else ''}]"
             content = f"{transcribed or '[media]'}"
             if text_part:
                 content = f"{text_part}\n{content}"
@@ -979,8 +994,9 @@ async def build_chat_history(chat_id: int, my_id: int) -> list[dict]:
         # ── Rasm ──
         if getattr(msg, "photo", None):
             images_seen += 1
-            # Faqat so'nggi max_images ta rasmni encode qilamiz
-            if image_count - images_seen < max_images:
+            # Faqat user xabarlari + so'nggi max_images ta rasm encode qilinadi
+            # Claude API assistant turnida image block ruxsat bermaydi
+            if role == "user" and image_count - images_seen < max_images:
                 encoded = await encode_image_for_claude(client, msg)
                 if encoded:
                     if text_part:
@@ -989,7 +1005,7 @@ async def build_chat_history(chat_id: int, my_id: int) -> list[dict]:
                         ]
                     result.append({"role": role, "content": encoded})
                     continue
-            # Eski rasmlar — faqat label
+            # Assistant rasmlari yoki eski rasmlar — faqat label
             content = text_part or "[Rasm yuborildi]"
             result.append({"role": role, "content": content})
             continue
