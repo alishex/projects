@@ -281,7 +281,7 @@ class TelegramToolset:
 async def create_client() -> TelegramClient:
     if not config.TELEGRAM_API_ID or not config.TELEGRAM_API_HASH:
         raise ValueError("TELEGRAM_API_ID / TELEGRAM_API_HASH .env da topilmadi")
-    client = TelegramClient(config.TELEGRAM_SESSION_NAME, config.TELEGRAM_API_ID, config.TELEGRAM_API_HASH)
+    client = TelegramClient(config.TELEGRAM_SESSION_NAME, config.TELEGRAM_API_ID, config.TELEGRAM_API_HASH, receive_updates=False)
     client.parse_mode = "html"
     await client.connect()
     if not await client.is_user_authorized():
