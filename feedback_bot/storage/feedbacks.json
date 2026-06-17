@@ -191,6 +191,10 @@
       {
         "text": "Stnehrnegnsgndgnynegnegnensgneegnegnegndh dge gne",
         "date": "2026-06-13 09:22"
+      },
+      {
+        "text": "IT xodimi yaxshi bola ))",
+        "date": "2026-06-17 04:50"
       }
     ],
     "media": [
@@ -208,13 +212,19 @@
         "type": "video",
         "file_id": "BAACAgIAAxkBAANXai0iPeuhcbTOEe_V8QABU42vwTz4AAInnQACl3NoSbqqnb-vh-rjPAQ",
         "date": "2026-06-13 09:27"
+      },
+      {
+        "type": "voice",
+        "file_id": "AwACAgIAAxkBAAODajIWZG8JrQyckQABNTZqieJWhKJGAAJZlAACJaCQSVZefw_UO7ZdPAQ",
+        "date": "2026-06-17 03:37"
       }
     ],
     "group_message_ids": [
-      22,
-      23,
-      24,
-      25
+      35,
+      36,
+      37,
+      38,
+      39
     ]
   },
   "6368051557": {
@@ -247,6 +257,22 @@
     "media": [],
     "group_message_ids": [
       27
+    ]
+  },
+  "1713522263": {
+    "full_name": "МКемалдинович",
+    "username": "m_kemaldinovich",
+    "phone": "998950297404",
+    "last_rating": 2,
+    "comments": [
+      {
+        "text": "Дизайнер кучли ишлавоти, ойлигини оширила 👀",
+        "date": "2026-06-17 04:33"
+      }
+    ],
+    "media": [],
+    "group_message_ids": [
+      34
     ]
   }
 }
