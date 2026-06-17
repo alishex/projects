@@ -26,7 +26,8 @@ _PHONE      = os.getenv("COMMUNITY_PHONE",    "+998 78 555 31 31")
 _KNOWLEDGE = f"""
 Do'kon manzili: {_ADDRESS}
 Do'kon telefoni: {_PHONE}
-Ish vaqti: har kuni {_WORK_START:02d}:00 – {_WORK_END:02d}:00 (Toshkent vaqti, UTC+5)
+Do'kon ish vaqti: 24/7 — yigirma to'rt soat, yetti kun (do'kon hech qachon yopilmaydi)
+Call centre va community xodimlari: har kuni {_WORK_START:02d}:00 – {_WORK_END:02d}:00 (Toshkent vaqti)
 
 Mahsulotlar (erkaklar uchun):
   kurtka, vetrovka, ko'ylak, polo, futbolka, shim, jinsi, kastyum-shim,
@@ -68,9 +69,10 @@ Avvalgi javoblarni ko'rib, takrorlanmaslik uchun davom et.
 XABAR TURLARI VA HARAKAT:
 
 A) STANDART SAVOLLAR (o'zing javob ber):
-   manzil → aniq ayt | ish vaqti → ayt | narx → diapazon (99 900–399 900)
+   manzil → aniq ayt | narx → diapazon (99 900–399 900)
    o'lcham → mavjud o'lchamlar | dostavka → bor, pochta tanlash mumkin
    almashtirish → mumkin, batafsil operator aytadi
+   ish vaqti → DO'KON 24/7 ishlaydi; call centre va community 09:00–22:00
 
 B) BUYURTMA — ma'lumotlarni natural suhbat orqali yig':
    Kerakli 9 ta ma'lumot (tabiiy ketma-ketlikda so'ra):
