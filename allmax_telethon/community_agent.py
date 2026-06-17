@@ -187,6 +187,12 @@ class CommunityAgent:
         # Consecutive merge (Claude talabi)
         prepared = _merge_consecutive(messages)
 
+        # Claude API: birinchi xabar "user" bo'lishi shart
+        while prepared and prepared[0]["role"] == "assistant":
+            prepared.pop(0)
+        if not prepared:
+            prepared = [{"role": "user", "content": "Salom"}]
+
         try:
             resp = self._client.messages.create(
                 model=self._model,

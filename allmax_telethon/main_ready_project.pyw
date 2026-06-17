@@ -1066,7 +1066,7 @@ async def process_with_community_agent(event, sender, user_id: int) -> bool:
                     f"🔗 {tg_link}\n"
                     f"🆔 User ID: {user_id}"
                 )
-                # Bitrix CRM ga ham push qilish
+                # Bitrix CRM va project task push
                 phone = normalize_phone(od.get("phone", ""))
                 if phone and BITRIX_ENABLE and not lead_state[user_id]["sent_to_bitrix"]:
                     try:
@@ -1077,13 +1077,32 @@ async def process_with_community_agent(event, sender, user_id: int) -> bool:
                             f"{od.get('region','?')} / {od.get('district','?')}, "
                             f"pochta: {od.get('postal','?')}"
                         )
-                        await asyncio.to_thread(
+                        ok, bitrix_lead_id, bx_status = await asyncio.to_thread(
                             push_lead_to_bitrix_if_needed,
                             user_id, sender_name, username,
                             od.get("name", ""), phone, source_text,
                         )
+                        logging.info(
+                            "Bitrix CRM (order): ok=%s lead_id=%s status=%s",
+                            ok, bitrix_lead_id, bx_status,
+                        )
                     except Exception as be:
-                        logging.warning("Bitrix push (order): %s", be)
+                        logging.warning("Bitrix CRM push (order): %s", be)
+
+                if phone and not lead_state[user_id]["sent_to_project_task"]:
+                    try:
+                        ok2, task_id, task_status = await asyncio.to_thread(
+                            push_project_task_to_bitrix_if_needed,
+                            user_id, sender_name, username,
+                            od.get("name", ""), phone, source_text,
+                            lead_state[user_id].get("bitrix_lead_id"),
+                        )
+                        logging.info(
+                            "Bitrix project task (order): ok=%s task_id=%s status=%s",
+                            ok2, task_id, task_status,
+                        )
+                    except Exception as be:
+                        logging.warning("Bitrix project task push (order): %s", be)
 
             else:
                 notify_msg = (
