@@ -15,6 +15,10 @@ from telethon import TelegramClient, events
 from telethon.errors import FloodWaitError, SessionPasswordNeededError
 import anthropic
 import json
+from community_agent import CommunityAgent, AgentResult
+from media_handler import (
+    get_media_kind, transcribe_message, encode_image_for_claude,
+)
 
 # =========================
 # ANALYTICS LOGGING
@@ -59,6 +63,7 @@ MIN_REPLY_INTERVAL = float(os.getenv("MIN_REPLY_INTERVAL", "0.8"))
 MESSAGE_BURST_WINDOW = float(os.getenv("MESSAGE_BURST_WINDOW", "1.8"))
 MAX_BURST_MESSAGES = int(os.getenv("MAX_BURST_MESSAGES", "5"))
 ONLY_TEXT_MESSAGES = os.getenv("ONLY_TEXT_MESSAGES", "false").lower() == "true"
+COMMUNITY_AGENT_ENABLE = os.getenv("COMMUNITY_AGENT_ENABLE", "false").lower() == "true"
 
 LEAD_GROUP = os.getenv("LEAD_GROUP", "").strip()
 
@@ -110,6 +115,11 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 # =========================
 client = TelegramClient(SESSION_NAME, API_ID, API_HASH)
 anthropic_client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY) if ANTHROPIC_API_KEY else None
+community_agent_inst = (
+    CommunityAgent(ANTHROPIC_API_KEY, ANTHROPIC_MODEL)
+    if COMMUNITY_AGENT_ENABLE and ANTHROPIC_API_KEY
+    else None
+)
 last_reply_time = defaultdict(lambda: 0.0)
 user_queues = {}
 user_workers = {}
@@ -911,6 +921,189 @@ def merge_burst_texts(events_batch: list) -> tuple[str, int]:
 
 
 # =========================
+# COMMUNITY AGENT HANDLER
+# =========================
+CHAT_HISTORY_LIMIT = int(os.getenv("COMMUNITY_HISTORY_LIMIT", "60"))
+
+
+def _sender_display(sender, user_id: int) -> tuple[str, str]:
+    name = " ".join(
+        x for x in [getattr(sender, "first_name", "") or "", getattr(sender, "last_name", "") or ""] if x
+    ).strip() or str(user_id)
+    username = getattr(sender, "username", "") or ""
+    return name, username
+
+
+async def build_chat_history(chat_id: int, my_id: int) -> list[dict]:
+    """
+    Telethon orqali to'liq DM tarixini o'qiydi.
+    Har bir xabar Claude API formatiga (role + content) o'giriladi.
+    Ovozli/video → transkribatsiya, rasm → base64 (faqat so'nggi 3 ta rasm).
+    """
+    raw_messages = []
+    async for msg in client.iter_messages(chat_id, limit=CHAT_HISTORY_LIMIT):
+        if getattr(msg, "action", None) is not None:
+            continue
+        raw_messages.append(msg)
+
+    raw_messages.reverse()  # Eskidan yangiga
+
+    # Rasm limitini kuzatish uchun counter
+    image_count = sum(1 for m in raw_messages if getattr(m, "photo", None))
+    max_images = 3
+    images_seen = 0
+
+    result: list[dict] = []
+
+    for msg in raw_messages:
+        role = "assistant" if msg.out else "user"
+
+        # ── Matn ──
+        if msg.text and not msg.media:
+            result.append({"role": role, "content": msg.text.strip()})
+            continue
+
+        # ── Matn + media birga (caption) ──
+        text_part = (msg.text or "").strip()
+
+        # ── Ovoz / video_note / video / audio ──
+        kind = get_media_kind(msg)
+        if kind:
+            transcribed = await transcribe_message(client, msg)
+            content = f"{transcribed or '[media]'}"
+            if text_part:
+                content = f"{text_part}\n{content}"
+            result.append({"role": role, "content": content})
+            continue
+
+        # ── Rasm ──
+        if getattr(msg, "photo", None):
+            images_seen += 1
+            # Faqat so'nggi max_images ta rasmni encode qilamiz
+            if image_count - images_seen < max_images:
+                encoded = await encode_image_for_claude(client, msg)
+                if encoded:
+                    if text_part:
+                        encoded = [{"type": "text", "text": text_part}] + [
+                            b for b in encoded if b.get("type") == "image"
+                        ]
+                    result.append({"role": role, "content": encoded})
+                    continue
+            # Eski rasmlar — faqat label
+            content = text_part or "[Rasm yuborildi]"
+            result.append({"role": role, "content": content})
+            continue
+
+        # ── Stiker / GIF / boshqa ──
+        if getattr(msg, "sticker", None):
+            result.append({"role": role, "content": "[Stiker yuborildi]"})
+            continue
+        if msg.gif:
+            result.append({"role": role, "content": "[GIF yuborildi]"})
+            continue
+        if text_part:
+            result.append({"role": role, "content": text_part})
+
+    return result
+
+
+async def process_with_community_agent(event, sender, user_id: int) -> bool:
+    """
+    To'liq DM tarixini o'qib, Community Agent orqali javob beradi.
+    True qaytaradi agar muvaffaqiyatli ishlagan bo'lsa.
+    """
+    if not community_agent_inst:
+        return False
+
+    me = await client.get_me()
+    try:
+        messages = await build_chat_history(event.chat_id, me.id)
+    except Exception as exc:
+        logging.exception("Chat tarixi o'qish xatosi: %s", exc)
+        return False
+
+    if not messages:
+        return False
+
+    try:
+        result: AgentResult = await asyncio.to_thread(community_agent_inst.process, messages)
+    except Exception as exc:
+        logging.exception("Community agent xatosi: %s", exc)
+        return False
+
+    # ── Mijozga javob ──
+    if result.reply:
+        async with client.action(event.chat_id, "typing"):
+            await small_typing_delay(result.reply)
+            await send_long_message(event, result.reply)
+        mark_reply_time(user_id)
+        logging.info(
+            "Community agent reply user=%s order=%s human=%s reply_len=%s",
+            user_id, bool(result.order_data), result.needs_human, len(result.reply)
+        )
+
+    # ── Operator xabardor qilish ──
+    if (result.order_data or result.needs_human) and LEAD_GROUP:
+        try:
+            entity = await resolve_target_entity(LEAD_GROUP, "lead_group")
+            sender_name, username = _sender_display(sender, user_id)
+            tg_link = f"https://t.me/{username}" if username else f"tg://user?id={user_id}"
+
+            if result.order_data:
+                od = result.order_data
+                notify_msg = (
+                    "🛒 YANGI BUYURTMA — Community Agent\n\n"
+                    f"👤 Ism:      {od.get('name',     '—')}\n"
+                    f"📞 Telefon:  {od.get('phone',    '—')}\n"
+                    f"👕 Mahsulot: {od.get('product',  '—')}\n"
+                    f"📐 Razmer:   {od.get('size',     '—')}\n"
+                    f"🎨 Rang:     {od.get('color',    '—')}\n"
+                    f"🔢 Soni:     {od.get('qty',      '—')}\n"
+                    f"📍 Viloyat:  {od.get('region',   '—')}\n"
+                    f"📍 Tuman:    {od.get('district', '—')}\n"
+                    f"📦 Pochta:   {od.get('postal',   '—')}\n\n"
+                    f"📱 TG: {sender_name} (@{username or 'yoq'})\n"
+                    f"🔗 {tg_link}\n"
+                    f"🆔 User ID: {user_id}"
+                )
+                # Bitrix CRM ga ham push qilish
+                phone = normalize_phone(od.get("phone", ""))
+                if phone and BITRIX_ENABLE and not lead_state[user_id]["sent_to_bitrix"]:
+                    try:
+                        source_text = (
+                            f"Buyurtma: {od.get('product','?')}, "
+                            f"razmer {od.get('size','?')}, rang {od.get('color','?')}, "
+                            f"soni {od.get('qty','?')}, "
+                            f"{od.get('region','?')} / {od.get('district','?')}, "
+                            f"pochta: {od.get('postal','?')}"
+                        )
+                        await asyncio.to_thread(
+                            push_lead_to_bitrix_if_needed,
+                            user_id, sender_name, username,
+                            od.get("name", ""), phone, source_text,
+                        )
+                    except Exception as be:
+                        logging.warning("Bitrix push (order): %s", be)
+
+            else:
+                notify_msg = (
+                    "🙋 OPERATOR KERAK — Community Agent\n\n"
+                    f"📌 Sabab: {result.human_reason or 'Murakkab savol'}\n\n"
+                    f"📱 TG: {sender_name} (@{username or 'yoq'})\n"
+                    f"🔗 {tg_link}\n"
+                    f"🆔 User ID: {user_id}"
+                )
+
+            await client.send_message(entity, notify_msg)
+            logging.info("Operator notified user=%s", user_id)
+
+        except Exception as exc:
+            logging.exception("Operator notification xatosi: %s", exc)
+
+    return True
+
+
+# =========================
 # BUSINESS LOGIC
 # =========================
 async def process_contact_capture(event, sender, user_id: int, incoming_text: str, history_info: dict):
@@ -1020,13 +1213,16 @@ async def process_burst_events(events_batch: list):
         my_id = me.id
 
         merged_text, _ = merge_burst_texts(events_batch)
-        history_info = await inspect_chat_history(
-            chat_id=first_event.chat_id,
-            my_id=my_id,
-            exclude_message_ids={item["event"].id for item in events_batch},
-        )
 
-        await process_contact_capture(first_event, sender, user_id, merged_text, history_info)
+        if COMMUNITY_AGENT_ENABLE and community_agent_inst:
+            await process_with_community_agent(first_event, sender, user_id)
+        else:
+            history_info = await inspect_chat_history(
+                chat_id=first_event.chat_id,
+                my_id=my_id,
+                exclude_message_ids={item["event"].id for item in events_batch},
+            )
+            await process_contact_capture(first_event, sender, user_id, merged_text, history_info)
 
     except FloodWaitError as e:
         logging.warning("Flood wait: %s seconds", e.seconds)
