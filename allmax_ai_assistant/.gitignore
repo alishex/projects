@@ -1,0 +1,5 @@
+# allmax_ai_assistant
+venv/
+.env
+conversation_history.json
+__pycache__/
