@@ -12,8 +12,8 @@ def rating_kb():
 def phone_kb():
     return ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text="📞 Telefon raqamini yuborish", request_contact=True)],
-            [KeyboardButton(text="⏭ O‘tkazib yuborish")]
+            [KeyboardButton(text="\U0001f4de Telefon raqamini yuborish", request_contact=True)],
+            [KeyboardButton(text="⏭ O'tkazib yuborish")]
         ],
         resize_keyboard=True
     )
