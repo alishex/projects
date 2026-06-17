@@ -12,7 +12,7 @@
 
 | # | Loyiha | Tavsif | Port |
 |---|---|---|---|
-| 1 | [allmax_telethon](#1-allmax_telethon) | Telegram DM lead capture boti | — |
+| 1 | [allmax_telethon](#1-allmax_telethon) | Telegram DM Community Agent — Claude AI auto-reply + lead | — |
 | 2 | [allmax_hr_bot](#2-allmax_hr_bot) | HR onboarding va intervyu boti | — |
 | 3 | [feedback_bot](#3-feedback_bot) | Mijoz fikr-mulohaza boti | — |
 | 4 | [bitrix_lead_alert_bot](#4-bitrix_lead_alert_bot) | Bitrix24 yangi lead alert boti | 8000 |
@@ -25,47 +25,104 @@
 
 ## 1. allmax_telethon
 
-> Telegram shaxsiy akkauntga kelgan DM xabarlardan avtomatik lead yaratadi
+> ALLMAX Telegram DM Community Agent — Claude AI yordamida mijozlar bilan suhbat, buyurtma yigish va Bitrix24 integratsiya
 
 ### Nima qiladi
-1. Telegram DM ga yangi xabar kelganda mijozdan **ism va telefon** soradi
-2. Matndan kontaktni **Regex + Claude AI** yordamida ajratib oladi
-3. **Bitrix24 CRM** ga yangi lead yaratadi (dublikat tekshiruvi bilan)
-4. **Bitrix24 Projects** ga avtomatik task ochadi (lead ga bogliq)
-5. **Telegram guruhiga** lead malumotini yuboradi
-6. Har bir DM ni **SQLite** ga yozadi (analytics uchun)
+
+**Community Agent (asosiy rejim):**
+1. Telegram DM ga kelgan **matn, ovoz, video, rasm** xabarlarni o'qiydi
+2. Claude AI oxirgi **30 kunlik to'liq suhbat tarixini** tahlil qilib javob beradi
+3. Standart savollarga (manzil, narx, o'lcham, yetkazib berish, **ish vaqti 24/7**) avtomatik javob beradi
+4. Buyurtma ma'lumotlarini tabiiy suhbat orqali yig'adi (9 ta maydon)
+5. Buyurtma to'liq bo'lganda **Bitrix24 CRM lead + Projects task** yaratadi
+6. **Operator guruhiga** buyurtma xulasasi + Telegram havolasi yuboradi
+7. Murakkab savollarda operatorga yo'naltiradi
+
+**Fallback rejim (Community Agent o'chirilganda):**
+- Mijozdan ism va telefon so'raydi
+- Bitrix24 ga lead yaratadi
+
+### Buyurtma yig'ish (9 maydon)
+
+| # | Maydon | Tavsif |
+|---|---|---|
+| 1 | ism | Mijoz ismi |
+| 2 | telefon | Raqami |
+| 3 | mahsulot | Nomi yoki tavsifi |
+| 4 | razmer | O'lcham (M–3XL, shim 29–56) |
+| 5 | rang | Rang |
+| 6 | soni | Dona soni |
+| 7 | viloyat | Yetkazib berish viloyati |
+| 8 | tuman | Tuman |
+| 9 | pochta | BTS / EMU / UzPost |
 
 ### Qanday ishlaydi
 
 ```
-Yangi DM -> Burst collector (1.8s) -> Contact parser -> Shablon yuborish
-                                              |
-                                   (ism+telefon topilsa)
-                                    Bitrix CRM lead + Projects task + Guruh xabar
-                                              |
-                                    SQLite analytics log (dm_events)
+Yangi DM (matn/ovoz/video/rasm)
+        |
+  Burst collector (1.8s)
+        |
+  build_chat_history()
+    - 30 kun matn tarixi
+    - 48 soat ovoz/video transkriptsiya (faster-whisper)
+    - so'nggi 3 ta rasm (Claude Vision)
+        |
+  CommunityAgent.process() — Claude API
+    - order_complete tool  → Bitrix CRM + task + guruh xabar
+    - needs_human tool     → operatorga yo'naltirish
+    - oddiy javob          → mijozga yuboriladi
 ```
 
-- **Burst protection:** 1.8 soniya oynada kelgan 5 tagacha xabarni birlashtiradi
-- **Per-user queue:** Har foydalanuvchi uchun alohida asyncio worker
-- **FloodWait handler:** Telegram limit berilsa kutadi
-- **Dublikat himoya:** Bir telefon raqami uchun ikkinchi lead ochmaydi
-- **Analytics:** `dm_events` jadvalida user_id va timestamp saqlanadi
+### Do'kon ma'lumotlari (agent biladi)
+
+| | |
+|---|---|
+| **Manzil** | Toshkent, Bunyodkor Savdo Majmuasi (Korzinka 1-qavat), metro: Mirzo Ulug'bek |
+| **Telefon** | +998 78 555 31 31 |
+| **Do'kon ish vaqti** | **24/7** — hech qachon yopilmaydi |
+| **Call centre / Community** | Har kuni **09:00–22:00** |
+| **Narxlar** | 99 900 – 399 900 so'm (fix-price) |
+| **To'lov** | Naqd, plastik, Uzum nasiya |
+| **Yetkazib berish** | O'zbekiston bo'ylab — BTS, EMU, UzPost |
 
 ### Texnologiyalar
 
 | Kutubxona | Vazifasi |
 |---|---|
-| `telethon` | Telegram user-account client |
-| `anthropic` | Claude AI — kontakt parsing |
-| `requests` | Bitrix24 API sorovlari |
-| `sqlite3` | Analytics logging |
+| `telethon` | Telegram user-account client (`allmax_cm_session`) |
+| `anthropic` | Claude AI — Community Agent (tool-use) |
+| `faster-whisper` | Ovoz/video transkriptsiya (base model) |
+| `requests` | Bitrix24 API so'rovlari |
+| `sqlite3` | Analytics + media transcription cache |
 | `python-dotenv` | .env konfiguratsiya |
+
+### Konfiguratsiya (.env)
+
+```env
+COMMUNITY_AGENT_ENABLE=true
+COMMUNITY_ADDRESS=Toshkent sh., Bunyodkor Savdo Majmuasi ...
+COMMUNITY_PHONE=+998 78 555 31 31
+COMMUNITY_WORK_START=9
+COMMUNITY_WORK_END=22
+COMMUNITY_HISTORY_LIMIT=60
+COMMUNITY_HISTORY_DAYS=30
+COMMUNITY_MEDIA_HOURS=48
+```
+
+### Fayllar
+
+| Fayl | Vazifasi |
+|---|---|
+| `main_ready_project.pyw` | Asosiy bot, event handler, Bitrix integratsiya |
+| `community_agent.py` | Claude AI Community Agent (tool-use, suhbat logikasi) |
+| `media_handler.py` | Ovoz/video transkriptsiya, rasm encoding, SQLite cache |
 
 ### Systemd
 
 ```
 service: allmax-telethon
+user-session: @allmaxshaxsiy (allmax_cm_session)
 ```
 
 ---
@@ -142,7 +199,7 @@ bot: @allmax_feedback_bot
 | `fastapi` | Web server |
 | `apscheduler` | Har daqiqa polling |
 | `aiosqlite` | Checkpoint saqlash |
-| `httpx` | Bitrix24 API sorovlari |
+| `httpx` | Bitrix24 API so'rovlari |
 
 ### Systemd
 
@@ -232,26 +289,27 @@ webhook: https://allmax.tizm.uz/instagram/webhook
 ### Nima qiladi
 - Telegram Bot (`@Claude_ai_oBot`) orqali **erkin tilda** topshiriq berish
 - Claude AI **tool-use** orqali real Telegram akkaunt nomidan harakatlar bajaradi
-- Barcha chatlar, guruhlar, kanallardan xabar oqiydi va yuboradi
+- Barcha chatlar, guruhlar, kanallardan xabar o'qiydi va yuboradi
 - **Ovoz xabarlarni** matnga aylantiradi (faster-whisper)
 - **Suhbat tarixi** saqlanadi (oxirgi 20 ta almashuv)
+- `receive_updates=False` — fon update'lardan keladigan TL xatolardan himoyalangan
 
 ### Claude AI toollar
 
 | Tool | Vazifasi |
 |---|---|
-| `list_dialogs` | Barcha chatlar royxati |
+| `list_dialogs` | Barcha chatlar ro'yxati |
 | `get_chat_history` | Chat xabarlar tarixi |
-| `search_messages` | Kalit soz boyicha qidirish |
+| `search_messages` | Kalit so'z bo'yicha qidirish |
 | `send_message` | Xabar yuborish |
-| `get_chat_info` | Chat haqida malumot |
+| `get_chat_info` | Chat haqida ma'lumot |
 
 ### Texnologiyalar
 
 | Kutubxona | Vazifasi |
 |---|---|
 | `aiogram 3.x` | Buyruqlar boti |
-| `telethon` | Telegram user-account client |
+| `telethon` | Telegram user-account client (`receive_updates=False`) |
 | `anthropic` | Claude AI tool-use agent |
 | `faster-whisper` | Ovoz transkriptsiya |
 
@@ -272,25 +330,10 @@ user-session: @Anvar_Abdurahmon
 ### Nima qiladi
 - Telegram Bot (`@allmax_claude_aiBot`) orqali **erkin tilda** topshiriq berish
 - Claude AI **tool-use** orqali **ALLMAX akkaunt** (`@allmaxshaxsiy`) nomidan ishlaydi
-- Barcha chatlar, guruhlar, kanallardan xabar oqiydi va yuboradi
-- Hisobot yigish, qidirish, statistika hisoblash
+- Barcha chatlar, guruhlar, kanallardan xabar o'qiydi va yuboradi
+- Hisobot yig'ish, qidirish, statistika hisoblash
 - **Suhbat tarixi** saqlanadi (oxirgi 20 ta almashuv)
 - Faqat **admin** (ID: 6586004680) foydalana oladi
-
-### Qanday ishlaydi
-
-```
-Admin -> @allmax_claude_aiBot ga xabar yozadi
-                    |
-        Claude AI (claude-opus-4-8) tool-use
-                    |
-    list_dialogs / get_chat_history / search_messages
-    send_message / get_chat_info
-                    |
-    Telethon — @allmaxshaxsiy akkaunt orqali bajaradi
-                    |
-    Natija -> adminga javob
-```
 
 ### Texnologiyalar
 
@@ -316,9 +359,9 @@ admin: 6586004680
 
 ### Server holati
 
-| Servis | Status | Port | Bot |
+| Servis | Status | Port | Bot / Session |
 |---|---|---|---|
-| `allmax-telethon` | active | — | — |
+| `allmax-telethon` | active | — | @allmaxshaxsiy |
 | `allmax-hr-bot` | active | — | @allmax_jbot |
 | `feedback-bot` | active | — | @allmax_feedback_bot |
 | `bitrix-lead-alert-bot` | active | 8000 | — |
@@ -327,7 +370,7 @@ admin: 6586004680
 | `telegram-ai-assistant` | active | — | @Claude_ai_oBot |
 | `allmax-ai-assistant` | active | — | @allmax_claude_aiBot |
 
-Hammasi `systemctl enable`, `Restart=always` — server reboot bolsa avtomatik qayta ishga tushadi.
+Hammasi `systemctl enable`, `Restart=always` — server reboot bo'lsa avtomatik qayta ishga tushadi.
 
 ### Nginx (allmax.tizm.uz)
 
@@ -336,7 +379,7 @@ Hammasi `systemctl enable`, `Restart=always` — server reboot bolsa avtomatik q
 | `/instagram/` | 8002 | instagram_bitrix_dm_lead_bot |
 | `/tirox/` | 8002 | instagram_bitrix_dm_lead_bot |
 
-### Loglarni korish
+### Loglarni ko'rish
 
 ```bash
 journalctl -u <service-name> -f
