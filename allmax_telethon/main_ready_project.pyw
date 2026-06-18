@@ -16,9 +16,10 @@ from telethon.errors import FloodWaitError, SessionPasswordNeededError
 import anthropic
 import json
 from community_agent import CommunityAgent, AgentResult
+import moysklad
 from media_handler import (
     get_media_kind, transcribe_message, encode_image_for_claude,
-    encode_gif_for_claude, encode_sticker_for_claude,
+    encode_gif_for_claude, encode_sticker_for_claude, prewarm_whisper,
 )
 
 # =========================
@@ -1619,6 +1620,10 @@ async def main():
 
     asyncio.create_task(_daily_report_loop())
     logging.info("Daily report loop started (har kuni 00:00 UZT)")
+
+    # Fon prewarm — birinchi mijoz xabariga tayyor bo'lish uchun
+    asyncio.create_task(prewarm_whisper())
+    asyncio.create_task(asyncio.to_thread(moysklad.prewarm))
 
     await client.run_until_disconnected()
 
