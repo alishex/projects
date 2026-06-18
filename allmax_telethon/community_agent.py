@@ -23,6 +23,90 @@ _WORK_END   = int(os.getenv("COMMUNITY_WORK_END",   "22"))
 _ADDRESS    = os.getenv("COMMUNITY_ADDRESS",  "Toshkent sh., Bunyodkor Savdo Majmuasi (Korzinka 1-qavat), metro: Mirzo Ulug'bek")
 _PHONE      = os.getenv("COMMUNITY_PHONE",    "+998 78 555 31 31")
 
+# BTS filiallar qoplami (viloyat → tumanlar ro'yxati)
+# ESLATMA: Bu ro'yxat taxminiy. Aniq ma'lumot uchun BTS rasmiy saytini tekshiring.
+_BTS_COVERAGE: dict[str, list[str]] = {
+    "Toshkent shahar": [
+        "Yunusobod", "Chilonzor", "Mirzo Ulug'bek", "Shayxontohur",
+        "Uchtepa", "Yakkasaroy", "Sergeli", "Olmazar", "Bektemir",
+        "Yashnobod", "Mirobod",
+    ],
+    "Toshkent viloyati": [
+        "Angren", "Bekobod", "Chirchiq", "Nurafshon", "Ohangaron",
+        "Yangiyo'l", "Zangiota", "Qibray", "Oqqo'rg'on", "Bo'ka",
+        "Parkent", "Piskent", "Yuqorichirchiq", "O'rta Chirchiq",
+    ],
+    "Samarqand viloyati": [
+        "Samarqand", "Urgut", "Kattaqo'rg'on", "Ishtixon", "Pastdarg'om",
+        "Bulung'ur", "Jomboy", "Qo'shrabot", "Nurobod",
+    ],
+    "Buxoro viloyati": [
+        "Buxoro", "Kogon", "G'ijduvon", "Qorako'l", "Romitan",
+        "Shofirkon", "Vobkent", "Jondor",
+    ],
+    "Namangan viloyati": [
+        "Namangan", "Chust", "Pop", "Kosonsoy", "Uychi",
+        "Mingbuloq", "Norin", "To'raqo'rg'on", "Chortoq",
+    ],
+    "Andijon viloyati": [
+        "Andijon", "Asaka", "Xo'jaobod", "Marhamat", "Oltinko'l",
+        "Shahrixon", "Baliqchi", "Buloqboshi", "Izboskan",
+    ],
+    "Farg'ona viloyati": [
+        "Farg'ona", "Qo'qon", "Marg'ilon", "Rishton", "Beshariq",
+        "Qo'shtepa", "Oltiariq", "Buvayda", "Dang'ara", "Uchko'prik",
+    ],
+    "Qashqadaryo viloyati": [
+        "Qarshi", "Shahrisabz", "G'uzor", "Koson", "Muborak",
+        "Kitob", "Chiroqchi", "Yakkabog'", "Kamashi",
+    ],
+    "Surxondaryo viloyati": [
+        "Termiz", "Denov", "Sherobod", "Boysun", "Sariosiyo",
+        "Qumqo'rg'on", "Uzun", "Jarqo'rg'on",
+    ],
+    "Xorazm viloyati": [
+        "Urganch", "Xiva", "Shovot", "Bog'ot", "Qo'shko'pir",
+        "Gurlan", "Hazorasp", "Yangiariq",
+    ],
+    "Jizzax viloyati": [
+        "Jizzax", "Zomin", "G'allaorol", "Paxtakor", "Sharof Rashidov",
+        "Arnasoy", "Baxmal", "Do'stlik",
+    ],
+    "Sirdaryo viloyati": [
+        "Guliston", "Yangiyer", "Shirin", "Sardoba", "Boyovut",
+        "Mirzaobod", "Oqoltin", "Sayxunobod",
+    ],
+    "Navoiy viloyati": [
+        "Navoiy", "Zarafshon", "Uchquduq", "Karmana", "Nurota",
+        "Konimex", "Navbahor", "Qiziltepa",
+    ],
+    "Qoraqalpog'iston": [
+        "Nukus", "Turtkul", "Xo'jayli", "Beruniy", "Qo'ng'irot",
+        "Chimboy", "Shumanay", "To'rtko'l",
+    ],
+}
+
+
+def _bts_check(region: str, district: str) -> tuple[bool, str]:
+    """(mavjud, xabar) qaytaradi."""
+    r_low = region.strip().lower()
+    d_low = district.strip().lower()
+    for reg, districts in _BTS_COVERAGE.items():
+        if r_low in reg.lower() or reg.lower() in r_low:
+            for d in districts:
+                if d_low in d.lower() or d.lower() in d_low:
+                    return True, f"BTS filiali {reg} — {d} tumanida mavjud"
+            return False, f"BTS {reg}da {district} tumanini qoplamaydi (yirik shahar markaziga yetkazilishi mumkin)"
+    return False, f"BTS {region} viloyati bo'yicha ma'lumot yo'q"
+
+
+def _bts_coverage_summary() -> str:
+    lines = []
+    for reg, districts in _BTS_COVERAGE.items():
+        lines.append(f"  {reg}: {', '.join(districts)}")
+    return "\n".join(lines)
+
+
 _KNOWLEDGE = f"""
 Do'kon manzili: {_ADDRESS}
 Do'kon telefoni: {_PHONE}
@@ -35,9 +119,21 @@ Mahsulotlar (erkaklar uchun):
   remen, hamyon, sumka, aksessuarlar
 
 O'lchamlar: M–3XL (kattaroq ham bor); shimlarda 29–56
-Narxlar (fix-price): 99 900 – 399 900 so'm
+
+Narxlar (fix-price bo'limlari):
+  • 99 000 so'm
+  • 149 900 so'm
+  • 199 900 so'm
+  • 249 900 so'm
+  • 299 900 so'm
+  • Premium bo'lim — alohida narxlar
+
 To'lov: naqd, plastik karta, Uzum nasiya (bo'lib to'lash)
-Dostavka: O'zbekiston bo'ylab — BTS, EMU yoki UzPost orqali
+
+Yetkazib berish:
+  • Toshkent shahri ichida — YandexGo orqali (mijoz manziliga)
+  • Butun O'zbekiston bo'ylab — BTS, EMU yoki UzPost orqali
+
 Almashtirish/qaytarish: mumkin (batafsil operator aytadi)
 """
 
@@ -54,7 +150,7 @@ ASOSIY QOIDALAR (HECH QACHON BUZMA):
 4. Samimiy, muloyim, professional — robotday EMAS
 5. Emoji: 1–2 tadan oshirma
 6. Qisqa va aniq javob ber
-7. Agar suhbatda avval javob berilgan savolni qayta bermaslik kerak — kontekstni esda tut
+7. Suhbat tarixida avval berilgan javobni qayta berma — kontekstni esda tut
 
 KONTEKST TAHLILI:
 Senga berilgan suhbat tarixida:
@@ -69,8 +165,10 @@ Avvalgi javoblarni ko'rib, takrorlanmaslik uchun davom et.
 XABAR TURLARI VA HARAKAT:
 
 A) STANDART SAVOLLAR (o'zing javob ber):
-   manzil → aniq ayt | narx → diapazon (99 900–399 900)
-   o'lcham → mavjud o'lchamlar | dostavka → bor, pochta tanlash mumkin
+   manzil    → aniq ayt
+   narx      → bo'limlarni sanab ayt: 99 000 / 149 900 / 199 900 / 249 900 / 299 900 / Premium
+   o'lcham   → mavjud o'lchamlar (M–3XL, shimlarda 29–56)
+   dostavka  → Toshkent shahri: YandexGo | Boshqa: BTS/EMU/UzPost
    almashtirish → mumkin, batafsil operator aytadi
    ish vaqti → DO'KON 24/7 ishlaydi; call centre va community 09:00–22:00
 
@@ -82,14 +180,26 @@ B) BUYURTMA — ma'lumotlarni natural suhbat orqali yig':
      4) razmer / o'lcham
      5) rang
      6) soni
-     7) viloyat
-     8) tuman (kerakli bo'lsa o'sha tumandagi pochta punktlarini tashla)
+     7) viloyat / shahar
+        ↳ Agar TOSHKENT SHAHRI: "Toshkent shahriga YandexGo orqali yetkazib beramiz.
+           Manzilingizni (ko'cha, uy) yozing, operatorimiz vaqtni kelishib oladi 🚗"
+           → postal = "YandexGo" bo'ladi, tuman = manzil bo'ladi
+        ↳ Boshqa viloyat → 8 va 9-bandlarga o't
+     8) tuman
+        ↳ BTS tanlansa: quyidagi BTS qoplam ro'yxatini tekshir.
+          * Tuman ro'yxatda BOR → "Shu tumanda BTS filiali bor, shu yerga yetkazib bersak ma'qulmi? ✅"
+          * Tuman ro'yxatda YO'Q → "Afsuski BTS [tuman]ni qoplamaydi. EMU yoki UzPost tanlasangiz bo'ladi."
+        ↳ EMU/UzPost tanlansa: tumanini so'ra, davom et
      9) qulay pochta: BTS, EMU yoki UzPost
+        (Toshkent shahri uchun bu qadam o'tkazib yuboriladi — YandexGo)
 
    ⚠ Bir yo'la hammani so'rama — 1–2 tadan tabiiy so'ra.
    ⚠ Suhbat tarixida allaqachon so'ralgan ma'lumotni qaytadan so'rma.
 
-C) BARCHA 9 TA MA'LUMOT TO'LIQ BO'LGACH:
+BTS QOPLAM RO'YXATI (tumanlar bo'yicha):
+{_bts_coverage_summary()}
+
+C) BARCHA MA'LUMOT TO'LIQ BO'LGACH:
    order_complete tool chaqir.
    Keyin mijozga:
      ish vaqtida ({_WORK_START}:00–{_WORK_END}:00): "Operatorimiz 5–10 daqiqada siz bilan bog'lanadi ✅"
@@ -107,7 +217,7 @@ E) RASM YUBORILSA:
 _TOOLS = [
     {
         "name": "order_complete",
-        "description": "Buyurtma uchun barcha 9 ta ma'lumot (ism, telefon, mahsulot, razmer, rang, soni, viloyat, tuman, pochta) to'liq yig'ilganda chaqiriladi.",
+        "description": "Buyurtma uchun barcha ma'lumotlar to'liq yig'ilganda chaqiriladi.",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -117,9 +227,9 @@ _TOOLS = [
                 "size":     {"type": "string",  "description": "O'lcham/razmer"},
                 "color":    {"type": "string",  "description": "Rang"},
                 "qty":      {"type": "integer", "description": "Soni"},
-                "region":   {"type": "string",  "description": "Viloyat"},
-                "district": {"type": "string",  "description": "Tuman"},
-                "postal":   {"type": "string",  "description": "Pochta xizmati (BTS / EMU / UzPost)"},
+                "region":   {"type": "string",  "description": "Viloyat yoki shahar"},
+                "district": {"type": "string",  "description": "Tuman yoki manzil (Toshkent uchun)"},
+                "postal":   {"type": "string",  "description": "Yetkazish usuli: BTS / EMU / UzPost / YandexGo"},
             },
             "required": ["name", "phone", "product", "size", "region", "district", "postal"],
         },
@@ -153,7 +263,6 @@ def _merge_consecutive(messages: list[dict]) -> list[dict]:
     for msg in messages[1:]:
         last = merged[-1]
         if msg["role"] == last["role"]:
-            # Ikkalasini list formatiga o'tkazib birlashtirish
             def to_list(c):
                 if isinstance(c, list):
                     return c
@@ -186,10 +295,8 @@ class CommunityAgent:
         if not messages:
             messages = [{"role": "user", "content": "Salom"}]
 
-        # Consecutive merge (Claude talabi)
         prepared = _merge_consecutive(messages)
 
-        # Claude API: birinchi xabar "user" bo'lishi shart
         while prepared and prepared[0]["role"] == "assistant":
             prepared.pop(0)
         if not prepared:
