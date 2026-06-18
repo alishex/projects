@@ -118,13 +118,52 @@ def media_label(kind: str) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Format detection by magic bytes
+# ---------------------------------------------------------------------------
+def _detect_audio_format(path: Path) -> Optional[str]:
+    """Fayl boshidagi baytlar orqali haqiqiy audio formatni aniqlaydi."""
+    try:
+        with open(path, "rb") as f:
+            header = f.read(12)
+        if header[:4] == b"OggS":
+            return "ogg"
+        if header[:4] == b"\x1a\x45\xdf\xa3":  # EBML (WebM/MKV)
+            return "webm"
+        if header[:3] == b"ID3" or (len(header) >= 2 and header[0] == 0xff and (header[1] & 0xe0) == 0xe0):
+            return "mp3"
+        if len(header) >= 8 and header[4:8] in (b"ftyp", b"mdat", b"moov"):
+            return "mp4"
+    except Exception:
+        pass
+    return None
+
+
+# ---------------------------------------------------------------------------
 # Transcription
 # ---------------------------------------------------------------------------
 def _extract_audio(src: Path, dst: Path):
-    subprocess.run(
-        ["ffmpeg", "-y", "-i", str(src), "-vn", "-ar", "16000", "-ac", "1", "-f", "wav", str(dst)],
-        check=True, capture_output=True,
-    )
+    """
+    Audio/video fayldan audio qismini WAV ga ajratadi.
+    Telegram ovoz xabarlari ko'pincha .webm kengaytmali OggS fayl bo'ladi —
+    shuning uchun avval haqiqiy formatni aniqlab, ffmpeg ga ko'rsatamiz.
+    """
+    base_cmd = ["ffmpeg", "-y"]
+
+    fmt = _detect_audio_format(src)
+    if fmt:
+        base_cmd += ["-f", fmt]
+    base_cmd += ["-i", str(src), "-vn", "-ar", "16000", "-ac", "1", "-f", "wav", str(dst)]
+
+    result = subprocess.run(base_cmd, capture_output=True)
+    if result.returncode == 0 and dst.exists() and dst.stat().st_size > 0:
+        return
+
+    # Fallback: format ko'rsatmasdan
+    fallback = ["ffmpeg", "-y", "-i", str(src), "-vn", "-ar", "16000", "-ac", "1", "-f", "wav", str(dst)]
+    result2 = subprocess.run(fallback, capture_output=True)
+    if result2.returncode != 0:
+        stderr = (result2.stderr or b"").decode(errors="replace")
+        raise subprocess.CalledProcessError(result2.returncode, fallback, stderr=stderr.encode())
 
 
 def _transcribe_sync(model, audio_path: Path) -> str:
@@ -193,6 +232,75 @@ async def encode_image_for_claude(tg_client, msg: Any) -> Optional[list]:
         ]
     except Exception as e:
         log.warning("Rasm encode xatosi: %s", e)
+        return None
+
+
+# ---------------------------------------------------------------------------
+# GIF first-frame extraction for Claude Vision
+# ---------------------------------------------------------------------------
+def _extract_gif_frame_sync(src: Path, dst: Path):
+    """GIF/MPEG4 animatsiyasidan birinchi kadrni JPEG ga oladi."""
+    subprocess.run(
+        ["ffmpeg", "-y", "-i", str(src), "-frames:v", "1", "-q:v", "2", str(dst)],
+        check=True, capture_output=True,
+    )
+
+
+async def encode_gif_for_claude(tg_client, msg: Any) -> Optional[list]:
+    """
+    Telegram GIF (MPEG4 animatsiya) dan birinchi kadrni olib,
+    Claude Vision uchun image block sifatida qaytaradi.
+    """
+    try:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            media_path = await tg_client.download_media(msg, file=str(Path(tmpdir) / "gif"))
+            if not media_path:
+                return None
+
+            frame_path = Path(tmpdir) / "frame.jpg"
+            await asyncio.to_thread(_extract_gif_frame_sync, Path(media_path), frame_path)
+
+            if not frame_path.exists() or frame_path.stat().st_size == 0:
+                return None
+
+            with open(frame_path, "rb") as f:
+                data = base64.standard_b64encode(f.read()).decode()
+
+        return [
+            {"type": "text", "text": "[Mijoz GIF yubordi]"},
+            {"type": "image", "source": {"type": "base64", "media_type": "image/jpeg", "data": data}},
+        ]
+    except Exception as e:
+        log.warning("GIF encode xatosi: %s", e)
+        return None
+
+
+# ---------------------------------------------------------------------------
+# Sticker encoding for Claude Vision (WebP → base64)
+# ---------------------------------------------------------------------------
+async def encode_sticker_for_claude(tg_client, msg: Any) -> Optional[list]:
+    """Telegram stikerini WebP formatda Claude Vision uchun qaytaradi."""
+    try:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = await tg_client.download_media(msg, file=str(Path(tmpdir) / "sticker"))
+            if not path:
+                return None
+
+            path = Path(path)
+            # Animated stickers are .tgs (lottie) — skip, only static WebP
+            if path.suffix.lower() == ".tgs":
+                return None
+
+            mime = SUPPORTED_IMAGE_MIME.get(path.suffix.lower(), "image/webp")
+            with open(path, "rb") as f:
+                data = base64.standard_b64encode(f.read()).decode()
+
+        return [
+            {"type": "text", "text": "[Mijoz stiker yubordi]"},
+            {"type": "image", "source": {"type": "base64", "media_type": mime, "data": data}},
+        ]
+    except Exception as e:
+        log.warning("Stiker encode xatosi: %s", e)
         return None
 
 

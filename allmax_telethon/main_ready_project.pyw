@@ -18,6 +18,7 @@ import json
 from community_agent import CommunityAgent, AgentResult
 from media_handler import (
     get_media_kind, transcribe_message, encode_image_for_claude,
+    encode_gif_for_claude, encode_sticker_for_claude,
 )
 
 # =========================
@@ -1195,15 +1196,41 @@ async def build_chat_history(chat_id: int, my_id: int) -> list[dict]:
             result.append({"role": role, "content": content})
             continue
 
-        # ── Stiker / GIF / boshqa ──
+        # ── GIF ──
+        if getattr(msg, "gif", False):
+            if role == "user":
+                encoded = await encode_gif_for_claude(client, msg)
+                if encoded:
+                    if text_part:
+                        encoded = [{"type": "text", "text": text_part}] + [
+                            b for b in encoded if b.get("type") == "image"
+                        ]
+                    result.append({"role": role, "content": encoded})
+                    continue
+            result.append({"role": role, "content": text_part or "[GIF yuborildi]"})
+            continue
+
+        # ── Stiker ──
         if getattr(msg, "sticker", None):
-            result.append({"role": role, "content": "[Stiker yuborildi]"})
+            if role == "user":
+                encoded = await encode_sticker_for_claude(client, msg)
+                if encoded:
+                    if text_part:
+                        encoded = [{"type": "text", "text": text_part}] + [
+                            b for b in encoded if b.get("type") == "image"
+                        ]
+                    result.append({"role": role, "content": encoded})
+                    continue
+            result.append({"role": role, "content": text_part or "[Stiker yuborildi]"})
             continue
-        if msg.gif:
-            result.append({"role": role, "content": "[GIF yuborildi]"})
-            continue
+
         if text_part:
             result.append({"role": role, "content": text_part})
+
+    # "assistant message prefill" xatosini oldini olish:
+    # Claude API oxirgi xabar user bo'lishini talab qiladi
+    while result and result[-1]["role"] == "assistant":
+        result.pop()
 
     return result
 
