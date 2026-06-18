@@ -167,7 +167,9 @@ def _extract_audio(src: Path, dst: Path):
 
 
 def _transcribe_sync(model, audio_path: Path) -> str:
-    segments, _ = model.transcribe(str(audio_path), beam_size=1, vad_filter=True)
+    segments, _ = model.transcribe(
+        str(audio_path), beam_size=5, vad_filter=True, language="uz"
+    )
     return " ".join(s.text.strip() for s in segments).strip()
 
 
