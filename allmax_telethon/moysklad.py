@@ -96,7 +96,12 @@ def format_stock_reply(results: list[dict], query: str) -> str:
     Agent uchun stok natijalarini o'zbek tilida formatlaydi.
     """
     if not results:
-        return f"Kechirasiz, '{query}' bo'yicha mahsulot topilmadi 🙁"
+        return (
+            f"'{query}' bo'yicha MoySkladda hech narsa topilmadi. "
+            f"Imlo xatosi bo'lishi mumkin — boshqa variant bilan check_stock qayta chaqir "
+            f"(masalan: '{query}' o'rniga to'liqroq yoki to'g'ri imlosi bilan). "
+            f"2 ta urinishdan keyin ham 0 bo'lsa — mijozga yo'q de."
+        )
 
     in_stock  = [r for r in results if r["in_stock"]]
     out_stock = [r for r in results if not r["in_stock"]]
