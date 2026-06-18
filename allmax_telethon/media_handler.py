@@ -43,6 +43,15 @@ def _init_cache():
             created  TEXT DEFAULT (datetime('now'))
         )
     """)
+    con.execute("""
+        CREATE TABLE IF NOT EXISTS image_cache (
+            msg_id   INTEGER PRIMARY KEY,
+            mime     TEXT NOT NULL,
+            data     TEXT NOT NULL,
+            label    TEXT NOT NULL DEFAULT '[Mijoz rasm yubordi]',
+            created  TEXT DEFAULT (datetime('now'))
+        )
+    """)
     con.commit()
     con.close()
 
@@ -65,6 +74,37 @@ def _cache_set(msg_id: int, text: str):
         con.close()
     except Exception as e:
         log.warning("Media cache yozish xatosi: %s", e)
+
+
+def _img_cache_get(msg_id: int) -> Optional[list]:
+    try:
+        con = sqlite3.connect(_CACHE_DB)
+        row = con.execute(
+            "SELECT mime, data, label FROM image_cache WHERE msg_id=?", (msg_id,)
+        ).fetchone()
+        con.close()
+        if not row:
+            return None
+        mime, data, label = row
+        return [
+            {"type": "text", "text": label},
+            {"type": "image", "source": {"type": "base64", "media_type": mime, "data": data}},
+        ]
+    except Exception:
+        return None
+
+
+def _img_cache_set(msg_id: int, mime: str, data: str, label: str):
+    try:
+        con = sqlite3.connect(_CACHE_DB)
+        con.execute(
+            "INSERT OR REPLACE INTO image_cache (msg_id, mime, data, label) VALUES (?,?,?,?)",
+            (msg_id, mime, data, label),
+        )
+        con.commit()
+        con.close()
+    except Exception as e:
+        log.warning("Image cache yozish xatosi: %s", e)
 
 
 # ---------------------------------------------------------------------------
@@ -215,7 +255,11 @@ async def transcribe_message(tg_client, msg: Any) -> Optional[str]:
 # Image encoding for Claude Vision
 # ---------------------------------------------------------------------------
 async def encode_image_for_claude(tg_client, msg: Any) -> Optional[list]:
-    """Rasmni Claude Vision uchun base64 content block ro'yxatiga o'giradi."""
+    """Rasmni Claude Vision uchun base64 content block ro'yxatiga o'giradi. SQLite cache ishlatadi."""
+    cached = _img_cache_get(msg.id)
+    if cached is not None:
+        return cached
+
     try:
         with tempfile.TemporaryDirectory() as tmpdir:
             path = await tg_client.download_media(msg, file=str(Path(tmpdir) / "img"))
@@ -228,8 +272,10 @@ async def encode_image_for_claude(tg_client, msg: Any) -> Optional[list]:
             with open(path, "rb") as f:
                 data = base64.standard_b64encode(f.read()).decode()
 
+        label = "[Mijoz rasm yubordi]"
+        _img_cache_set(msg.id, mime, data, label)
         return [
-            {"type": "text", "text": "[Mijoz rasm yubordi]"},
+            {"type": "text", "text": label},
             {"type": "image", "source": {"type": "base64", "media_type": mime, "data": data}},
         ]
     except Exception as e:
@@ -251,8 +297,12 @@ def _extract_gif_frame_sync(src: Path, dst: Path):
 async def encode_gif_for_claude(tg_client, msg: Any) -> Optional[list]:
     """
     Telegram GIF (MPEG4 animatsiya) dan birinchi kadrni olib,
-    Claude Vision uchun image block sifatida qaytaradi.
+    Claude Vision uchun image block sifatida qaytaradi. SQLite cache ishlatadi.
     """
+    cached = _img_cache_get(msg.id)
+    if cached is not None:
+        return cached
+
     try:
         with tempfile.TemporaryDirectory() as tmpdir:
             media_path = await tg_client.download_media(msg, file=str(Path(tmpdir) / "gif"))
@@ -268,8 +318,10 @@ async def encode_gif_for_claude(tg_client, msg: Any) -> Optional[list]:
             with open(frame_path, "rb") as f:
                 data = base64.standard_b64encode(f.read()).decode()
 
+        label = "[Mijoz GIF yubordi]"
+        _img_cache_set(msg.id, "image/jpeg", data, label)
         return [
-            {"type": "text", "text": "[Mijoz GIF yubordi]"},
+            {"type": "text", "text": label},
             {"type": "image", "source": {"type": "base64", "media_type": "image/jpeg", "data": data}},
         ]
     except Exception as e:
@@ -304,6 +356,18 @@ async def encode_sticker_for_claude(tg_client, msg: Any) -> Optional[list]:
     except Exception as e:
         log.warning("Stiker encode xatosi: %s", e)
         return None
+
+
+# ---------------------------------------------------------------------------
+# Prewarm (startup da chaqiriladi)
+# ---------------------------------------------------------------------------
+async def prewarm_whisper():
+    """Servis ishga tushganda Whisper modelini oldindan yuklaydi."""
+    try:
+        await _get_model()
+        log.info("Whisper prewarm: model tayyor")
+    except Exception as exc:
+        log.warning("Whisper prewarm xatosi: %s", exc)
 
 
 # ---------------------------------------------------------------------------

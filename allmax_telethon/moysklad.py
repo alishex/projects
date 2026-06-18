@@ -20,7 +20,7 @@ log = logging.getLogger(__name__)
 _BASE        = "https://api.moysklad.ru/api/remap/1.2"
 _TIMEOUT     = 12
 _SHOWROOM_ID = "31a6eab6-c9cf-11ef-0a80-18080032558e"
-_CACHE_TTL   = 60  # sekund
+_CACHE_TTL   = 600  # sekund (10 daqiqa)
 
 # Showroom stok keshi: {timestamp: float, items: list[dict]}
 _cache: dict = {"ts": 0.0, "items": []}
@@ -108,6 +108,15 @@ def check_stock(query: str, top: int = 15) -> list[dict]:
     matched = [item for item in all_items if q in item["name"].lower()]
 
     return matched[:top]
+
+
+def prewarm():
+    """Servis ishga tushganda showroom keshini oldindan yuklaydi."""
+    try:
+        items = _fetch_showroom_stock()
+        log.info("MoySklad prewarm: %d ta mahsulot yuklandi", len(items))
+    except Exception as exc:
+        log.warning("MoySklad prewarm xatosi: %s", exc)
 
 
 def format_stock_reply(results: list[dict], query: str) -> str:
