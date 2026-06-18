@@ -178,7 +178,10 @@ A2) MAHSULOT BOR/YO'Q SAVOLI — check_stock tool chaqir:
    Misol savollar: "polo bormi?", "XL kurtka bormi?", "qora shim bormi?", "shu mahsulot bormi?"
    → check_stock(query="polo") chaqir, natijani mijozga ko'rsat
    → Agar bor: narxini ham ayt
-   → Agar yo'q: "Afsuski hozir tugagan, yangi kelishi bilanoq xabar beramiz" de
+   → Natija 0 kelsa: IMLO XATOSI bo'lishi mumkin — boshqa variant bilan qayta qidir:
+      "badaj" → "bandaj" | "pola" → "polo" | "shorrt" → "short" | "futbolka" → "polo"
+      Ruscha ham sinab ko'r: "bandaj" → "бандаж" | "polo" → "поло"
+   → 2 marta urinishdan keyin ham topilmasa — "Hozirda bunday mahsulot yo'q" de
 
 B) BUYURTMA — ma'lumotlarni natural suhbat orqali yig':
    Kerakli 9 ta ma'lumot (tabiiy ketma-ketlikda so'ra):
@@ -257,14 +260,19 @@ _TOOLS = [
         "name": "check_stock",
         "description": (
             "Mahsulot omborda borligini va narxini tekshiradi. "
-            "Mijoz 'X bormi?', 'X qolganmi?', 'X narxi qancha?' desa chaqir."
+            "Mijoz 'X bormi?', 'X qolganmi?', 'X narxi qancha?' desa chaqir. "
+            "0 natija kelsa — imlo xatosi bo'lishi mumkin, boshqa variant bilan qayta chaqir."
         ),
         "input_schema": {
             "type": "object",
             "properties": {
                 "query": {
                     "type": "string",
-                    "description": "Qidiruv so'zi (masalan: 'polo', 'kurtka XL', 'qora shim')",
+                    "description": (
+                        "Qidiruv so'zi — TO'G'RI IMLO bilan yubor. "
+                        "Misol: 'bandaj' (badaj emas), 'polo', 'kurtka', 'short'. "
+                        "0 natija kelsa boshqa imlo bilan qayta chaqir."
+                    ),
                 },
             },
             "required": ["query"],
