@@ -87,7 +87,7 @@ def _fetch_showroom_stock() -> list[dict]:
     return items
 
 
-def check_stock(query: str, top: int = 8) -> list[dict]:
+def check_stock(query: str, top: int = 15) -> list[dict]:
     """
     Showroom omborida query bo'yicha mahsulot qidiradi.
     Faqat mavjud (stock > 0) mahsulotlarni qaytaradi.
@@ -107,7 +107,6 @@ def check_stock(query: str, top: int = 8) -> list[dict]:
     q = query.lower().strip()
     matched = [item for item in all_items if q in item["name"].lower()]
 
-    # Natijalarni qisqartirish: agar juda ko'p variant bo'lsa top ta qaytarish
     return matched[:top]
 
 

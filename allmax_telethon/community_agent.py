@@ -187,8 +187,11 @@ A2) MAHSULOT BOR/YO'Q SAVOLI — check_stock tool chaqir:
    Misol savollar: "polo bormi?", "XL kurtka bormi?", "qora shim bormi?", "shu mahsulot bormi?"
    → check_stock(query="polo") chaqir, natijani mijozga ko'rsat
    → Agar bor: narxini ham ayt
-   → Natija 0 kelsa: IMLO XATOSI bo'lishi mumkin — boshqa variant bilan qayta qidir:
-      "badaj" → "bandaj" | "pola" → "polo" | "shorrt" → "short" | "futbolka" → "polo"
+   → Natija 0 kelsa: IMLO XATOSI yoki SINONIM bo'lishi mumkin — boshqa variant bilan qayta qidir:
+      IMLO:    "badaj" → "bandaj" | "pola" → "polo" | "shorrt" → "short"
+      SINONIM: "remen" → "kamar" | "ремень" → "kamar" | "belbog" → "kamar"
+               "futbolka" → "polo" | "майка" → "polo" | "джинсы" → "jins"
+               "кофта" → "koftа" | "куртка" → "kurtka" | "шорты" → "short"
       Ruscha ham sinab ko'r: "bandaj" → "бандаж" | "polo" → "поло"
    → 2 marta urinishdan keyin ham topilmasa — "Hozirda bunday mahsulot yo'q" de
 
@@ -270,7 +273,8 @@ _TOOLS = [
         "description": (
             "Mahsulot omborda borligini va narxini tekshiradi. "
             "Mijoz 'X bormi?', 'X qolganmi?', 'X narxi qancha?' desa chaqir. "
-            "0 natija kelsa — imlo xatosi bo'lishi mumkin, boshqa variant bilan qayta chaqir."
+            "0 natija kelsa — imlo xatosi yoki sinonim bo'lishi mumkin, boshqa variant bilan qayta chaqir. "
+            "Muhim sinonimlar: 'remen'→'kamar', 'ремень'→'kamar', 'belbog'→'kamar', 'futbolka'→'polo'."
         ),
         "input_schema": {
             "type": "object",
@@ -278,9 +282,10 @@ _TOOLS = [
                 "query": {
                     "type": "string",
                     "description": (
-                        "Qidiruv so'zi — TO'G'RI IMLO bilan yubor. "
-                        "Misol: 'bandaj' (badaj emas), 'polo', 'kurtka', 'short'. "
-                        "0 natija kelsa boshqa imlo bilan qayta chaqir."
+                        "Qidiruv so'zi — TO'G'RI IMLO va O'ZBEK NOMI bilan yubor. "
+                        "Sinonimlar: 'remen'/'ремень'/'belbog' → 'kamar', 'futbolka'→'polo'. "
+                        "Misol: 'kamar', 'bandaj', 'polo', 'kurtka', 'short'. "
+                        "0 natija kelsa sinonim yoki boshqa imlo bilan qayta chaqir."
                     ),
                 },
             },
