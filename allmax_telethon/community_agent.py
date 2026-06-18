@@ -255,6 +255,26 @@ def _work_msg() -> str:
     return f"Ertalab {_WORK_START}:30 dan operatorimiz siz bilan bog'lanadi 🕘"
 
 
+def _to_content_list(c) -> list:
+    if isinstance(c, list):
+        return list(c)
+    return [{"type": "text", "text": str(c)}]
+
+
+def _strip_images_from_assistant(messages: list[dict]) -> list[dict]:
+    """Claude API assistant turnida image block ruxsat bermaydi — birini ham o'tkazmaydi."""
+    out = []
+    for msg in messages:
+        if msg["role"] != "assistant" or not isinstance(msg.get("content"), list):
+            out.append(msg)
+            continue
+        clean = [b for b in msg["content"] if b.get("type") != "image"]
+        if not clean:
+            clean = [{"type": "text", "text": "[media]"}]
+        out.append({"role": "assistant", "content": clean if len(clean) > 1 else clean[0]["text"]})
+    return out
+
+
 def _merge_consecutive(messages: list[dict]) -> list[dict]:
     """Bir-biriga ketma-ket bir xil role xabarlarni birlashtiradi (Claude talabi)."""
     if not messages:
@@ -263,11 +283,10 @@ def _merge_consecutive(messages: list[dict]) -> list[dict]:
     for msg in messages[1:]:
         last = merged[-1]
         if msg["role"] == last["role"]:
-            def to_list(c):
-                if isinstance(c, list):
-                    return c
-                return [{"type": "text", "text": str(c)}]
-            merged[-1] = {"role": last["role"], "content": to_list(last["content"]) + to_list(msg["content"])}
+            merged[-1] = {
+                "role": last["role"],
+                "content": _to_content_list(last["content"]) + _to_content_list(msg["content"]),
+            }
         else:
             merged.append(dict(msg))
     return merged
@@ -296,6 +315,7 @@ class CommunityAgent:
             messages = [{"role": "user", "content": "Salom"}]
 
         prepared = _merge_consecutive(messages)
+        prepared = _strip_images_from_assistant(prepared)
 
         while prepared and prepared[0]["role"] == "assistant":
             prepared.pop(0)
