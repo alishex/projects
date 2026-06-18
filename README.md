@@ -2,7 +2,7 @@
 
 **ALLMAX** kompaniyasining barcha avtomatlashtirish loyihalari — Telegram botlar, Instagram integratsiya, CRM va AI yordamchilar.
 
-**Server:** DigitalOcean VPS — Ubuntu 24.04 — `209.38.239.245`  
+**Server:** DigitalOcean VPS — Ubuntu 24.04 — `209.38.239.245` — 2 vCPU / 4 GB RAM (s-2vcpu-4gb)  
 **AI:** Anthropic Claude `claude-opus-4-8` (barcha loyihalarda)  
 **GitHub:** [alishex/projects](https://github.com/alishex/projects)
 
@@ -33,10 +33,12 @@
 1. Telegram DM ga kelgan **matn, ovoz, video, rasm** xabarlarni o'qiydi
 2. Claude AI oxirgi **30 kunlik to'liq suhbat tarixini** tahlil qilib javob beradi
 3. Standart savollarga (manzil, narx, o'lcham, yetkazib berish, **ish vaqti 24/7**) avtomatik javob beradi
-4. Buyurtma ma'lumotlarini tabiiy suhbat orqali yig'adi (9 ta maydon)
-5. Buyurtma to'liq bo'lganda **Bitrix24 CRM lead + Projects task** yaratadi
-6. **Operator guruhiga** buyurtma xulasasi + Telegram havolasi yuboradi
-7. Murakkab savollarda operatorga yo'naltiradi
+4. **MoySklad** dan real vaqtda mahsulot mavjudligi va narxini tekshiradi (`check_stock` tool)
+5. Buyurtma ma'lumotlarini tabiiy suhbat orqali yig'adi (9 ta maydon)
+6. Buyurtma to'liq bo'lganda **Bitrix24 CRM lead + Projects task** yaratadi
+7. **Operator guruhiga** buyurtma xulasasi + Telegram havolasi yuboradi
+8. Murakkab savollarda operatorga yo'naltiradi
+9. Mijoz qaysi tilda yozsa — **shu tilda** javob beradi (O'zbek / Rus / Ingliz)
 
 **Fallback rejim (Community Agent o'chirilganda):**
 - Mijozdan ism va telefon so'raydi
@@ -68,10 +70,11 @@ Yangi DM (matn/ovoz/video/rasm)
     - 48 soat ovoz/video transkriptsiya (faster-whisper)
     - so'nggi 3 ta rasm (Claude Vision)
         |
-  CommunityAgent.process() — Claude API
+  CommunityAgent.process() — Claude API (agentic loop, max 4 iter)
+    - check_stock tool     → moysklad.py → stok + narx → tool_result
     - order_complete tool  → Bitrix CRM + task + guruh xabar
     - needs_human tool     → operatorga yo'naltirish
-    - oddiy javob          → mijozga yuboriladi
+    - oddiy javob          → mijozga yuboriladi (uz/ru/en)
 ```
 
 ### Do'kon ma'lumotlari (agent biladi)
@@ -82,18 +85,19 @@ Yangi DM (matn/ovoz/video/rasm)
 | **Telefon** | +998 78 555 31 31 |
 | **Do'kon ish vaqti** | **24/7** — hech qachon yopilmaydi |
 | **Call centre / Community** | Har kuni **09:00–22:00** |
-| **Narxlar** | 99 900 – 399 900 so'm (fix-price) |
+| **Narx bosqichlari** | 99 000 / 149 900 / 199 900 / 249 900 / 299 900 / Premium |
 | **To'lov** | Naqd, plastik, Uzum nasiya |
-| **Yetkazib berish** | O'zbekiston bo'ylab — BTS, EMU, UzPost |
+| **Yetkazib berish (viloyatlar)** | BTS (Nukus, Urganch, Buxoro, Navoiy, Samarqand, Qarshi, Termiz, Farg'ona, Namangan, Andijon, Guliston, Jizzax), EMU, UzPost |
+| **Yetkazib berish (Toshkent)** | YandexGo kuryer |
 
 ### Texnologiyalar
 
 | Kutubxona | Vazifasi |
 |---|---|
 | `telethon` | Telegram user-account client (`allmax_cm_session`) |
-| `anthropic` | Claude AI — Community Agent (tool-use) |
+| `anthropic` | Claude AI — Community Agent (tool-use, agentic loop) |
 | `faster-whisper` | Ovoz/video transkriptsiya (base model) |
-| `requests` | Bitrix24 API so'rovlari |
+| `requests` | Bitrix24 API + MoySklad API so'rovlari |
 | `sqlite3` | Analytics + media transcription cache |
 | `python-dotenv` | .env konfiguratsiya |
 
@@ -108,6 +112,7 @@ COMMUNITY_WORK_END=22
 COMMUNITY_HISTORY_LIMIT=60
 COMMUNITY_HISTORY_DAYS=30
 COMMUNITY_MEDIA_HOURS=48
+MOYSKLAD_TOKEN=<MoySklad Bearer token>
 ```
 
 ### Fayllar
@@ -115,7 +120,8 @@ COMMUNITY_MEDIA_HOURS=48
 | Fayl | Vazifasi |
 |---|---|
 | `main_ready_project.pyw` | Asosiy bot, event handler, Bitrix integratsiya |
-| `community_agent.py` | Claude AI Community Agent (tool-use, suhbat logikasi) |
+| `community_agent.py` | Claude AI Community Agent (tool-use, agentic loop, ko'p til) |
+| `moysklad.py` | MoySklad REST API — mahsulot qidirish + stok tekshiruvi |
 | `media_handler.py` | Ovoz/video transkriptsiya, rasm encoding, SQLite cache |
 
 ### Systemd
