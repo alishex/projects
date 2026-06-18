@@ -30,7 +30,7 @@
 ### Nima qiladi
 
 **Community Agent (asosiy rejim):**
-1. Telegram DM ga kelgan **matn, ovoz, video, rasm** xabarlarni o'qiydi
+1. Telegram DM ga kelgan **matn, ovoz (golos), round video, video, rasm, GIF, stiker** xabarlarni o'qiydi
 2. Claude AI oxirgi **30 kunlik to'liq suhbat tarixini** tahlil qilib javob beradi
 3. Standart savollarga (manzil, narx, o'lcham, yetkazib berish, **ish vaqti 24/7**) avtomatik javob beradi
 4. **MoySklad** dan real vaqtda mahsulot mavjudligi va narxini tekshiradi (`check_stock` tool)
@@ -67,8 +67,8 @@ Yangi DM (matn/ovoz/video/rasm)
         |
   build_chat_history()
     - 30 kun matn tarixi
-    - 48 soat ovoz/video transkriptsiya (faster-whisper)
-    - so'nggi 3 ta rasm (Claude Vision)
+    - 48 soat ovoz/round video/video transkriptsiya (faster-whisper)
+    - so'nggi 3 ta rasm + GIF + stiker (Claude Vision)
         |
   CommunityAgent.process() — Claude API (agentic loop, max 4 iter)
     - check_stock tool     → moysklad.py → stok + narx → tool_result
@@ -122,7 +122,7 @@ MOYSKLAD_TOKEN=<MoySklad Bearer token>
 | `main_ready_project.pyw` | Asosiy bot, event handler, Bitrix integratsiya |
 | `community_agent.py` | Claude AI Community Agent (tool-use, agentic loop, ko'p til) |
 | `moysklad.py` | MoySklad REST API — mahsulot qidirish + stok tekshiruvi |
-| `media_handler.py` | Ovoz/video transkriptsiya, rasm encoding, SQLite cache |
+| `media_handler.py` | Ovoz/round video transkriptsiya, rasm/GIF/stiker Claude Vision, SQLite cache |
 
 ### Systemd
 
