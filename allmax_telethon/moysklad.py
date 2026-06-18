@@ -69,7 +69,7 @@ def _fetch_showroom_stock() -> list[dict]:
             qty = float(r.get("stock", 0))
             if qty <= 0:
                 continue
-            raw_price = int(r.get("price", 0))
+            raw_price = int(r.get("salePrice", 0))
             items.append({
                 "name":      r["name"],
                 "price_som": raw_price // 100,
