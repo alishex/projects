@@ -5,6 +5,7 @@ Arxitektura:
   - Caller (main_ready_project) to'liq chat tarixini yig'adi (matn + transkriptsiya + rasmlar)
   - Bu modul faqat Claude API bilan ishlaydi
   - order_complete / needs_human tool-use orqali signal beradi
+  - check_stock → moysklad.py orqali stok tekshiradi (agentic loop)
 """
 
 import logging
@@ -14,6 +15,7 @@ from datetime import datetime, timezone, timedelta
 from typing import Optional
 
 import anthropic
+import moysklad
 
 log = logging.getLogger(__name__)
 
@@ -144,7 +146,7 @@ ALLMAX haqida:
 {_KNOWLEDGE}
 
 ASOSIY QOIDALAR (HECH QACHON BUZMA):
-1. Mahsulot bor yoki yo'qligi haqida ASLO o'zing qaror qilma
+1. Mahsulot bor yoki yo'qligi haqida ASLO o'zing taxmin qilma — check_stock tool chaqir
 2. Buyurtmani faqat operator tasdiqlaydi — sen faqat ma'lumot yig'asan
 3. Faqat O'ZBEK tilida gapir
 4. Samimiy, muloyim, professional — robotday EMAS
@@ -171,6 +173,12 @@ A) STANDART SAVOLLAR (o'zing javob ber):
    dostavka  → Toshkent shahri: YandexGo | Boshqa: BTS/EMU/UzPost
    almashtirish → mumkin, batafsil operator aytadi
    ish vaqti → DO'KON 24/7 ishlaydi; call centre va community 09:00–22:00
+
+A2) MAHSULOT BOR/YO'Q SAVOLI — check_stock tool chaqir:
+   Misol savollar: "polo bormi?", "XL kurtka bormi?", "qora shim bormi?", "shu mahsulot bormi?"
+   → check_stock(query="polo") chaqir, natijani mijozga ko'rsat
+   → Agar bor: narxini ham ayt
+   → Agar yo'q: "Afsuski hozir tugagan, yangi kelishi bilanoq xabar beramiz" de
 
 B) BUYURTMA — ma'lumotlarni natural suhbat orqali yig':
    Kerakli 9 ta ma'lumot (tabiiy ketma-ketlikda so'ra):
@@ -245,6 +253,23 @@ _TOOLS = [
             "required": ["reason"],
         },
     },
+    {
+        "name": "check_stock",
+        "description": (
+            "Mahsulot omborda borligini va narxini tekshiradi. "
+            "Mijoz 'X bormi?', 'X qolganmi?', 'X narxi qancha?' desa chaqir."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "Qidiruv so'zi (masalan: 'polo', 'kurtka XL', 'qora shim')",
+                },
+            },
+            "required": ["query"],
+        },
+    },
 ]
 
 
@@ -310,6 +335,12 @@ class CommunityAgent:
         messages: Claude API formatidagi to'liq suhbat tarixi.
         Caller (main) Telegram DM tarixini build qilib beradi.
         Synchronous — asyncio.to_thread() orqali chaqirilsin.
+
+        check_stock tool uchun agentic loop (maks 3 iteratsiya):
+          1) Claude check_stock chaqiradi
+          2) Biz moysklad.check_stock() bajaramiz
+          3) Natijani tool_result sifatida qaytaramiz
+          4) Claude mijozga javob beradi
         """
         if not messages:
             messages = [{"role": "user", "content": "Salom"}]
@@ -322,42 +353,74 @@ class CommunityAgent:
         if not prepared:
             prepared = [{"role": "user", "content": "Salom"}]
 
-        try:
-            resp = self._client.messages.create(
-                model=self._model,
-                max_tokens=1200,
-                system=SYSTEM_PROMPT,
-                tools=_TOOLS,
-                messages=prepared,
-            )
-        except anthropic.RateLimitError as e:
-            log.warning("Claude rate limit: %s", e)
-            return AgentResult(reply="Tizimda vaqtinchalik muammo, biroz kutib qayta yozing 🙏")
-        except anthropic.APIError as e:
-            log.error("Claude API xatosi: %s", e)
-            return AgentResult(reply="Tizimda muammo yuz berdi 🙏")
-        except Exception as e:
-            log.exception("Claude kutilmagan xato: %s", e)
-            return AgentResult(reply="Tizimda muammo yuz berdi 🙏")
-
+        current = list(prepared)
         parts: list[str] = []
         order_data = None
         needs_human = False
         human_reason = ""
 
-        for block in resp.content:
-            if block.type == "text":
-                t = (block.text or "").strip()
-                if t:
-                    parts.append(t)
-            elif block.type == "tool_use":
-                if block.name == "order_complete":
-                    order_data = dict(block.input)
-                    parts.append(_work_msg())
-                elif block.name == "needs_human":
-                    needs_human  = True
-                    human_reason = (block.input or {}).get("reason", "")
-                    parts.append("Operatorimizga yo'naltirdim, tez orada bog'lanishadi 🙏")
+        for _iteration in range(4):  # maks 4 iteratsiya (3 check_stock + 1 final)
+            try:
+                resp = self._client.messages.create(
+                    model=self._model,
+                    max_tokens=1200,
+                    system=SYSTEM_PROMPT,
+                    tools=_TOOLS,
+                    messages=current,
+                )
+            except anthropic.RateLimitError as e:
+                log.warning("Claude rate limit: %s", e)
+                return AgentResult(reply="Tizimda vaqtinchalik muammo, biroz kutib qayta yozing 🙏")
+            except anthropic.APIError as e:
+                log.error("Claude API xatosi: %s", e)
+                return AgentResult(reply="Tizimda muammo yuz berdi 🙏")
+            except Exception as e:
+                log.exception("Claude kutilmagan xato: %s", e)
+                return AgentResult(reply="Tizimda muammo yuz berdi 🙏")
+
+            # Tool call larni ajratib olish
+            tool_calls = [b for b in resp.content if b.type == "tool_use"]
+            stock_calls = [b for b in tool_calls if b.name == "check_stock"]
+
+            # check_stock bo'lmasa yoki terminal tool bo'lsa — tugatamiz
+            if not stock_calls:
+                for block in resp.content:
+                    if block.type == "text":
+                        t = (block.text or "").strip()
+                        if t:
+                            parts.append(t)
+                    elif block.type == "tool_use":
+                        if block.name == "order_complete":
+                            order_data = dict(block.input)
+                            parts.append(_work_msg())
+                        elif block.name == "needs_human":
+                            needs_human  = True
+                            human_reason = (block.input or {}).get("reason", "")
+                            parts.append("Operatorimizga yo'naltirdim, tez orada bog'lanishadi 🙏")
+                break
+
+            # check_stock tool larini bajaramiz
+            tool_results = []
+            for tc in stock_calls:
+                query = (tc.input or {}).get("query", "")
+                log.info("MoySklad stok qidiruvi: %s", query)
+                try:
+                    results = moysklad.check_stock(query)
+                    result_text = moysklad.format_stock_reply(results, query)
+                except Exception as exc:
+                    log.warning("moysklad.check_stock xatosi: %s", exc)
+                    result_text = f"Stok ma'lumotini olishda xatolik yuz berdi."
+                tool_results.append({
+                    "type":        "tool_result",
+                    "tool_use_id": tc.id,
+                    "content":     result_text,
+                })
+
+            # Navbatdagi iteratsiya uchun xabarlar ro'yxatiga qo'shamiz
+            current = current + [
+                {"role": "assistant", "content": list(resp.content)},
+                {"role": "user",      "content": tool_results},
+            ]
 
         reply = "\n\n".join(parts).strip()
         return AgentResult(
