@@ -25,6 +25,8 @@ from media_handler import (
 # =========================
 _ANALYTICS_DB = Path(__file__).parent / "analytics" / "telegram_dm_log.sqlite3"
 
+_REPORT_TZ = timedelta(hours=5)  # UTC+5 Toshkent
+
 def _init_analytics_db():
     _ANALYTICS_DB.parent.mkdir(exist_ok=True)
     con = _sqlite3.connect(_ANALYTICS_DB)
@@ -35,8 +37,45 @@ def _init_analytics_db():
             ts    TEXT NOT NULL DEFAULT (datetime('now'))
         )
     """)
+    con.execute("""
+        CREATE TABLE IF NOT EXISTS daily_contacts (
+            id           INTEGER PRIMARY KEY AUTOINCREMENT,
+            date         TEXT NOT NULL,
+            user_id      INTEGER NOT NULL,
+            display_name TEXT,
+            username     TEXT,
+            topic        TEXT,
+            contact_type TEXT NOT NULL DEFAULT 'general',
+            updated_at   TEXT NOT NULL DEFAULT (datetime('now')),
+            UNIQUE(date, user_id)
+        )
+    """)
     con.commit()
     con.close()
+
+
+def _save_daily_contact(user_id: int, display_name: str, username: str, topic: str, contact_type: str = "general"):
+    today = (datetime.now(timezone.utc) + _REPORT_TZ).strftime("%Y-%m-%d")
+    try:
+        con = _sqlite3.connect(_ANALYTICS_DB)
+        con.execute("""
+            INSERT INTO daily_contacts (date, user_id, display_name, username, topic, contact_type, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
+            ON CONFLICT(date, user_id) DO UPDATE SET
+                display_name = excluded.display_name,
+                username     = excluded.username,
+                topic        = excluded.topic,
+                contact_type = CASE
+                    WHEN excluded.contact_type = 'order' THEN 'order'
+                    WHEN excluded.contact_type = 'human' AND daily_contacts.contact_type != 'order' THEN 'human'
+                    ELSE daily_contacts.contact_type
+                END,
+                updated_at = excluded.updated_at
+        """, (today, user_id, display_name, username, topic, contact_type))
+        con.commit()
+        con.close()
+    except Exception as e:
+        logging.warning("daily_contact save xatosi: %s", e)
 
 def _log_dm_event(user_id: int):
     try:
@@ -833,6 +872,30 @@ def push_project_task_to_bitrix_if_needed(
 
 
 # =========================
+# CONTACT TOPIC HELPER
+# =========================
+def _build_contact_topic(result, messages: list[dict]) -> tuple[str, str]:
+    """AgentResult dan qisqa mavzu va turini aniqlaydi."""
+    if result.order_data:
+        od = result.order_data
+        parts = [od.get("product", ""), od.get("size", ""), od.get("color", "")]
+        info = ", ".join(x for x in parts if x)
+        return (f"Buyurtma: {info}" if info else "Buyurtma berdi"), "order"
+    if result.needs_human:
+        reason = result.human_reason or "murakkab savol"
+        return f"Operator kerak: {reason}", "human"
+    user_msgs = [m["content"] for m in messages if m["role"] == "user"]
+    if user_msgs:
+        last = user_msgs[-1]
+        text = last if isinstance(last, str) else (
+            next((b["text"] for b in last if isinstance(b, dict) and b.get("type") == "text"), "") if isinstance(last, list) else ""
+        )
+        if text:
+            return text[:80].replace("\n", " ").strip(), "general"
+    return "Umumiy savol", "general"
+
+
+# =========================
 # EXTERNAL PUSH
 # =========================
 async def send_lead_to_group(sender, user_id: int, customer_name: str, phone: str, source_text: str):
@@ -857,6 +920,128 @@ async def send_lead_to_group(sender, user_id: int, customer_name: str, phone: st
 
     entity = await resolve_target_entity(LEAD_GROUP, "lead_group")
     await client.send_message(entity, msg)
+
+
+# =========================
+# AUTO CONTACT → PROJECT TASK
+# =========================
+async def _try_auto_contact_task(event, sender, user_id: int, text: str):
+    """
+    Mijoz ismi va telefoni aniqlansa — faqat Bitrix Project task ochadi (CRM ga yozmaydi).
+    Xarid qilish shart emas — ism+nomer yetarli.
+    """
+    state = lead_state[user_id]
+    if state["sent_to_project_task"]:
+        return
+    if not BITRIX_PROJECT_ENABLE or not BITRIX_PROJECT_GROUP_ID:
+        return
+
+    name, phone = extract_name_and_phone(text)
+    if not (name and phone):
+        me = await client.get_me()
+        recent = await collect_recent_customer_messages(event.chat_id, me.id, {event.id}, 15)
+        full_text = f"{recent}\n{text}".strip()
+        name, phone = extract_name_and_phone(full_text)
+
+    if not (name and phone):
+        return
+
+    if not state["name"]:
+        state["name"] = name
+    if not state["phone"]:
+        state["phone"] = phone
+
+    sender_name, username = _sender_display(sender, user_id)
+    source_text = text or "[contact]"
+
+    try:
+        ok, task_id, status = await asyncio.to_thread(
+            push_project_task_to_bitrix_if_needed,
+            user_id, sender_name, username,
+            name, phone, source_text,
+            None,
+        )
+        logging.info("Auto contact task: user=%s name=%s phone=%s task_id=%s status=%s", user_id, name, phone, task_id, status)
+    except Exception as e:
+        logging.warning("Auto contact task xatosi: %s", e)
+
+
+# =========================
+# DAILY REPORT
+# =========================
+async def _send_daily_report():
+    """Kecha (00:00–23:59 UZT) uchun kunlik hisobot guruhga yuboradi."""
+    yesterday = ((datetime.now(timezone.utc) + _REPORT_TZ) - timedelta(days=1)).strftime("%Y-%m-%d")
+
+    try:
+        con = _sqlite3.connect(_ANALYTICS_DB)
+        rows = con.execute("""
+            SELECT user_id, display_name, username, topic, contact_type
+            FROM daily_contacts WHERE date = ? ORDER BY id ASC
+        """, (yesterday,)).fetchall()
+        con.close()
+    except Exception as e:
+        logging.exception("Daily report DB xatosi: %s", e)
+        return
+
+    count = len(rows)
+    orders  = sum(1 for r in rows if r[4] == "order")
+    humans  = sum(1 for r in rows if r[4] == "human")
+    generals = count - orders - humans
+
+    day_names = ["Dushanba", "Seshanba", "Chorshanba", "Payshanba", "Juma", "Shanba", "Yakshanba"]
+    dt = datetime.strptime(yesterday, "%Y-%m-%d")
+    day_name = day_names[dt.weekday()]
+
+    lines = [
+        "📊  KUNLIK HISOBOT",
+        f"📅  {yesterday}  |  {day_name}",
+        "",
+        f"📩  Jami murojaat: {count} ta odam",
+    ]
+
+    if count > 0:
+        lines += ["", "👥  Murojaatchilar:", "─" * 28]
+        icons = {"order": "🛒", "human": "🙋", "general": "💬"}
+        for i, (uid, name, uname, topic, ctype) in enumerate(rows, 1):
+            name_str  = name or "Noma'lum"
+            link_str  = f"@{uname}" if uname else f"ID:{uid}"
+            icon      = icons.get(ctype, "💬")
+            topic_str = (topic or "—")[:90]
+            lines.append(f"{i}. 👤 {name_str}  ({link_str})")
+            lines.append(f"    {icon} {topic_str}")
+        lines += [
+            "─" * 28,
+            f"🛒 Buyurtmalar: {orders}   🙋 Operatorga: {humans}   💬 Umumiy: {generals}",
+        ]
+    else:
+        lines += ["", "— Bugun hech kim murojaat qilmagan."]
+
+    msg = "\n".join(lines)
+
+    if not LEAD_GROUP:
+        logging.warning("LEAD_GROUP berilmagan — daily report yuborilmadi.")
+        return
+    try:
+        entity = await resolve_target_entity(LEAD_GROUP, "lead_group")
+        await client.send_message(entity, msg)
+        logging.info("Daily report yuborildi: %s | jami=%s", yesterday, count)
+    except Exception as e:
+        logging.exception("Daily report yuborish xatosi: %s", e)
+
+
+async def _daily_report_loop():
+    """Har kuni 00:00 UZT da _send_daily_report chaqiradi."""
+    while True:
+        now_uzt = datetime.now(timezone.utc) + _REPORT_TZ
+        midnight = (now_uzt + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+        wait_sec = (midnight - now_uzt).total_seconds()
+        logging.info("Daily report %d soniyadan keyin (%s 00:00 UZT)", int(wait_sec), midnight.strftime("%Y-%m-%d"))
+        await asyncio.sleep(wait_sec)
+        try:
+            await _send_daily_report()
+        except Exception as e:
+            logging.exception("Daily report loop xatosi: %s", e)
 
 
 # =========================
@@ -1046,6 +1231,14 @@ async def process_with_community_agent(event, sender, user_id: int) -> bool:
     except Exception as exc:
         logging.exception("Community agent xatosi: %s", exc)
         return False
+
+    # ── Kunlik statistikaga yoz ──
+    try:
+        sender_name_dc, uname_dc = _sender_display(sender, user_id)
+        topic_dc, ctype_dc = _build_contact_topic(result, messages)
+        _save_daily_contact(user_id, sender_name_dc, uname_dc, topic_dc, ctype_dc)
+    except Exception as _dc_err:
+        logging.warning("daily_contact save: %s", _dc_err)
 
     # ── Mijozga javob ──
     if result.reply:
@@ -1251,6 +1444,9 @@ async def process_burst_events(events_batch: list):
 
         if COMMUNITY_AGENT_ENABLE and community_agent_inst:
             await process_with_community_agent(first_event, sender, user_id)
+            # Ism+nomer aniqlansa — faqat Bitrix Project task (CRM emas)
+            if merged_text:
+                await _try_auto_contact_task(first_event, sender, user_id, merged_text)
         else:
             history_info = await inspect_chat_history(
                 chat_id=first_event.chat_id,
@@ -1393,6 +1589,9 @@ async def main():
     logging.info("Lead group enabled: %s", LEAD_GROUP)
     logging.info("Bitrix CRM enabled: %s", BITRIX_ENABLE)
     logging.info("Bitrix project task enabled: %s | group_id=%s | responsible_id=%s", BITRIX_PROJECT_ENABLE, BITRIX_PROJECT_GROUP_ID, BITRIX_PROJECT_RESPONSIBLE_ID)
+
+    asyncio.create_task(_daily_report_loop())
+    logging.info("Daily report loop started (har kuni 00:00 UZT)")
 
     await client.run_until_disconnected()
 
