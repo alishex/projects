@@ -246,6 +246,10 @@ async def transcribe_message(tg_client, msg: Any) -> Optional[str]:
         _cache_set(msg.id, result)
         return result
 
+    except subprocess.CalledProcessError as e:
+        stderr_tail = (e.stderr or b"").decode(errors="replace")[-400:]
+        log.warning("Transkriptsiya xatosi msg_id=%s exit=%s | ffmpeg stderr: %s", msg.id, e.returncode, stderr_tail)
+        return f"[{media_label(kind)} — xatolik]"
     except Exception as e:
         log.warning("Transkriptsiya xatosi msg_id=%s: %s", msg.id, e)
         return f"[{media_label(kind)} — xatolik]"
