@@ -88,7 +88,7 @@
 
 | | |
 |---|---|
-| **Manzil** | Toshkent, Bunyodkor Savdo Majmuasi (Korzinka 1-qavat), metro: Mirzo Ulug'bek |
+| **Manzil** | Toshkent, Bunyodkor Savdo Majmuasi (Korzinka -1-qavat, er osti qavat), metro: Mirzo Ulug'bek |
 | **Telefon** | +998 78 555 31 31 |
 | **Do'kon ish vaqti** | **24/7** — hech qachon yopilmaydi |
 | **Call centre / Community** | Har kuni **09:30–22:00** |
@@ -112,8 +112,9 @@ Yangi DM (matn/ovoz/video/rasm/GIF/stiker)
         │
   CommunityAgent.process() — Claude API (agentic loop, maks 4 iteratsiya)
     ├─ check_stock tool     → moysklad.py → showroom stok + narx → tool_result
-    ├─ order_complete tool  → Bitrix24 CRM lead + Projects task + guruh xabar
-    ├─ needs_human tool     → operator guruhiga yo'naltirish
+    ├─ order_complete tool  → Bitrix24 CRM lead + Projects task + guruh xabar (eski o'chirilib, yangi tashlanadi)
+    ├─ needs_human tool     → operator guruhiga yo'naltirish (eski o'chirilib, yangi tashlanadi)
+    ├─ share_location tool  → mijozga geolokatsiya pin yuboradi (41.283123, 69.212336)
     └─ oddiy javob          → mijozga yuboriladi (uz/ru/en)
         │
   _try_auto_contact_task() — ism+telefon aniqlansa Bitrix24 Project task
@@ -138,7 +139,7 @@ Yangi DM (matn/ovoz/video/rasm/GIF/stiker)
 | `anthropic` | Claude AI `claude-opus-4-8` — Community Agent (tool-use, agentic loop) |
 | `faster-whisper` | Ovoz/video transkriptsiya (`base` model, `language="uz"`, `beam_size=5`) |
 | `ffmpeg` | Audio ajratish (WebM/OGG format detection by magic bytes) |
-| `sqlite3` | Analytics DB + media transcription cache + image cache |
+| `sqlite3` | Analytics DB + media transcription cache + image cache + lead_group_messages |
 | `requests` | Bitrix24 API so'rovlari |
 | `urllib` | MoySklad REST API (gzip encoding majburiy) |
 | `python-dotenv` | .env konfiguratsiya |
