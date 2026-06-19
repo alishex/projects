@@ -96,9 +96,37 @@ def _fetch_showroom_stock() -> list[dict]:
         return []
 
 
+# MoySkladdagi mahsulot nomlari o'zbekcha/ruscha aralash —
+# mijoz bir tilda so'rasa, ikkinchi tildagi nom ham qidirilsin.
+_SYNONYMS: dict[str, list[str]] = {
+    "remen":      ["kamar", "belt"],
+    "belt":       ["kamar", "remen"],
+    "kamar":      ["remen", "belt"],
+    "atir":       ["parfum", "adekalon"],
+    "parfum":     ["atir", "adekalon"],
+    "adekalon":   ["atir", "parfum"],
+    "soat":       ["qo'l soat"],
+    "часы":       ["qo'l soat", "soat"],
+    "ochki":      ["ko'zoynak"],
+    "achki":      ["ko'zoynak"],
+    "ko'zoynak":  ["ochki"],
+    "очки":       ["ko'zoynak", "ochki"],
+    "sumka":      ["yon sumka", "bananka"],
+    "çanta":      ["sumka", "yon sumka"],
+    "kostyum":    ["kastyum", "kastyum-shim"],
+    "kastyum":    ["kostyum", "kastyum-shim"],
+    "kurtka":     ["vetrovka"],
+    "vetrovka":   ["kurtka"],
+    "paypoq":     ["носки", "носок"],
+    "носки":      ["paypoq"],
+    "qo'lqop":    ["перчатки"],
+}
+
+
 def check_stock(query: str, top: int = 15) -> list[dict]:
     """
     Showroom omborida query bo'yicha mahsulot qidiradi.
+    Synonym qidiruvi: "remen" → "kamar" ham qidiriladi.
     Faqat mavjud (stock > 0) mahsulotlarni qaytaradi.
 
     Returns: [{"name": str, "price_som": int, "stock": int, "in_stock": bool}]
@@ -114,7 +142,17 @@ def check_stock(query: str, top: int = 15) -> list[dict]:
         return []
 
     q = query.lower().strip()
-    matched = [item for item in all_items if q in item["name"].lower()]
+
+    # Asosiy qidiruv + synonym qidiruv
+    search_terms = [q] + _SYNONYMS.get(q, [])
+    seen_names: set[str] = set()
+    matched: list[dict] = []
+    for term in search_terms:
+        for item in all_items:
+            name = item["name"].lower()
+            if term in name and item["name"] not in seen_names:
+                seen_names.add(item["name"])
+                matched.append(item)
 
     return matched[:top]
 
