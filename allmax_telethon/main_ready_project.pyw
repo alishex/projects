@@ -13,13 +13,13 @@ import requests
 from dotenv import load_dotenv
 from telethon import TelegramClient, events
 from telethon.errors import FloodWaitError, SessionPasswordNeededError
+from telethon.tl.functions.messages import SendMediaRequest
+from telethon.tl.types import InputGeoPoint, InputMediaGeoPoint
 import anthropic
 import json
 from community_agent import CommunityAgent, AgentResult
-import moysklad
 from media_handler import (
     get_media_kind, transcribe_message, encode_image_for_claude,
-    encode_gif_for_claude, encode_sticker_for_claude, prewarm_whisper,
 )
 
 # =========================
@@ -52,8 +52,38 @@ def _init_analytics_db():
             UNIQUE(date, user_id)
         )
     """)
+    con.execute("""
+        CREATE TABLE IF NOT EXISTS lead_group_messages (
+            user_id    INTEGER PRIMARY KEY,
+            message_id INTEGER NOT NULL,
+            updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+        )
+    """)
     con.commit()
     con.close()
+
+
+def _get_lead_msg_id(user_id: int) -> Optional[int]:
+    try:
+        con = _sqlite3.connect(_ANALYTICS_DB)
+        row = con.execute("SELECT message_id FROM lead_group_messages WHERE user_id=?", (user_id,)).fetchone()
+        con.close()
+        return row[0] if row else None
+    except Exception:
+        return None
+
+
+def _set_lead_msg_id(user_id: int, message_id: int):
+    try:
+        con = _sqlite3.connect(_ANALYTICS_DB)
+        con.execute(
+            "INSERT OR REPLACE INTO lead_group_messages (user_id, message_id, updated_at) VALUES (?,?,datetime('now'))",
+            (user_id, message_id),
+        )
+        con.commit()
+        con.close()
+    except Exception as e:
+        logging.warning("lead_group_messages yozish xatosi: %s", e)
 
 
 def _save_daily_contact(user_id: int, display_name: str, username: str, topic: str, contact_type: str = "general"):
@@ -877,7 +907,7 @@ def push_project_task_to_bitrix_if_needed(
 # CONTACT TOPIC HELPER
 # =========================
 def _build_contact_topic(result, messages: list[dict]) -> tuple[str, str]:
-    """AgentResult va suhbat tarixidan suhbat mazmunini va turini aniqlaydi."""
+    """AgentResult dan qisqa mavzu va turini aniqlaydi."""
     if result.order_data:
         od = result.order_data
         parts = [od.get("product", ""), od.get("size", ""), od.get("color", "")]
@@ -886,37 +916,33 @@ def _build_contact_topic(result, messages: list[dict]) -> tuple[str, str]:
     if result.needs_human:
         reason = result.human_reason or "murakkab savol"
         return f"Operator kerak: {reason}", "human"
-
-    # Mazmunli user xabarlarini (oxirgidan boshlab) topamiz
-    _skip = {"ha", "yo'q", "yoq", "ok", "okay", "yaxshi", "rahmat", "salom",
-             "xayr", "bo'ldi", "boldi", "tushunarli", "👍", "👌", "😊", "✅"}
-    meaningful: list[str] = []
-    for m in reversed(messages):
-        if m["role"] != "user":
-            continue
-        content = m["content"]
-        if isinstance(content, str):
-            text = content.strip()
-        elif isinstance(content, list):
-            text = next(
-                (b["text"] for b in content if isinstance(b, dict) and b.get("type") == "text"), ""
-            ).strip()
-        else:
-            continue
-        if len(text) > 4 and text.lower() not in _skip:
-            meaningful.append(text.replace("\n", " ")[:60])
-        if len(meaningful) >= 2:
-            break
-
-    meaningful.reverse()
-    if meaningful:
-        return " → ".join(meaningful)[:110], "general"
-    return "Umumiy murojaat", "general"
+    user_msgs = [m["content"] for m in messages if m["role"] == "user"]
+    if user_msgs:
+        last = user_msgs[-1]
+        text = last if isinstance(last, str) else (
+            next((b["text"] for b in last if isinstance(b, dict) and b.get("type") == "text"), "") if isinstance(last, list) else ""
+        )
+        if text:
+            return text[:80].replace("\n", " ").strip(), "general"
+    return "Umumiy savol", "general"
 
 
 # =========================
 # EXTERNAL PUSH
 # =========================
+async def _send_to_group_with_update(user_id: int, msg_text: str):
+    """Guruhga xabar yuboradi. Agar bu user uchun eski xabar bo'lsa — avval o'chirib yangisini tashlaydi."""
+    entity = await resolve_target_entity(LEAD_GROUP, "lead_group")
+    sent = await client.send_message(entity, msg_text)
+    old_msg_id = _get_lead_msg_id(user_id)
+    if old_msg_id:
+        try:
+            await client.delete_messages(entity, [old_msg_id])
+        except Exception as e:
+            logging.warning("Eski guruh xabari o'chirishda xato msg_id=%s: %s", old_msg_id, e)
+    _set_lead_msg_id(user_id, sent.id)
+
+
 async def send_lead_to_group(sender, user_id: int, customer_name: str, phone: str, source_text: str):
     sender_name = " ".join(
         x for x in [
@@ -937,8 +963,7 @@ async def send_lead_to_group(sender, user_id: int, customer_name: str, phone: st
         f"Mijoz xabari:\n{source_text}"
     )
 
-    entity = await resolve_target_entity(LEAD_GROUP, "lead_group")
-    await client.send_message(entity, msg)
+    await _send_to_group_with_update(user_id, msg)
 
 
 # =========================
@@ -998,26 +1023,14 @@ async def _send_daily_report():
             SELECT user_id, display_name, username, topic, contact_type
             FROM daily_contacts WHERE date = ? ORDER BY id ASC
         """, (yesterday,)).fetchall()
-        # Yangi mijozlar — ilgari hech qachon murojaat qilmaganlar
-        new_user_ids = set(
-            r[0] for r in con.execute("""
-                SELECT DISTINCT user_id FROM daily_contacts
-                WHERE date = ?
-                  AND user_id NOT IN (
-                      SELECT DISTINCT user_id FROM daily_contacts WHERE date < ?
-                  )
-            """, (yesterday, yesterday)).fetchall()
-        )
         con.close()
     except Exception as e:
         logging.exception("Daily report DB xatosi: %s", e)
         return
 
-    count    = len(rows)
-    new_cnt  = len(new_user_ids)
-    ret_cnt  = count - new_cnt
-    orders   = sum(1 for r in rows if r[4] == "order")
-    humans   = sum(1 for r in rows if r[4] == "human")
+    count = len(rows)
+    orders  = sum(1 for r in rows if r[4] == "order")
+    humans  = sum(1 for r in rows if r[4] == "human")
     generals = count - orders - humans
 
     day_names = ["Dushanba", "Seshanba", "Chorshanba", "Payshanba", "Juma", "Shanba", "Yakshanba"]
@@ -1028,25 +1041,22 @@ async def _send_daily_report():
         "📊  KUNLIK HISOBOT",
         f"📅  {yesterday}  |  {day_name}",
         "",
-        f"🆕  Yangi murojatlar:    {new_cnt} ta",
-        f"🔄  Qaytgan mijozlar:    {ret_cnt} ta",
-        f"📩  Jami murojatlar:     {count} ta",
+        f"📩  Jami murojaat: {count} ta odam",
     ]
 
     if count > 0:
-        lines += ["", "👥  Murojaatchilar:", "─" * 32]
+        lines += ["", "👥  Murojaatchilar:", "─" * 28]
         icons = {"order": "🛒", "human": "🙋", "general": "💬"}
         for i, (uid, name, uname, topic, ctype) in enumerate(rows, 1):
             name_str  = name or "Noma'lum"
             link_str  = f"@{uname}" if uname else f"ID:{uid}"
-            new_badge = " 🆕" if uid in new_user_ids else ""
             icon      = icons.get(ctype, "💬")
-            topic_str = (topic or "—")[:100]
-            lines.append(f"{i}. 👤 {name_str}  ({link_str}){new_badge}")
+            topic_str = (topic or "—")[:90]
+            lines.append(f"{i}. 👤 {name_str}  ({link_str})")
             lines.append(f"    {icon} {topic_str}")
         lines += [
-            "─" * 32,
-            f"🛒 Buyurtma: {orders}   🙋 Operator: {humans}   💬 Umumiy: {generals}",
+            "─" * 28,
+            f"🛒 Buyurtmalar: {orders}   🙋 Operatorga: {humans}   💬 Umumiy: {generals}",
         ]
     else:
         lines += ["", "— Bugun hech kim murojaat qilmagan."]
@@ -1059,7 +1069,7 @@ async def _send_daily_report():
     try:
         entity = await resolve_target_entity(LEAD_GROUP, "lead_group")
         await client.send_message(entity, msg)
-        logging.info("Daily report yuborildi: %s | jami=%s yangi=%s", yesterday, count, new_cnt)
+        logging.info("Daily report yuborildi: %s | jami=%s", yesterday, count)
     except Exception as e:
         logging.exception("Daily report yuborish xatosi: %s", e)
 
@@ -1229,41 +1239,15 @@ async def build_chat_history(chat_id: int, my_id: int) -> list[dict]:
             result.append({"role": role, "content": content})
             continue
 
-        # ── GIF ──
-        if getattr(msg, "gif", False):
-            if role == "user":
-                encoded = await encode_gif_for_claude(client, msg)
-                if encoded:
-                    if text_part:
-                        encoded = [{"type": "text", "text": text_part}] + [
-                            b for b in encoded if b.get("type") == "image"
-                        ]
-                    result.append({"role": role, "content": encoded})
-                    continue
-            result.append({"role": role, "content": text_part or "[GIF yuborildi]"})
-            continue
-
-        # ── Stiker ──
+        # ── Stiker / GIF / boshqa ──
         if getattr(msg, "sticker", None):
-            if role == "user":
-                encoded = await encode_sticker_for_claude(client, msg)
-                if encoded:
-                    if text_part:
-                        encoded = [{"type": "text", "text": text_part}] + [
-                            b for b in encoded if b.get("type") == "image"
-                        ]
-                    result.append({"role": role, "content": encoded})
-                    continue
-            result.append({"role": role, "content": text_part or "[Stiker yuborildi]"})
+            result.append({"role": role, "content": "[Stiker yuborildi]"})
             continue
-
+        if msg.gif:
+            result.append({"role": role, "content": "[GIF yuborildi]"})
+            continue
         if text_part:
             result.append({"role": role, "content": text_part})
-
-    # "assistant message prefill" xatosini oldini olish:
-    # Claude API oxirgi xabar user bo'lishini talab qiladi
-    while result and result[-1]["role"] == "assistant":
-        result.pop()
 
     return result
 
@@ -1311,10 +1295,25 @@ async def process_with_community_agent(event, sender, user_id: int) -> bool:
             user_id, bool(result.order_data), result.needs_human, len(result.reply)
         )
 
+    # ── Geolokatsiya ──
+    if result.send_location:
+        try:
+            peer = await client.get_input_entity(event.chat_id)
+            await client(SendMediaRequest(
+                peer=peer,
+                media=InputMediaGeoPoint(
+                    geo_point=InputGeoPoint(lat=41.283123, long=69.212336)
+                ),
+                message="",
+                random_id=int(time.monotonic() * 1e6),
+            ))
+            logging.info("Geolokatsiya yuborildi user=%s", user_id)
+        except Exception as _geo_err:
+            logging.warning("Geolokatsiya yuborishda xato: %s", _geo_err)
+
     # ── Operator xabardor qilish ──
     if (result.order_data or result.needs_human) and LEAD_GROUP:
         try:
-            entity = await resolve_target_entity(LEAD_GROUP, "lead_group")
             sender_name, username = _sender_display(sender, user_id)
             tg_link = f"https://t.me/{username}" if username else f"tg://user?id={user_id}"
 
@@ -1382,7 +1381,7 @@ async def process_with_community_agent(event, sender, user_id: int) -> bool:
                     f"🆔 User ID: {user_id}"
                 )
 
-            await client.send_message(entity, notify_msg)
+            await _send_to_group_with_update(user_id, notify_msg)
             logging.info("Operator notified user=%s", user_id)
 
         except Exception as exc:
@@ -1652,10 +1651,6 @@ async def main():
 
     asyncio.create_task(_daily_report_loop())
     logging.info("Daily report loop started (har kuni 00:00 UZT)")
-
-    # Fon prewarm — birinchi mijoz xabariga tayyor bo'lish uchun
-    asyncio.create_task(prewarm_whisper())
-    asyncio.create_task(asyncio.to_thread(moysklad.prewarm))
 
     await client.run_until_disconnected()
 
