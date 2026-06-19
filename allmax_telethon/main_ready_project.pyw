@@ -877,7 +877,7 @@ def push_project_task_to_bitrix_if_needed(
 # CONTACT TOPIC HELPER
 # =========================
 def _build_contact_topic(result, messages: list[dict]) -> tuple[str, str]:
-    """AgentResult dan qisqa mavzu va turini aniqlaydi."""
+    """AgentResult va suhbat tarixidan suhbat mazmunini va turini aniqlaydi."""
     if result.order_data:
         od = result.order_data
         parts = [od.get("product", ""), od.get("size", ""), od.get("color", "")]
@@ -886,15 +886,32 @@ def _build_contact_topic(result, messages: list[dict]) -> tuple[str, str]:
     if result.needs_human:
         reason = result.human_reason or "murakkab savol"
         return f"Operator kerak: {reason}", "human"
-    user_msgs = [m["content"] for m in messages if m["role"] == "user"]
-    if user_msgs:
-        last = user_msgs[-1]
-        text = last if isinstance(last, str) else (
-            next((b["text"] for b in last if isinstance(b, dict) and b.get("type") == "text"), "") if isinstance(last, list) else ""
-        )
-        if text:
-            return text[:80].replace("\n", " ").strip(), "general"
-    return "Umumiy savol", "general"
+
+    # Mazmunli user xabarlarini (oxirgidan boshlab) topamiz
+    _skip = {"ha", "yo'q", "yoq", "ok", "okay", "yaxshi", "rahmat", "salom",
+             "xayr", "bo'ldi", "boldi", "tushunarli", "👍", "👌", "😊", "✅"}
+    meaningful: list[str] = []
+    for m in reversed(messages):
+        if m["role"] != "user":
+            continue
+        content = m["content"]
+        if isinstance(content, str):
+            text = content.strip()
+        elif isinstance(content, list):
+            text = next(
+                (b["text"] for b in content if isinstance(b, dict) and b.get("type") == "text"), ""
+            ).strip()
+        else:
+            continue
+        if len(text) > 4 and text.lower() not in _skip:
+            meaningful.append(text.replace("\n", " ")[:60])
+        if len(meaningful) >= 2:
+            break
+
+    meaningful.reverse()
+    if meaningful:
+        return " → ".join(meaningful)[:110], "general"
+    return "Umumiy murojaat", "general"
 
 
 # =========================
@@ -981,14 +998,26 @@ async def _send_daily_report():
             SELECT user_id, display_name, username, topic, contact_type
             FROM daily_contacts WHERE date = ? ORDER BY id ASC
         """, (yesterday,)).fetchall()
+        # Yangi mijozlar — ilgari hech qachon murojaat qilmaganlar
+        new_user_ids = set(
+            r[0] for r in con.execute("""
+                SELECT DISTINCT user_id FROM daily_contacts
+                WHERE date = ?
+                  AND user_id NOT IN (
+                      SELECT DISTINCT user_id FROM daily_contacts WHERE date < ?
+                  )
+            """, (yesterday, yesterday)).fetchall()
+        )
         con.close()
     except Exception as e:
         logging.exception("Daily report DB xatosi: %s", e)
         return
 
-    count = len(rows)
-    orders  = sum(1 for r in rows if r[4] == "order")
-    humans  = sum(1 for r in rows if r[4] == "human")
+    count    = len(rows)
+    new_cnt  = len(new_user_ids)
+    ret_cnt  = count - new_cnt
+    orders   = sum(1 for r in rows if r[4] == "order")
+    humans   = sum(1 for r in rows if r[4] == "human")
     generals = count - orders - humans
 
     day_names = ["Dushanba", "Seshanba", "Chorshanba", "Payshanba", "Juma", "Shanba", "Yakshanba"]
@@ -999,22 +1028,25 @@ async def _send_daily_report():
         "📊  KUNLIK HISOBOT",
         f"📅  {yesterday}  |  {day_name}",
         "",
-        f"📩  Jami murojaat: {count} ta odam",
+        f"🆕  Yangi murojatlar:    {new_cnt} ta",
+        f"🔄  Qaytgan mijozlar:    {ret_cnt} ta",
+        f"📩  Jami murojatlar:     {count} ta",
     ]
 
     if count > 0:
-        lines += ["", "👥  Murojaatchilar:", "─" * 28]
+        lines += ["", "👥  Murojaatchilar:", "─" * 32]
         icons = {"order": "🛒", "human": "🙋", "general": "💬"}
         for i, (uid, name, uname, topic, ctype) in enumerate(rows, 1):
             name_str  = name or "Noma'lum"
             link_str  = f"@{uname}" if uname else f"ID:{uid}"
+            new_badge = " 🆕" if uid in new_user_ids else ""
             icon      = icons.get(ctype, "💬")
-            topic_str = (topic or "—")[:90]
-            lines.append(f"{i}. 👤 {name_str}  ({link_str})")
+            topic_str = (topic or "—")[:100]
+            lines.append(f"{i}. 👤 {name_str}  ({link_str}){new_badge}")
             lines.append(f"    {icon} {topic_str}")
         lines += [
-            "─" * 28,
-            f"🛒 Buyurtmalar: {orders}   🙋 Operatorga: {humans}   💬 Umumiy: {generals}",
+            "─" * 32,
+            f"🛒 Buyurtma: {orders}   🙋 Operator: {humans}   💬 Umumiy: {generals}",
         ]
     else:
         lines += ["", "— Bugun hech kim murojaat qilmagan."]
@@ -1027,7 +1059,7 @@ async def _send_daily_report():
     try:
         entity = await resolve_target_entity(LEAD_GROUP, "lead_group")
         await client.send_message(entity, msg)
-        logging.info("Daily report yuborildi: %s | jami=%s", yesterday, count)
+        logging.info("Daily report yuborildi: %s | jami=%s yangi=%s", yesterday, count, new_cnt)
     except Exception as e:
         logging.exception("Daily report yuborish xatosi: %s", e)
 
