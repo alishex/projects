@@ -362,6 +362,8 @@ class CommunityAgent:
 
         while prepared and prepared[0]["role"] == "assistant":
             prepared.pop(0)
+        while prepared and prepared[-1]["role"] == "assistant":
+            prepared.pop()
         if not prepared:
             prepared = [{"role": "user", "content": "Salom"}]
 
