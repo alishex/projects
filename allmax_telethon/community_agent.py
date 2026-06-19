@@ -22,7 +22,7 @@ log = logging.getLogger(__name__)
 _TZ         = timedelta(hours=5)  # UTC+5 Toshkent
 _WORK_START = int(os.getenv("COMMUNITY_WORK_START", "9"))
 _WORK_END   = int(os.getenv("COMMUNITY_WORK_END",   "22"))
-_ADDRESS    = os.getenv("COMMUNITY_ADDRESS",  "Toshkent sh., Bunyodkor Savdo Majmuasi (Korzinka 1-qavat), metro: Mirzo Ulug'bek")
+_ADDRESS    = os.getenv("COMMUNITY_ADDRESS",  "Toshkent sh., Bunyodkor Savdo Majmuasi (Korzinka -1-qavat, er osti qavat), metro: Mirzo Ulug'bek")
 _PHONE      = os.getenv("COMMUNITY_PHONE",    "+998 78 555 31 31")
 
 # BTS filiallar qoplami (viloyat → tumanlar ro'yxati)
@@ -113,7 +113,7 @@ _KNOWLEDGE = f"""
 Do'kon manzili: {_ADDRESS}
 Do'kon telefoni: {_PHONE}
 Do'kon ish vaqti: 24/7 — yigirma to'rt soat, yetti kun (do'kon hech qachon yopilmaydi)
-Call centre va community xodimlari: har kuni {_WORK_START:02d}:30 – {_WORK_END:02d}:00 (Toshkent vaqti)
+Call centre va community xodimlari: har kuni {_WORK_START:02d}:00 – {_WORK_END:02d}:00 (Toshkent vaqti)
 
 Mahsulotlar (erkaklar uchun):
   kurtka, vetrovka, ko'ylak, polo, futbolka, shim, jinsi, kastyum-shim,
@@ -145,23 +145,14 @@ Senga Telegram orqali kelgan DM suhbatini to'liq tahlil qilib, davom ettirishni 
 ALLMAX haqida:
 {_KNOWLEDGE}
 
-⚠️ QATTIY TALAB — HECH QACHON BUZMA:
-
-1. XUSHMUOMALALIK — BU MAJBURIY, TANLOV EMAS:
-   Har bir javob issiq, samimiy va insoniy bo'lishi SHART.
-   Sovuq, quruq yoki rasmiy javob MUTLAQO TAQIQLANGAN.
-   • Salomlashuvga ALBATTA issiq javob ber: "Assalomu alaykum! 😊 Xush kelibsiz ALLMAX ga!"
-   • Har bir xabar oxirida mijozga yordam taklif qil
-   • "Ha" yoki "Yo'q" bilan tugaydigan javob YO'L QO'YILMAYDI — davom ettir
-   • Mahsulot yo'q bo'lsa: "Afsuski hozir tugagan 😔 Boshqa variantni ko'rsataymi?" de
-   • Mijoz minnatdorlik bildirsa: "Iltimos, xarid barakali bo'lsin! 🙏" de
-
-2. Mahsulot bor yoki yo'qligi haqida ASLO o'zing taxmin qilma — check_stock tool chaqir
-3. Buyurtmani faqat operator tasdiqlaydi — sen faqat ma'lumot yig'asan
-4. Mijoz qaysi tilda yozsa, SHU tilda javob ber (O'zbek / Rus / Ingliz)
-5. Emoji: har javobda 1–2 ta, joyi kelib tushsa
-6. Javob qisqa va aniq — lekin HECH QACHON sovuq emas
-7. Suhbat tarixida avval berilgan javobni qayta berma
+ASOSIY QOIDALAR (HECH QACHON BUZMA):
+1. Mahsulot bor yoki yo'qligi haqida ASLO o'zing taxmin qilma — check_stock tool chaqir
+2. Buyurtmani faqat operator tasdiqlaydi — sen faqat ma'lumot yig'asan
+3. Mijoz qaysi tilda yozsa, SHU tilda javob ber (O'zbek / Rus / Ingliz)
+4. Samimiy, muloyim, professional — robotday EMAS
+5. Emoji: 1–2 tadan oshirma
+6. Qisqa va aniq javob ber
+7. Suhbat tarixida avval berilgan javobni qayta berma — kontekstni esda tut
 
 KONTEKST TAHLILI:
 Senga berilgan suhbat tarixida:
@@ -176,24 +167,18 @@ Avvalgi javoblarni ko'rib, takrorlanmaslik uchun davom et.
 XABAR TURLARI VA HARAKAT:
 
 A) STANDART SAVOLLAR (o'zing javob ber):
-   manzil    → aniq ayt
+   manzil    → aniq ayt VA share_location tool chaqir (geolokatsiya pin ham yuboriladi)
    narx      → bo'limlarni sanab ayt: 99 000 / 149 900 / 199 900 / 249 900 / 299 900 / Premium
    o'lcham   → mavjud o'lchamlar (M–3XL, shimlarda 29–56)
    dostavka  → Toshkent shahri: YandexGo | Boshqa: BTS/EMU/UzPost
    almashtirish → mumkin, batafsil operator aytadi
-   ish vaqti → DO'KON 24/7 ishlaydi; call centre va community 09:30–22:00
+   ish vaqti → DO'KON 24/7 ishlaydi; call centre va community 09:00–22:00
 
 A2) MAHSULOT BOR/YO'Q SAVOLI — check_stock tool chaqir:
    Misol savollar: "polo bormi?", "XL kurtka bormi?", "qora shim bormi?", "shu mahsulot bormi?"
    → check_stock(query="polo") chaqir, natijani mijozga ko'rsat
    → Agar bor: narxini ham ayt
-   → Natija 0 kelsa: IMLO XATOSI yoki SINONIM bo'lishi mumkin — boshqa variant bilan qayta qidir:
-      IMLO:    "badaj" → "bandaj" | "pola" → "polo" | "shorrt" → "short"
-      SINONIM: "remen" → "kamar" | "ремень" → "kamar" | "belbog" → "kamar"
-               "futbolka" → "polo" | "майка" → "polo" | "джинсы" → "jins"
-               "кофта" → "koftа" | "куртка" → "kurtka" | "шорты" → "short"
-      Ruscha ham sinab ko'r: "bandaj" → "бандаж" | "polo" → "поло"
-   → 2 marta urinishdan keyin ham topilmasa — "Hozirda bunday mahsulot yo'q" de
+   → Agar yo'q: "Afsuski hozir tugagan, yangi kelishi bilanoq xabar beramiz" de
 
 B) BUYURTMA — ma'lumotlarni natural suhbat orqali yig':
    Kerakli 9 ta ma'lumot (tabiiy ketma-ketlikda so'ra):
@@ -225,7 +210,7 @@ BTS QOPLAM RO'YXATI (tumanlar bo'yicha):
 C) BARCHA MA'LUMOT TO'LIQ BO'LGACH:
    order_complete tool chaqir.
    Keyin mijozga:
-     ish vaqtida ({_WORK_START}:30–{_WORK_END}:00): "Operatorimiz 5–10 daqiqada siz bilan bog'lanadi ✅"
+     ish vaqtida ({_WORK_START}:00–{_WORK_END}:00): "Operatorimiz 5–10 daqiqada siz bilan bog'lanadi ✅"
      ish vaqtidan tashqarida: "Ertalab {_WORK_START}:30 dan operatorimiz siz bilan bog'lanadi 🕘"
 
 D) MURAKKAB / NOANIQ SAVOLLAR:
@@ -272,24 +257,28 @@ _TOOLS = [
         "name": "check_stock",
         "description": (
             "Mahsulot omborda borligini va narxini tekshiradi. "
-            "Mijoz 'X bormi?', 'X qolganmi?', 'X narxi qancha?' desa chaqir. "
-            "0 natija kelsa — imlo xatosi yoki sinonim bo'lishi mumkin, boshqa variant bilan qayta chaqir. "
-            "Muhim sinonimlar: 'remen'→'kamar', 'ремень'→'kamar', 'belbog'→'kamar', 'futbolka'→'polo'."
+            "Mijoz 'X bormi?', 'X qolganmi?', 'X narxi qancha?' desa chaqir."
         ),
         "input_schema": {
             "type": "object",
             "properties": {
                 "query": {
                     "type": "string",
-                    "description": (
-                        "Qidiruv so'zi — TO'G'RI IMLO va O'ZBEK NOMI bilan yubor. "
-                        "Sinonimlar: 'remen'/'ремень'/'belbog' → 'kamar', 'futbolka'→'polo'. "
-                        "Misol: 'kamar', 'bandaj', 'polo', 'kurtka', 'short'. "
-                        "0 natija kelsa sinonim yoki boshqa imlo bilan qayta chaqir."
-                    ),
+                    "description": "Qidiruv so'zi (masalan: 'polo', 'kurtka XL', 'qora shim')",
                 },
             },
             "required": ["query"],
+        },
+    },
+    {
+        "name": "share_location",
+        "description": (
+            "Mijoz do'kon manzilini yoki yo'lini so'raganda chaqiriladi. "
+            "Bot geolokatsiya pin yuboradi. Matnli javobni ham ber."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {},
         },
     },
 ]
@@ -345,6 +334,7 @@ class AgentResult:
     order_data: Optional[dict] = None
     needs_human: bool = False
     human_reason: str = ""
+    send_location: bool = False
 
 
 class CommunityAgent:
@@ -380,6 +370,7 @@ class CommunityAgent:
         order_data = None
         needs_human = False
         human_reason = ""
+        send_location = False
 
         for _iteration in range(4):  # maks 4 iteratsiya (3 check_stock + 1 final)
             try:
@@ -419,6 +410,8 @@ class CommunityAgent:
                             needs_human  = True
                             human_reason = (block.input or {}).get("reason", "")
                             parts.append("Operatorimizga yo'naltirdim, tez orada bog'lanishadi 🙏")
+                        elif block.name == "share_location":
+                            send_location = True
                 break
 
             # check_stock tool larini bajaramiz
@@ -450,4 +443,5 @@ class CommunityAgent:
             order_data=order_data,
             needs_human=needs_human,
             human_reason=human_reason,
+            send_location=send_location,
         )
