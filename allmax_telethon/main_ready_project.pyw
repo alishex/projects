@@ -1644,7 +1644,10 @@ async def main():
     logging.info("Logged in as: %s (%s)", username, me.id)
     logging.info("Telegram DM template + contact-capture bot is running")
     logging.info("Mode: ONLY DM / NOT groups / NOT bots")
-    logging.info("AI enabled only for contact monitoring/parsing; no AI replies")
+    if COMMUNITY_AGENT_ENABLE and community_agent_inst:
+        logging.info("Community Agent: YOQILGAN (%s)", ANTHROPIC_MODEL)
+    else:
+        logging.info("Community Agent: o'chirilgan — faqat contact capture")
     logging.info("Lead group enabled: %s", LEAD_GROUP)
     logging.info("Bitrix CRM enabled: %s", BITRIX_ENABLE)
     logging.info("Bitrix project task enabled: %s | group_id=%s | responsible_id=%s", BITRIX_PROJECT_ENABLE, BITRIX_PROJECT_GROUP_ID, BITRIX_PROJECT_RESPONSIBLE_ID)
