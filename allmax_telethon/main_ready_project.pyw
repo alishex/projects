@@ -184,7 +184,7 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 # =========================
 # CLIENTS / STATE
 # =========================
-client = TelegramClient(SESSION_NAME, API_ID, API_HASH)
+client = TelegramClient(SESSION_NAME, API_ID, API_HASH, catch_up=True)
 anthropic_client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY) if ANTHROPIC_API_KEY else None
 community_agent_inst = (
     CommunityAgent(ANTHROPIC_API_KEY, ANTHROPIC_MODEL)
