@@ -46,7 +46,8 @@ def _get(url: str) -> dict:
 def _fetch_showroom_stock() -> list[dict]:
     """
     Showroom omboridagi barcha mavjud mahsulotlarni yuklaydi.
-    stock > 0 bo'lganlarni qaytaradi. 60 soniyaga cache qilinadi.
+    stock > 0 bo'lganlarni qaytaradi. Cache qilinadi.
+    API xato bersa — eski cache ishlatiladi (bo'sh qaytarmaydi).
     """
     now = time.monotonic()
     if now - _cache["ts"] < _CACHE_TTL and _cache["items"]:
@@ -57,34 +58,42 @@ def _fetch_showroom_stock() -> list[dict]:
     offset = 0
     limit  = 1000
 
-    while True:
-        url = (
-            f"{_BASE}/report/stock/all"
-            f"?filter=store={store_href}"
-            f"&limit={limit}&offset={offset}"
-        )
-        d = _get(url)
-        rows = d.get("rows", [])
-        for r in rows:
-            qty = float(r.get("stock", 0))
-            if qty <= 0:
-                continue
-            raw_price = int(r.get("salePrice", 0))
-            items.append({
-                "name":      r["name"],
-                "price_som": raw_price // 100,
-                "stock":     int(qty),
-                "in_stock":  True,
-            })
-        total = int(d.get("meta", {}).get("size", 0))
-        offset += limit
-        if offset >= total or not rows:
-            break
+    try:
+        while True:
+            url = (
+                f"{_BASE}/report/stock/all"
+                f"?filter=store={store_href}"
+                f"&limit={limit}&offset={offset}"
+            )
+            d = _get(url)
+            rows = d.get("rows", [])
+            for r in rows:
+                qty = float(r.get("stock", 0))
+                if qty <= 0:
+                    continue
+                raw_price = int(r.get("salePrice", 0))
+                items.append({
+                    "name":      r["name"],
+                    "price_som": raw_price // 100,
+                    "stock":     int(qty),
+                    "in_stock":  True,
+                })
+            total = int(d.get("meta", {}).get("size", 0))
+            offset += limit
+            if offset >= total or not rows:
+                break
 
-    _cache["ts"]    = now
-    _cache["items"] = items
-    log.info("MoySklad showroom cache yangilandi: %d ta mavjud mahsulot", len(items))
-    return items
+        _cache["ts"]    = now
+        _cache["items"] = items
+        log.info("MoySklad showroom cache yangilandi: %d ta mavjud mahsulot", len(items))
+        return items
+
+    except Exception as exc:
+        log.warning("MoySklad showroom yuklash xatosi: %s", exc)
+        if _cache["items"]:
+            log.info("Eski cache ishlatilmoqda: %d ta mahsulot", len(_cache["items"]))
+            return _cache["items"]
+        return []
 
 
 def check_stock(query: str, top: int = 15) -> list[dict]:
