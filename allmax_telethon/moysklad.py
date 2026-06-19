@@ -123,12 +123,23 @@ _SYNONYMS: dict[str, list[str]] = {
 }
 
 
-def check_stock(query: str, top: int = 15) -> list[dict]:
+def _words_match(words: list[str], product_name: str) -> bool:
+    """Har bir so'z mahsulot nomida mavjud bo'lsa True (tartib muhim emas)."""
+    name = product_name.lower()
+    return all(w in name for w in words)
+
+
+def check_stock(query: str, top: int = 20) -> list[dict]:
     """
     Showroom omborida query bo'yicha mahsulot qidiradi.
-    Synonym qidiruvi: "remen" → "kamar" ham qidiriladi.
-    Faqat mavjud (stock > 0) mahsulotlarni qaytaradi.
 
+    Qidiruv algoritmi (qatlama):
+      1. So'zlar bo'yicha: "qora shim" → "shim" HAM "qora" bo'lgan mahsulot topiladi
+         (tartib muhim emas: "Shim Qora #1" ham topiladi)
+      2. Synonym: "remen" → "kamar" ham qidiriladi
+      3. Fallback: 2+ so'zli query'da natija yo'q bo'lsa, har so'z alohida qidiriladi
+
+    Faqat mavjud (stock > 0) mahsulotlarni qaytaradi.
     Returns: [{"name": str, "price_som": int, "stock": int, "in_stock": bool}]
     """
     if not os.getenv("MOYSKLAD_TOKEN", ""):
@@ -143,16 +154,34 @@ def check_stock(query: str, top: int = 15) -> list[dict]:
 
     q = query.lower().strip()
 
-    # Asosiy qidiruv + synonym qidiruv
-    search_terms = [q] + _SYNONYMS.get(q, [])
-    seen_names: set[str] = set()
+    # Synonym expansion: "remen" → ["remen", "kamar", "belt"]
+    base_terms = [q] + _SYNONYMS.get(q, [])
+
+    seen: set[str] = set()
     matched: list[dict] = []
-    for term in search_terms:
+
+    def _add(item: dict):
+        if item["name"] not in seen:
+            seen.add(item["name"])
+            matched.append(item)
+
+    # 1-qadam: har bir term uchun SO'ZLAR BO'YICHA qidiruv (tartibsiz)
+    for term in base_terms:
+        words = term.split()
         for item in all_items:
-            name = item["name"].lower()
-            if term in name and item["name"] not in seen_names:
-                seen_names.add(item["name"])
-                matched.append(item)
+            if _words_match(words, item["name"]):
+                _add(item)
+
+    # 2-qadam (fallback): 2+ so'zli query'da hech narsa topilmasa,
+    # har so'zni ALOHIDA qidirish (keng tarmoq)
+    if not matched and len(q.split()) >= 2:
+        for word in q.split():
+            if len(word) >= 3:  # juda qisqa so'zlarni o'tkazib yuboramiz
+                syn_words = [word] + _SYNONYMS.get(word, [])
+                for sw in syn_words:
+                    for item in all_items:
+                        if sw in item["name"].lower():
+                            _add(item)
 
     return matched[:top]
 
