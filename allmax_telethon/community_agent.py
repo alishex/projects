@@ -113,7 +113,7 @@ _KNOWLEDGE = f"""
 Do'kon manzili: {_ADDRESS}
 Do'kon telefoni: {_PHONE}
 Do'kon ish vaqti: 24/7 — yigirma to'rt soat, yetti kun (do'kon hech qachon yopilmaydi)
-Call centre va community xodimlari: har kuni {_WORK_START:02d}:00 – {_WORK_END:02d}:00 (Toshkent vaqti)
+Call centre va community xodimlari: har kuni {_WORK_START:02d}:30 – {_WORK_END:02d}:00 (Toshkent vaqti)
 
 Mahsulotlar (erkaklar uchun):
   kurtka, vetrovka, ko'ylak, polo, futbolka, shim, jinsi, kastyum-shim,
@@ -181,7 +181,7 @@ A) STANDART SAVOLLAR (o'zing javob ber):
    o'lcham   → mavjud o'lchamlar (M–3XL, shimlarda 29–56)
    dostavka  → Toshkent shahri: YandexGo | Boshqa: BTS/EMU/UzPost
    almashtirish → mumkin, batafsil operator aytadi
-   ish vaqti → DO'KON 24/7 ishlaydi; call centre va community 09:00–22:00
+   ish vaqti → DO'KON 24/7 ishlaydi; call centre va community 09:30–22:00
 
 A2) MAHSULOT BOR/YO'Q SAVOLI — check_stock tool chaqir:
    Misol savollar: "polo bormi?", "XL kurtka bormi?", "qora shim bormi?", "shu mahsulot bormi?"
@@ -225,7 +225,7 @@ BTS QOPLAM RO'YXATI (tumanlar bo'yicha):
 C) BARCHA MA'LUMOT TO'LIQ BO'LGACH:
    order_complete tool chaqir.
    Keyin mijozga:
-     ish vaqtida ({_WORK_START}:00–{_WORK_END}:00): "Operatorimiz 5–10 daqiqada siz bilan bog'lanadi ✅"
+     ish vaqtida ({_WORK_START}:30–{_WORK_END}:00): "Operatorimiz 5–10 daqiqada siz bilan bog'lanadi ✅"
      ish vaqtidan tashqarida: "Ertalab {_WORK_START}:30 dan operatorimiz siz bilan bog'lanadi 🕘"
 
 D) MURAKKAB / NOANIQ SAVOLLAR:
