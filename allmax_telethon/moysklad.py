@@ -68,10 +68,14 @@ def _fetch_showroom_stock() -> list[dict]:
             d = _get(url)
             rows = d.get("rows", [])
             for r in rows:
-                qty = float(r.get("stock", 0))
+                # quantity = stock - reserve (sotishga haqiqatan tayyor)
+                # stock = jami balans (rezervdagilarni ham o'z ichiga oladi)
+                qty = float(r.get("quantity", r.get("stock", 0)))
                 if qty <= 0:
                     continue
                 raw_price = int(r.get("salePrice", 0))
+                if raw_price <= 0:
+                    continue  # narxi belgilanmagan — sotilmaydi
                 items.append({
                     "name":      r["name"],
                     "price_som": raw_price // 100,
