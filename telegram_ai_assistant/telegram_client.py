@@ -169,9 +169,12 @@ class TelegramToolset:
                 if kind:
                     if transcribe_left > 0:
                         transcribe_left -= 1
-                        transcript = await media_transcriber.transcribe_message(self.client, msg)
+                        if kind in ("video", "video_note"):
+                            result = await media_transcriber.analyze_video_message(self.client, msg)
+                        else:
+                            result = await media_transcriber.transcribe_message(self.client, msg)
                         label = media_transcriber.label_for_kind(kind)
-                        text = f"[{label}: {transcript}]" if transcript else f"[{label}]"
+                        text = f"[{label}: {result}]" if result else f"[{label}]"
                     else:
                         text = f"[{media_transcriber.label_for_kind(kind)}, limitga yetildi]"
                 elif getattr(msg, "photo", None):
@@ -181,6 +184,16 @@ class TelegramToolset:
                         text = f"[📸 Rasm: {desc}]" if desc else "[📸 Rasm]"
                     else:
                         text = "[📸 Rasm, limitga yetildi]"
+                elif getattr(msg, "document", None) and any(
+                    getattr(a, "file_name", "").lower().endswith((".heic", ".heif"))
+                    for a in getattr(msg.document, "attributes", [])
+                ):
+                    if transcribe_left > 0:
+                        transcribe_left -= 1
+                        desc = await media_transcriber.describe_heic_message(self.client, msg)
+                        text = f"[📷 HEIC Rasm: {desc}]" if desc else "[📷 HEIC Rasm]"
+                    else:
+                        text = "[📷 HEIC Rasm, limitga yetildi]"
                 elif msg.media:
                     text = "[media]"
                 else:
@@ -224,9 +237,12 @@ class TelegramToolset:
                 if kind:
                     if transcribe_left > 0:
                         transcribe_left -= 1
-                        transcript = await media_transcriber.transcribe_message(self.client, msg)
+                        if kind in ("video", "video_note"):
+                            result = await media_transcriber.analyze_video_message(self.client, msg)
+                        else:
+                            result = await media_transcriber.transcribe_message(self.client, msg)
                         label = media_transcriber.label_for_kind(kind)
-                        text = f"[{label}: {transcript}]" if transcript else f"[{label}]"
+                        text = f"[{label}: {result}]" if result else f"[{label}]"
                     else:
                         text = f"[{media_transcriber.label_for_kind(kind)}, limitga yetildi]"
                 elif getattr(msg, "photo", None):
@@ -236,6 +252,16 @@ class TelegramToolset:
                         text = f"[📸 Rasm: {desc}]" if desc else "[📸 Rasm]"
                     else:
                         text = "[📸 Rasm, limitga yetildi]"
+                elif getattr(msg, "document", None) and any(
+                    getattr(a, "file_name", "").lower().endswith((".heic", ".heif"))
+                    for a in getattr(msg.document, "attributes", [])
+                ):
+                    if transcribe_left > 0:
+                        transcribe_left -= 1
+                        desc = await media_transcriber.describe_heic_message(self.client, msg)
+                        text = f"[📷 HEIC Rasm: {desc}]" if desc else "[📷 HEIC Rasm]"
+                    else:
+                        text = "[📷 HEIC Rasm, limitga yetildi]"
                 elif msg.media:
                     text = "[media]"
             sender_name = ""
