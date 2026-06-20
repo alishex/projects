@@ -12,6 +12,7 @@ from aiogram.filters import Command
 from aiogram.types import Message
 
 import config
+import file_reader
 import media_transcriber
 import memory_store
 from claude_agent import ClaudeAgent
@@ -154,6 +155,44 @@ async def main() -> None:
         await message.answer("🖼 " + html.escape(description))
         if caption.strip():
             await process_task(message, task)
+
+    @dp.message(F.document)
+    async def handle_document_task(message: Message) -> None:
+        if not is_owner(message):
+            await message.answer("Kechirasiz, bu bot shaxsiy assistant.")
+            return
+        doc = message.document
+        filename = doc.file_name or "fayl"
+        if not file_reader.is_supported(filename):
+            await message.answer(
+                "\u26a0\ufe0f " + html.escape(filename) + " formati qollab-quvvatlanmaydi.\n"
+                "Qabul qilinadi: PDF, Word (.docx), Excel (.xlsx), TXT, CSV"
+            )
+            return
+        label = file_reader.label_for_ext(Path(filename).suffix.lower())
+        thinking = await message.answer(label + " o'qilmoqda: " + html.escape(filename) + "...")
+        text = ""
+        try:
+            with tempfile.TemporaryDirectory() as tmpdir:
+                path = Path(tmpdir) / filename
+                await bot.download(doc, destination=str(path))
+                text = await asyncio.to_thread(file_reader.extract_text, path)
+        except Exception as exc:
+            text = "[Fayl o'qishda xatolik: " + str(exc) + "]"
+        finally:
+            try:
+                await thinking.delete()
+            except Exception:
+                pass
+        caption = (message.caption or "").strip()
+        task = label + " - " + filename + "\n\nFayl mazmuni:\n" + (text or "")
+        if caption:
+            task += "\n\nSavol: " + caption
+        await message.answer(
+            label + " <b>" + html.escape(filename) + "</b> o'qildi \u2705 "
+            "(" + str(len(text or "")) + " belgi). Tahlil boshlanmoqda..."
+        )
+        await process_task(message, task)
 
     @dp.message(F.voice | F.video_note | F.video | F.audio)
     async def handle_voice_task(message: Message) -> None:
