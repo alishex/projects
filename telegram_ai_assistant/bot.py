@@ -163,14 +163,39 @@ async def main() -> None:
             return
         doc = message.document
         filename = doc.file_name or "fayl"
+        ext = Path(filename).suffix.lower()
+
+        if ext in {".heic", ".heif"}:
+            thinking = await message.answer("•️ HEIC rasm tahlil qilinmoqda...")
+            desc = ""
+            try:
+                with tempfile.TemporaryDirectory() as tmpdir:
+                    path = Path(tmpdir) / filename
+                    await bot.download(doc, destination=str(path))
+                    desc = await media_transcriber.describe_heic_file(path) or "(tavsif olinmadi)"
+            except Exception as exc:
+                desc = "HEIC rasmni o’qishda xatolik: " + str(exc)
+            finally:
+                try:
+                    await thinking.delete()
+                except Exception:
+                    pass
+            caption = (message.caption or "").strip()
+            await message.answer("📷 " + html.escape(desc))
+            task = "[📷 HEIC Rasm: " + desc + "]"
+            if caption:
+                task += "\n\nSavol: " + caption
+            await process_task(message, task)
+            return
+
         if not file_reader.is_supported(filename):
             await message.answer(
                 "\u26a0\ufe0f " + html.escape(filename) + " formati qollab-quvvatlanmaydi.\n"
-                "Qabul qilinadi: PDF, Word (.docx), Excel (.xlsx), TXT, CSV"
+                "Qabul qilinadi: PDF, Word (.docx), Excel (.xlsx), TXT, CSV, HEIC"
             )
             return
-        label = file_reader.label_for_ext(Path(filename).suffix.lower())
-        thinking = await message.answer(label + " o'qilmoqda: " + html.escape(filename) + "...")
+        label = file_reader.label_for_ext(ext)
+        thinking = await message.answer(label + " o’qilmoqda: " + html.escape(filename) + "...")
         text = ""
         try:
             with tempfile.TemporaryDirectory() as tmpdir:
@@ -178,7 +203,7 @@ async def main() -> None:
                 await bot.download(doc, destination=str(path))
                 text = await asyncio.to_thread(file_reader.extract_text, path)
         except Exception as exc:
-            text = "[Fayl o'qishda xatolik: " + str(exc) + "]"
+            text = "[Fayl o’qishda xatolik: " + str(exc) + "]"
         finally:
             try:
                 await thinking.delete()
@@ -189,7 +214,7 @@ async def main() -> None:
         if caption:
             task += "\n\nSavol: " + caption
         await message.answer(
-            label + " <b>" + html.escape(filename) + "</b> o'qildi \u2705 "
+            label + " <b>" + html.escape(filename) + "</b> o’qildi \u2705 "
             "(" + str(len(text or "")) + " belgi). Tahlil boshlanmoqda..."
         )
         await process_task(message, task)
@@ -197,22 +222,37 @@ async def main() -> None:
     @dp.message(F.voice | F.video_note | F.video | F.audio)
     async def handle_voice_task(message: Message) -> None:
         if not is_owner(message):
-            await message.answer("Kechirasiz, bu bot shaxsiy assistant va sizga mo'ljallanmagan.")
+            await message.answer("Kechirasiz, bu bot shaxsiy assistant va sizga mo’ljallanmagan.")
             return
 
+        is_video = bool(message.video or message.video_note)
         media = message.voice or message.video_note or message.video or message.audio
+        label = "📽 Round video" if message.video_note else ("🎬 Video" if message.video else "🎤")
+
         with tempfile.TemporaryDirectory() as tmpdir:
             src_path = Path(tmpdir) / "input.media"
             await bot.download(media, destination=str(src_path))
             try:
-                task_text = await media_transcriber.transcribe_file(src_path)
+                if is_video:
+                    task_text = await media_transcriber.analyze_video_file(src_path)
+                else:
+                    task_text = await media_transcriber.transcribe_file(src_path)
             except Exception as exc:
-                logger.exception("Ovozli xabarni transkripsiya qilishda xatolik: %s", exc)
-                await message.answer("⚠️ Ovozli xabarni tushunolmadim, matn ko'rinishida yozib yuborolasizmi?")
+                logger.exception("Media tahlilida xatolik: %s", exc)
+                await message.answer("⚠️ Media faylni tushunolmadim, qayta yuborib ko’ring.")
                 return
 
-        await message.answer(f"🎤 Tushundim: <i>{html.escape(task_text)}</i>")
-        await process_task(message, task_text)
+        if is_video:
+            display = task_text[:300] + ("..." if len(task_text) > 300 else "")
+            await message.answer(label + " tahlil qilindi: <i>" + html.escape(display) + "</i>")
+            caption = (message.caption or "").strip()
+            full_task = "[" + label + ": " + task_text + "]"
+            if caption:
+                full_task += "\n\nSavol: " + caption
+            await process_task(message, full_task)
+        else:
+            await message.answer("🎤 Tushundim: <i>" + html.escape(task_text) + "</i>")
+            await process_task(message, task_text)
 
     logger.info("Bot ishga tushdi (long polling)")
     await dp.start_polling(bot)
