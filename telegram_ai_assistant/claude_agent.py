@@ -167,7 +167,9 @@ class ClaudeAgent:
             return {"error": str(exc)}
 
     async def run_task(self, task_text: str, history: list[dict] | None = None) -> str:
-        messages = list(history or []) + [{"role": "user", "content": task_text}]
+        # Bo'sh content li xabarlarni filter qilish (400 xatosini oldini oladi)
+        clean_history = [m for m in (history or []) if m.get('content')]
+        messages = clean_history + [{'role': 'user', 'content': task_text}]
 
         for step in range(config.MAX_AGENT_STEPS):
             response = self.client.messages.create(
@@ -184,6 +186,8 @@ class ClaudeAgent:
             messages.append({"role": "assistant", "content": response.content})
 
             tool_blocks = [block for block in response.content if block.type == "tool_use"]
+            if not tool_blocks:
+                return ''.join(b.text for b in response.content if b.type == "text").strip() or "(bo'sh javob)"
             for block in tool_blocks:
                 logger.info("Tool call step=%s name=%s input=%s", step, block.name, block.input)
             results = await asyncio.gather(

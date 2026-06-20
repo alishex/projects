@@ -120,6 +120,41 @@ async def main() -> None:
 
         await process_task(message, message.text)
 
+    @dp.message(F.photo)
+    async def handle_photo_task(message: Message) -> None:
+        if not is_owner(message):
+            await message.answer("Kechirasiz, bu bot shaxsiy assistant va sizga mo'ljallanmagan.")
+            return
+        thinking = await message.answer("🖼 Rasm tahlil qilinmoqda...")
+        try:
+            import tempfile, base64
+            from pathlib import Path
+            photo = message.photo[-1]  # eng katta o'lcham
+            with tempfile.TemporaryDirectory() as tmpdir:
+                path = await bot.download(photo, destination=str(Path(tmpdir) / 'photo'))
+                path = Path(path)
+                mime = {'.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
+                        '.png': 'image/png', '.webp': 'image/webp'}.get(path.suffix.lower(), 'image/jpeg')
+                with open(path, 'rb') as f:
+                    img_data = base64.standard_b64encode(f.read()).decode()
+            from media_transcriber import _describe_image_sync
+            import asyncio
+            description = await asyncio.to_thread(_describe_image_sync, mime, img_data)
+        except Exception as exc:
+            description = f'Rasm tahlil xatosi: {exc}'
+        finally:
+            try:
+                await thinking.delete()
+            except Exception:
+                pass
+        caption = message.caption or ''
+        task = f'[📸 Rasm: {description}]'
+        if caption.strip():
+            task += " Savol: " + caption
+        await message.answer("🖼 " + html.escape(description))
+        if caption.strip():
+            await process_task(message, task)
+
     @dp.message(F.voice | F.video_note | F.video | F.audio)
     async def handle_voice_task(message: Message) -> None:
         if not is_owner(message):
