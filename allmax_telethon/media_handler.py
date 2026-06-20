@@ -18,7 +18,7 @@ _CACHE_DB = Path(__file__).parent / "analytics" / "media_cache.sqlite3"
 _whisper_model = None
 _model_lock = asyncio.Lock()
 
-WHISPER_MODEL_SIZE = "base"
+WHISPER_MODEL_SIZE = "small"
 MAX_DURATION_SEC   = 600  # 10 daqiqadan uzun bo'lsa skip
 
 SUPPORTED_IMAGE_MIME = {
@@ -207,10 +207,17 @@ def _extract_audio(src: Path, dst: Path):
 
 
 def _transcribe_sync(model, audio_path: Path) -> str:
-    segments, _ = model.transcribe(
-        str(audio_path), beam_size=5, vad_filter=True, language="uz"
-    )
-    return " ".join(s.text.strip() for s in segments).strip()
+    # Turkiy tillar oilasida: tr (turk) → o'zbek so'zlarini eng yaxshi taniydi.
+    # Fallback: ru (rus) — ko'p o'zbeklar rus tilida ham gaplashadi.
+    for lang in ("tr", "ru"):
+        segs, info = model.transcribe(
+            str(audio_path), beam_size=5, vad_filter=True, language=lang
+        )
+        text = " ".join(s.text.strip() for s in segs).strip()
+        log.info("Transcription lang=%s prob=%.2f: %.80s", lang, info.language_probability, text)
+        if len(text) >= 3:
+            return text
+    return ""
 
 
 async def transcribe_message(tg_client, msg: Any) -> Optional[str]:

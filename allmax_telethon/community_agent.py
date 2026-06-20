@@ -177,6 +177,7 @@ Senga berilgan suhbat tarixida:
   - "user" xabarlari → mijoz tomonidan
   - "assistant" xabarlari → Allmax (sen) tomonidan yoki operator tomonidan
   - [🎤 Ovozli xabar: ...] → mijoz ovozli xabar yuborgan, transkripsiya ko'rsatilgan
+  MUHIM: transkripsiya turkcha-o'zbekcha aralash bo'lishi mumkin (masalan: "dokan"=do'kon, "selamünaleyküm"=salom, "sağolun"=rahmat, "var"=bor). Mazmunni tushunib javob ber.
   - [🎥 Video xabar: ...] → video xabar transkripsiyasi
   - [Rasm] yoki rasm bloki → mijoz rasm yuborgan
 
