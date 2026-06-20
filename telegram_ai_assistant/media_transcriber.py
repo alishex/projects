@@ -1,4 +1,5 @@
 import asyncio
+import base64
 import logging
 import subprocess
 import tempfile
@@ -13,6 +14,14 @@ _model = None
 _model_lock = asyncio.Lock()
 _transcribe_lock = asyncio.Lock()
 
+SUPPORTED_IMAGE_MIME = {
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".png": "image/png",
+    ".webp": "image/webp",
+    ".gif": "image/gif",
+}
+
 
 async def _get_model():
     global _model
@@ -20,7 +29,6 @@ async def _get_model():
         async with _model_lock:
             if _model is None:
                 from faster_whisper import WhisperModel
-
                 logger.info("Whisper modeli yuklanmoqda: %s", config.WHISPER_MODEL_SIZE)
                 _model = WhisperModel(config.WHISPER_MODEL_SIZE, device="cpu", compute_type="int8")
     return _model
@@ -56,8 +64,17 @@ def _extract_audio(src: Path, dst: Path) -> None:
 
 
 def _transcribe_sync(model, audio_path: Path) -> str:
-    segments, _info = model.transcribe(str(audio_path), beam_size=1, vad_filter=True)
-    return " ".join(segment.text.strip() for segment in segments).strip()
+    # Turkiy tillar oilasida: tr (turk) → o'zbek so'zlarini eng yaxshi taniydi.
+    # Fallback: ru (rus) — ko'p o'zbeklar rus tilida ham gaplashadi.
+    for lang in ("tr", "ru"):
+        segs, info = model.transcribe(
+            str(audio_path), beam_size=5, vad_filter=True, language=lang
+        )
+        text = " ".join(s.text.strip() for s in segs).strip()
+        logger.info("Transcription lang=%s prob=%.2f: %.80s", lang, info.language_probability, text)
+        if len(text) >= 3:
+            return text
+    return ""
 
 
 async def transcribe_file(media_path: Path) -> str:
@@ -94,11 +111,59 @@ async def transcribe_message(client, msg: Any) -> Optional[str]:
         return "[transkripsiya qilishda xatolik yuz berdi]"
 
 
+def _describe_image_sync(mime: str, data: str) -> str:
+    """Claude Vision orqali rasm tavsifini sinxron chaqiradi."""
+    from anthropic import Anthropic
+    client = Anthropic(api_key=config.ANTHROPIC_API_KEY)
+    resp = client.messages.create(
+        model="claude-haiku-4-5-20251001",
+        max_tokens=512,
+        messages=[{
+            "role": "user",
+            "content": [
+                {
+                    "type": "image",
+                    "source": {"type": "base64", "media_type": mime, "data": data}
+                },
+                {
+                    "type": "text",
+                    "text": (
+                        "Bu rasmda nima tasvirlangan? "
+                        "O'zbek yoki rus tilida, qisqacha (2-4 jumla) tushuntir. "
+                        "Agar mahsulot, kiyim, narx yozuvi yoki savdo xabari bo'lsa — alohida ta'kidla."
+                    )
+                }
+            ]
+        }]
+    )
+    return resp.content[0].text.strip() if resp.content else "(tavsif olinmadi)"
+
+
+async def describe_image_message(tg_client, msg: Any) -> Optional[str]:
+    """Rasmni Claude Vision orqali tasvirlaydi."""
+    if not getattr(msg, "photo", None):
+        return None
+    try:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = await tg_client.download_media(msg, file=str(Path(tmpdir) / "photo"))
+            if not path:
+                return None
+            path = Path(path)
+            mime = SUPPORTED_IMAGE_MIME.get(path.suffix.lower(), "image/jpeg")
+            with open(path, "rb") as f:
+                data = base64.standard_b64encode(f.read()).decode()
+        description = await asyncio.to_thread(_describe_image_sync, mime, data)
+        return description
+    except Exception as exc:
+        logger.exception("Rasm tavsifi xatosi: %s", exc)
+        return None
+
+
 def label_for_kind(kind: str) -> str:
     return {
         "voice": "🎤 Ovozli xabar",
-        "video_note": "🎥 Video xabar",
-        "video": "🎥 Video",
+        "video_note": "🎥 Round video",
+        "video": "🎬 Video",
         "audio": "🎵 Audio",
     }.get(kind, "[media]")
 

@@ -171,9 +171,16 @@ class TelegramToolset:
                         transcribe_left -= 1
                         transcript = await media_transcriber.transcribe_message(self.client, msg)
                         label = media_transcriber.label_for_kind(kind)
-                        text = f"[{label}]: {transcript}" if transcript else f"[{label}]"
+                        text = f"[{label}: {transcript}]" if transcript else f"[{label}]"
                     else:
                         text = f"[{media_transcriber.label_for_kind(kind)}, limitga yetildi]"
+                elif getattr(msg, "photo", None):
+                    if transcribe_left > 0:
+                        transcribe_left -= 1
+                        desc = await media_transcriber.describe_image_message(self.client, msg)
+                        text = f"[📸 Rasm: {desc}]" if desc else "[📸 Rasm]"
+                    else:
+                        text = "[📸 Rasm, limitga yetildi]"
                 elif msg.media:
                     text = "[media]"
                 else:
@@ -219,9 +226,16 @@ class TelegramToolset:
                         transcribe_left -= 1
                         transcript = await media_transcriber.transcribe_message(self.client, msg)
                         label = media_transcriber.label_for_kind(kind)
-                        text = f"[{label}]: {transcript}" if transcript else f"[{label}]"
+                        text = f"[{label}: {transcript}]" if transcript else f"[{label}]"
                     else:
                         text = f"[{media_transcriber.label_for_kind(kind)}, limitga yetildi]"
+                elif getattr(msg, "photo", None):
+                    if transcribe_left > 0:
+                        transcribe_left -= 1
+                        desc = await media_transcriber.describe_image_message(self.client, msg)
+                        text = f"[📸 Rasm: {desc}]" if desc else "[📸 Rasm]"
+                    else:
+                        text = "[📸 Rasm, limitga yetildi]"
                 elif msg.media:
                     text = "[media]"
             sender_name = ""
