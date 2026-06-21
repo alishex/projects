@@ -30,7 +30,7 @@ class AdminSetup(StatesGroup):
 
 
 def is_admin_id(telegram_id: int) -> bool:
-    return telegram_id == cfg.SUPER_ADMIN_ID
+    return telegram_id in cfg.ADMIN_IDS
 
 
 def _dn(u: dict) -> str:
@@ -41,7 +41,7 @@ def _dn(u: dict) -> str:
 
 # ── /start ────────────────────────────────────────────────────────────────
 
-@router.message(Command("start"), F.from_user.func(lambda u: u.id == cfg.SUPER_ADMIN_ID))
+@router.message(Command("start"), F.from_user.func(lambda u: u.id in cfg.ADMIN_IDS))
 async def admin_start(msg: Message, state: FSMContext):
     await db.add_or_update_user(
         telegram_id=msg.from_user.id,
@@ -149,7 +149,7 @@ async def receive_group(msg: Message, state: FSMContext):
 
 # ── /admin ────────────────────────────────────────────────────────────────
 
-@router.message(Command("admin"), F.from_user.func(lambda u: u.id == cfg.SUPER_ADMIN_ID))
+@router.message(Command("admin"), F.from_user.func(lambda u: u.id in cfg.ADMIN_IDS))
 async def cmd_admin_panel(msg: Message):
     await msg.answer(
         "🔧 <b>Admin Panel</b>\n\nQuyidagi bo'limlardan birini tanlang:",
@@ -157,7 +157,7 @@ async def cmd_admin_panel(msg: Message):
     )
 
 
-@router.callback_query(AdminPanelCB.filter(), F.from_user.func(lambda u: u.id == cfg.SUPER_ADMIN_ID))
+@router.callback_query(AdminPanelCB.filter(), F.from_user.func(lambda u: u.id in cfg.ADMIN_IDS))
 async def cb_admin_panel(query: CallbackQuery, callback_data: AdminPanelCB):
     section = callback_data.section
 
@@ -210,7 +210,7 @@ async def cb_admin_panel(query: CallbackQuery, callback_data: AdminPanelCB):
     await query.answer()
 
 
-@router.callback_query(AdminEditOrderCB.filter(), F.from_user.func(lambda u: u.id == cfg.SUPER_ADMIN_ID))
+@router.callback_query(AdminEditOrderCB.filter(), F.from_user.func(lambda u: u.id in cfg.ADMIN_IDS))
 async def cb_admin_edit_order(query: CallbackQuery, callback_data: AdminEditOrderCB):
     """Bitta xodimning buyurtmasini ko'rsatish va tahrirlash."""
     user_id = callback_data.user_id
@@ -251,7 +251,7 @@ async def cb_admin_edit_order(query: CallbackQuery, callback_data: AdminEditOrde
     await query.answer()
 
 
-@router.callback_query(AdminToggleMealCB.filter(), F.from_user.func(lambda u: u.id == cfg.SUPER_ADMIN_ID))
+@router.callback_query(AdminToggleMealCB.filter(), F.from_user.func(lambda u: u.id in cfg.ADMIN_IDS))
 async def cb_admin_toggle_meal(query: CallbackQuery, callback_data: AdminToggleMealCB, bot: Bot):
     """Xodimning bitta ovqat holatini toggle qilish va xodimga xabar yuborish."""
     user_id = callback_data.user_id
@@ -420,7 +420,7 @@ async def _build_employees_text() -> str:
 
 # ── /set_users ────────────────────────────────────────────────────────────
 
-@router.message(Command("set_users"), F.from_user.func(lambda u: u.id == cfg.SUPER_ADMIN_ID))
+@router.message(Command("set_users"), F.from_user.func(lambda u: u.id in cfg.ADMIN_IDS))
 async def cmd_set_users(msg: Message, state: FSMContext):
     await msg.answer(
         "Xodimlarning Telegram ID raqamlarini yuboring.\n"
@@ -432,7 +432,7 @@ async def cmd_set_users(msg: Message, state: FSMContext):
 
 # ── /set_group ────────────────────────────────────────────────────────────
 
-@router.message(Command("set_group"), F.from_user.func(lambda u: u.id == cfg.SUPER_ADMIN_ID))
+@router.message(Command("set_group"), F.from_user.func(lambda u: u.id in cfg.ADMIN_IDS))
 async def cmd_set_group(msg: Message, state: FSMContext):
     await msg.answer("Hisobot yuboriladigan guruh ID sini yuboring.")
     await state.set_state(AdminSetup.waiting_group)
@@ -440,7 +440,7 @@ async def cmd_set_group(msg: Message, state: FSMContext):
 
 # ── /set_menu ─────────────────────────────────────────────────────────────
 
-@router.message(Command("set_menu"), F.from_user.func(lambda u: u.id == cfg.SUPER_ADMIN_ID))
+@router.message(Command("set_menu"), F.from_user.func(lambda u: u.id in cfg.ADMIN_IDS))
 async def cmd_set_menu(msg: Message, state: FSMContext):
     await msg.answer(
         "Yangi menyu yuboring. Format:\n\n"
@@ -496,7 +496,7 @@ async def receive_menu(msg: Message, state: FSMContext):
 
 # ── /set_cycle ────────────────────────────────────────────────────────────
 
-@router.message(Command("set_cycle"), F.from_user.func(lambda u: u.id == cfg.SUPER_ADMIN_ID))
+@router.message(Command("set_cycle"), F.from_user.func(lambda u: u.id in cfg.ADMIN_IDS))
 async def cmd_set_cycle(msg: Message):
     parts = msg.text.strip().split()
     if len(parts) != 4:
@@ -540,7 +540,7 @@ async def cmd_set_cycle(msg: Message):
 
 # ── /report ───────────────────────────────────────────────────────────────
 
-@router.message(Command("report"), F.from_user.func(lambda u: u.id == cfg.SUPER_ADMIN_ID))
+@router.message(Command("report"), F.from_user.func(lambda u: u.id in cfg.ADMIN_IDS))
 async def cmd_report(msg: Message):
     tomorrow = (_today() + timedelta(days=1)).isoformat()
     text = await build_order_report(tomorrow)
@@ -549,7 +549,7 @@ async def cmd_report(msg: Message):
 
 # ── /today ────────────────────────────────────────────────────────────────
 
-@router.message(Command("today"), F.from_user.func(lambda u: u.id == cfg.SUPER_ADMIN_ID))
+@router.message(Command("today"), F.from_user.func(lambda u: u.id in cfg.ADMIN_IDS))
 async def cmd_today(msg: Message):
     menu = await get_today_menu()
     if not menu:
@@ -564,7 +564,7 @@ async def cmd_today(msg: Message):
 
 # ── /tomorrow ─────────────────────────────────────────────────────────────
 
-@router.message(Command("tomorrow"), F.from_user.func(lambda u: u.id == cfg.SUPER_ADMIN_ID))
+@router.message(Command("tomorrow"), F.from_user.func(lambda u: u.id in cfg.ADMIN_IDS))
 async def cmd_tomorrow(msg: Message):
     menu = await get_tomorrow_menu()
     if not menu:
@@ -579,7 +579,7 @@ async def cmd_tomorrow(msg: Message):
 
 # ── /reset_day ────────────────────────────────────────────────────────────
 
-@router.message(Command("reset_day"), F.from_user.func(lambda u: u.id == cfg.SUPER_ADMIN_ID))
+@router.message(Command("reset_day"), F.from_user.func(lambda u: u.id in cfg.ADMIN_IDS))
 async def cmd_reset_day(msg: Message):
     today = _today().isoformat()
     await db.reset_day_orders(today)
