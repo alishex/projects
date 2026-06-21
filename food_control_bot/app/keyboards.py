@@ -23,6 +23,9 @@ class MealConfirmCB(CallbackData, prefix="mconf"):
 class ReportMealCB(CallbackData, prefix="rm"):
     meal: int   # 1 or 2
 
+class AdminPanelCB(CallbackData, prefix="ap"):
+    section: str  # "main", "status", "employees", "tomorrow", "settings"
+
 
 # ── Reply Keyboard ────────────────────────────────────────────────────────
 
@@ -39,7 +42,7 @@ def remove_keyboard():
     return ReplyKeyboardRemove()
 
 
-# ── Meal Selection (17:30 xabari) ─────────────────────────────────────────
+# ── Meal Selection (13:30 xabari) ─────────────────────────────────────────
 
 def meal_selection_keyboard(m1_status=None, m2_status=None) -> InlineKeyboardMarkup:
     def label(n, status):
@@ -76,3 +79,32 @@ def report_meal_keyboard() -> InlineKeyboardMarkup:
         InlineKeyboardButton(text="1-ovqat", callback_data=ReportMealCB(meal=1).pack()),
         InlineKeyboardButton(text="2-ovqat", callback_data=ReportMealCB(meal=2).pack()),
     ]])
+
+
+# ── Admin Panel ───────────────────────────────────────────────────────────
+
+def admin_main_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="📋 Bugungi holat",       callback_data=AdminPanelCB(section="status").pack()),
+            InlineKeyboardButton(text="👥 Xodimlar",            callback_data=AdminPanelCB(section="employees").pack()),
+        ],
+        [
+            InlineKeyboardButton(text="📊 Ertangi buyurtmalar", callback_data=AdminPanelCB(section="tomorrow").pack()),
+            InlineKeyboardButton(text="⚙️ Sozlamalar",          callback_data=AdminPanelCB(section="settings").pack()),
+        ],
+    ])
+
+
+def admin_back_keyboard(refresh_section: str = "") -> InlineKeyboardMarkup:
+    buttons = []
+    if refresh_section:
+        buttons.append(InlineKeyboardButton(
+            text="🔄 Yangilash",
+            callback_data=AdminPanelCB(section=refresh_section).pack()
+        ))
+    buttons.append(InlineKeyboardButton(
+        text="⬅️ Orqaga",
+        callback_data=AdminPanelCB(section="main").pack()
+    ))
+    return InlineKeyboardMarkup(inline_keyboard=[buttons])

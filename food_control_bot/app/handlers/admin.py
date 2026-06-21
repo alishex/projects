@@ -1,17 +1,22 @@
 import logging
-from datetime import date
-from aiogram import Router, F
-from aiogram.types import Message
+from datetime import timedelta
+from aiogram import Router, F, Bot
+from aiogram.types import Message, CallbackQuery
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 
 import app.database as db
 import app.config as cfg
+from app.utils import today as _today
 from app.services.menu_service import (
     get_today_menu, get_tomorrow_menu, format_menu_text, CYCLE_LABELS
 )
 from app.services.report_service import build_order_report, build_final_report
+from app.keyboards import (
+    AdminPanelCB,
+    admin_main_keyboard, admin_back_keyboard,
+)
 
 log = logging.getLogger(__name__)
 router = Router()
@@ -25,6 +30,12 @@ class AdminSetup(StatesGroup):
 
 def is_admin_id(telegram_id: int) -> bool:
     return telegram_id == cfg.SUPER_ADMIN_ID
+
+
+def _dn(u: dict) -> str:
+    if u.get("username"):
+        return f"@{u['username']}"
+    return u.get("full_name") or f"User_{u['telegram_id']}"
 
 
 # ── /start ────────────────────────────────────────────────────────────────
@@ -51,7 +62,8 @@ async def admin_start(msg: Message, state: FSMContext):
     else:
         await msg.answer(
             "Marketing bo'limining ovqat nazorati botiga xush kelibsiz.\n\n"
-            "Mavjud buyruqlar:\n"
+            "/admin — Admin panel\n\n"
+            "Buyruqlar:\n"
             "/set_users — xodimlar ID ro'yxatini yangilash\n"
             "/set_group — hisobot guruh ID sini o'zgartirish\n"
             "/set_menu  — menyu tahrirlash\n"
@@ -92,7 +104,6 @@ async def receive_employees(msg: Message, state: FSMContext):
     for tid in ids:
         await db.add_employee_id(tid)
 
-    # Admin o'zini ham qo'shadi
     await db.add_or_update_user(
         telegram_id=msg.from_user.id,
         full_name=msg.from_user.full_name,
@@ -129,9 +140,145 @@ async def receive_group(msg: Message, state: FSMContext):
     await msg.answer(
         "✅ Sozlamalar saqlandi!\n\n"
         f"Guruh ID: <code>{group_id}</code>\n\n"
-        "Bot tayyor. Har kuni 17:30 da ertangi taomnoma yuboriladi.\n"
-        "22:00 da yakuniy hisobot guruhga va sizga yuboriladi."
+        "Bot tayyor. Har kuni 13:30 da ertangi taomnoma yuboriladi.\n"
+        "22:00 da yakuniy hisobot guruhga va sizga yuboriladi.\n\n"
+        "/admin — Admin panel"
     )
+
+
+# ── /admin ────────────────────────────────────────────────────────────────
+
+@router.message(Command("admin"), F.from_user.func(lambda u: u.id == cfg.SUPER_ADMIN_ID))
+async def cmd_admin_panel(msg: Message):
+    await msg.answer(
+        "🔧 <b>Admin Panel</b>\n\nQuyidagi bo'limlardan birini tanlang:",
+        reply_markup=admin_main_keyboard(),
+    )
+
+
+@router.callback_query(AdminPanelCB.filter(), F.from_user.func(lambda u: u.id == cfg.SUPER_ADMIN_ID))
+async def cb_admin_panel(query: CallbackQuery, callback_data: AdminPanelCB):
+    section = callback_data.section
+
+    if section == "main":
+        await query.message.edit_text(
+            "🔧 <b>Admin Panel</b>\n\nQuyidagi bo'limlardan birini tanlang:",
+            reply_markup=admin_main_keyboard(),
+        )
+
+    elif section == "status":
+        text = await _build_status_text()
+        await query.message.edit_text(
+            text, reply_markup=admin_back_keyboard(refresh_section="status")
+        )
+
+    elif section == "employees":
+        text = await _build_employees_text()
+        await query.message.edit_text(
+            text, reply_markup=admin_back_keyboard(refresh_section="employees")
+        )
+
+    elif section == "tomorrow":
+        tomorrow = (_today() + timedelta(days=1)).isoformat()
+        text = await build_order_report(tomorrow)
+        await query.message.edit_text(
+            text, reply_markup=admin_back_keyboard(refresh_section="tomorrow")
+        )
+
+    elif section == "settings":
+        settings = await db.get_settings()
+        group_id = settings.get("group_id") if settings else "—"
+        text = (
+            "⚙️ <b>Sozlamalar</b>\n\n"
+            f"Guruh ID: <code>{group_id}</code>\n\n"
+            "Buyruqlar:\n"
+            "/set_users — xodimlar ID ro'yxatini yangilash\n"
+            "/set_group — hisobot guruh ID sini o'zgartirish\n"
+            "/set_menu  — menyu tahrirlash\n"
+            "/set_cycle — siklni sozlash\n"
+            "/reset_day — bugungi buyurtmalarni tozalash"
+        )
+        await query.message.edit_text(
+            text, reply_markup=admin_back_keyboard()
+        )
+
+    await query.answer()
+
+
+async def _build_status_text() -> str:
+    tomorrow = (_today() + timedelta(days=1)).isoformat()
+    from app.services.menu_service import get_menu_for_date
+    from datetime import date as dt
+    menu = await get_menu_for_date(dt.fromisoformat(tomorrow))
+
+    users = await db.get_all_active_users()
+    orders = await db.get_orders_for_date(tomorrow)
+    order_map = {o["telegram_id"]: o for o in orders if o["is_confirmed"] == 1}
+
+    confirmed, not_confirmed = [], []
+    m1_yes, m1_no = [], []
+    m2_yes, m2_no = [], []
+
+    for u in users:
+        tid = u["telegram_id"]
+        o = order_map.get(tid)
+        if not o:
+            not_confirmed.append(u)
+            continue
+        confirmed.append(u)
+        (m1_yes if o["meal_1_status"] == "yes" else m1_no).append(u)
+        (m2_yes if o["meal_2_status"] == "yes" else m2_no).append(u)
+
+    def nl(lst):
+        return "\n".join(f"  {i+1}. {_dn(u)}" for i, u in enumerate(lst)) or "  —"
+
+    menu_label = menu["week_label"] if menu else tomorrow
+    m1_name = menu["meal_1"] if menu else "1-ovqat"
+    m2_name = menu["meal_2"] if menu else "2-ovqat"
+
+    parts = [
+        f"📋 <b>Bugungi holat</b>",
+        f"📅 {menu_label}\n",
+        f"✅ Tasdiqlagan: {len(confirmed)} ta",
+        f"⏳ Javob bermagan: {len(not_confirmed)} ta",
+    ]
+    if not_confirmed:
+        parts.append(f"\n<b>Javob bermaganlar:</b>\n{nl(not_confirmed)}")
+
+    parts += [
+        f"\n━━━━━━━━━━━━━━━━",
+        f"<b>1-ovqat:</b> {m1_name}",
+        f"  Yeydi ({len(m1_yes)} ta): {', '.join(_dn(u) for u in m1_yes) or '—'}",
+        f"  Yemaydi ({len(m1_no)} ta): {', '.join(_dn(u) for u in m1_no) or '—'}",
+        f"\n<b>2-ovqat:</b> {m2_name}",
+        f"  Yeydi ({len(m2_yes)} ta): {', '.join(_dn(u) for u in m2_yes) or '—'}",
+        f"  Yemaydi ({len(m2_no)} ta): {', '.join(_dn(u) for u in m2_no) or '—'}",
+    ]
+    return "\n".join(parts)
+
+
+async def _build_employees_text() -> str:
+    users = await db.get_all_active_users()
+    admins = [u for u in users if u.get("role") == "admin"]
+    employees = [u for u in users if u.get("role") != "admin"]
+
+    lines = [f"👥 <b>Xodimlar ro'yxati</b> (jami {len(users)} kishi)\n"]
+
+    lines.append("<b>👑 Admin:</b>")
+    for u in admins:
+        nick = f"@{u['username']}" if u.get("username") else "username yo'q"
+        started = "✅" if u.get("has_started") else "⭕"
+        lines.append(f"  {started} {u.get('full_name', '—')} ({nick})")
+
+    lines.append("\n<b>👤 Xodimlar:</b>")
+    for i, u in enumerate(employees, 1):
+        nick = f"@{u['username']}" if u.get("username") else "username yo'q"
+        started = "✅" if u.get("has_started") else "⭕"
+        name = u.get("full_name") or f"User_{u['telegram_id']}"
+        lines.append(f"  {i}. {started} {name} ({nick})")
+
+    lines.append("\n✅ = botga ulanganlar  |  ⭕ = hali ulanmaganlar")
+    return "\n".join(lines)
 
 
 # ── /set_users ────────────────────────────────────────────────────────────
@@ -214,9 +361,6 @@ async def receive_menu(msg: Message, state: FSMContext):
 
 @router.message(Command("set_cycle"), F.from_user.func(lambda u: u.id == cfg.SUPER_ADMIN_ID))
 async def cmd_set_cycle(msg: Message):
-    """
-    Misol: /set_cycle 2026-06-21 1 Yakshanba
-    """
     parts = msg.text.strip().split()
     if len(parts) != 4:
         await msg.answer(
@@ -230,6 +374,7 @@ async def cmd_set_cycle(msg: Message):
     _, anchor_date_str, week_str, day_name = parts
 
     try:
+        from datetime import date
         date.fromisoformat(anchor_date_str)
     except ValueError:
         await msg.answer("❌ Sana formati noto'g'ri. YYYY-MM-DD ko'rinishida yozing.")
@@ -260,8 +405,7 @@ async def cmd_set_cycle(msg: Message):
 
 @router.message(Command("report"), F.from_user.func(lambda u: u.id == cfg.SUPER_ADMIN_ID))
 async def cmd_report(msg: Message):
-    from datetime import timedelta
-    tomorrow = (date.today() + timedelta(days=1)).isoformat()
+    tomorrow = (_today() + timedelta(days=1)).isoformat()
     text = await build_order_report(tomorrow)
     await msg.answer(text)
 
@@ -300,6 +444,6 @@ async def cmd_tomorrow(msg: Message):
 
 @router.message(Command("reset_day"), F.from_user.func(lambda u: u.id == cfg.SUPER_ADMIN_ID))
 async def cmd_reset_day(msg: Message):
-    today = date.today().isoformat()
+    today = _today().isoformat()
     await db.reset_day_orders(today)
     await msg.answer(f"✅ {today} kuniga oid barcha buyurtmalar tozalandi.")
