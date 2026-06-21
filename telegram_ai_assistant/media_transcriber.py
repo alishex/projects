@@ -185,11 +185,11 @@ def _extract_video_frames(video_path: Path, output_dir: Path, n: int = 3) -> lis
         r = subprocess.run(
             [
                 "ffmpeg", "-y", "-ss", f"{ts:.2f}", "-i", str(video_path),
-                "-frames:v", "1", "-q:v", "3", str(frame_path)
+                "-frames:v", "1", "-update", "1", "-q:v", "3", str(frame_path)
             ],
             capture_output=True, timeout=15
         )
-        if r.returncode == 0 and frame_path.exists() and frame_path.stat().st_size > 1000:
+        if r.returncode == 0 and frame_path.exists() and frame_path.stat().st_size > 50:
             frames.append(frame_path)
     return frames
 
