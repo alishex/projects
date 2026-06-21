@@ -27,7 +27,7 @@ async def user_start(msg: Message):
     tid = msg.from_user.id
 
     # Admin o'zini qayta qo'shmasin (admin handleri oldin ishlaganida qaytib keladi)
-    if tid == cfg.SUPER_ADMIN_ID:
+    if tid in cfg.ADMIN_IDS:
         return
 
     user = await db.get_user(tid)
@@ -146,7 +146,7 @@ async def wrong_media_type(msg: Message):
 
 @router.message(F.text & ~F.text.startswith("/"))
 async def unregistered_text(msg: Message):
-    if msg.from_user.id == cfg.SUPER_ADMIN_ID:
+    if msg.from_user.id in cfg.ADMIN_IDS:
         return
     user = await db.get_user(msg.from_user.id)
     if not user:
