@@ -252,8 +252,8 @@ async def cb_admin_edit_order(query: CallbackQuery, callback_data: AdminEditOrde
 
 
 @router.callback_query(AdminToggleMealCB.filter(), F.from_user.func(lambda u: u.id == cfg.SUPER_ADMIN_ID))
-async def cb_admin_toggle_meal(query: CallbackQuery, callback_data: AdminToggleMealCB):
-    """Xodimning bitta ovqat holatini toggle qilish."""
+async def cb_admin_toggle_meal(query: CallbackQuery, callback_data: AdminToggleMealCB, bot: Bot):
+    """Xodimning bitta ovqat holatini toggle qilish va xodimga xabar yuborish."""
     user_id = callback_data.user_id
     meal = callback_data.meal
     tomorrow = (_today() + timedelta(days=1)).isoformat()
@@ -266,21 +266,32 @@ async def cb_admin_toggle_meal(query: CallbackQuery, callback_data: AdminToggleM
     new_status = "no" if current == "yes" else "yes"
     await db.admin_toggle_meal(tomorrow, user_id, meal, new_status)
 
-    action = "❌ Yemaydi" if new_status == "no" else "✅ Yeydi"
-    await query.answer(f"{meal}-ovqat: {action}", show_alert=False)
-
-    # Refresh edit screen
-    updated_cb = AdminEditOrderCB(user_id=user_id)
-    fake_cb = query
-    fake_cb.data = updated_cb.pack()
-
-    user = await db.get_user(user_id)
-    order = await db.get_order(tomorrow, user_id)
-
     from app.services.menu_service import get_menu_for_date
     from datetime import date as dt
     menu = await get_menu_for_date(dt.fromisoformat(tomorrow))
+    meal_name = (menu["meal_1"] if meal == 1 else menu["meal_2"]) if menu else f"{meal}-ovqat"
+    menu_label = menu["week_label"] if menu else tomorrow
 
+    old_icon = "✅ Yeydi" if current == "yes" else ("❌ Yemaydi" if current == "no" else "⏳ belgilanmagan")
+    new_icon = "✅ Yeydi" if new_status == "yes" else "❌ Yemaydi"
+
+    await query.answer(f"{meal}-ovqat: {new_icon}", show_alert=False)
+
+    # Xodimga xabar yuborish
+    user = await db.get_user(user_id)
+    try:
+        await bot.send_message(
+            user_id,
+            f"ℹ️ Admin sizning buyurtmangizni o'zgartirdi.\n\n"
+            f"📅 {menu_label}\n"
+            f"{meal}-ovqat: {meal_name}\n\n"
+            f"{old_icon} → {new_icon}"
+        )
+    except Exception:
+        pass  # Xodim botni bloklagan yoki boshmagan bo'lishi mumkin
+
+    # Edit screen yangilash
+    order = await db.get_order(tomorrow, user_id)
     name = _dn(user) if user else f"User_{user_id}"
     m1_name = menu["meal_1"] if menu else "1-ovqat"
     m2_name = menu["meal_2"] if menu else "2-ovqat"
@@ -292,7 +303,7 @@ async def cb_admin_toggle_meal(query: CallbackQuery, callback_data: AdminToggleM
 
     text = (
         f"✏️ <b>{name}</b> buyurtmasini tahrirlash\n"
-        f"📅 {menu['week_label'] if menu else tomorrow}\n\n"
+        f"📅 {menu_label}\n\n"
         f"<b>1-ovqat:</b> {m1_name}\n"
         f"Holat: {m1_icon}\n\n"
         f"<b>2-ovqat:</b> {m2_name}\n"
