@@ -8,23 +8,30 @@ from aiogram.filters.callback_data import CallbackData
 # ── Callback Data ─────────────────────────────────────────────────────────
 
 class MealSelectCB(CallbackData, prefix="ms"):
-    meal: int   # 1 or 2
+    meal: int
 
 class MealChoiceCB(CallbackData, prefix="mc"):
-    meal: int   # 1 or 2
-    ch: str     # "yes" or "no"
+    meal: int
+    ch: str
 
 class MealBackCB(CallbackData, prefix="mb"):
     pass
 
 class MealConfirmCB(CallbackData, prefix="mconf"):
-    act: str    # "ok" or "edit"
+    act: str
 
 class ReportMealCB(CallbackData, prefix="rm"):
-    meal: int   # 1 or 2
+    meal: int
 
 class AdminPanelCB(CallbackData, prefix="ap"):
-    section: str  # "main", "status", "employees", "tomorrow", "settings"
+    section: str  # "main","status","employees","tomorrow","settings","edit"
+
+class AdminEditOrderCB(CallbackData, prefix="aeo"):
+    user_id: int  # telegram_id of employee to edit
+
+class AdminToggleMealCB(CallbackData, prefix="atm"):
+    user_id: int
+    meal: int     # 1 or 2
 
 
 # ── Reply Keyboard ────────────────────────────────────────────────────────
@@ -72,7 +79,7 @@ def meal_confirm_keyboard() -> InlineKeyboardMarkup:
     ]])
 
 
-# ── Meal Report (Ovqat hisoboti button bosqichi) ──────────────────────────
+# ── Meal Report ───────────────────────────────────────────────────────────
 
 def report_meal_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[[
@@ -93,6 +100,9 @@ def admin_main_keyboard() -> InlineKeyboardMarkup:
             InlineKeyboardButton(text="📊 Ertangi buyurtmalar", callback_data=AdminPanelCB(section="tomorrow").pack()),
             InlineKeyboardButton(text="⚙️ Sozlamalar",          callback_data=AdminPanelCB(section="settings").pack()),
         ],
+        [
+            InlineKeyboardButton(text="✏️ Buyurtmalarni tahrirlash", callback_data=AdminPanelCB(section="edit").pack()),
+        ],
     ])
 
 
@@ -108,3 +118,63 @@ def admin_back_keyboard(refresh_section: str = "") -> InlineKeyboardMarkup:
         callback_data=AdminPanelCB(section="main").pack()
     ))
     return InlineKeyboardMarkup(inline_keyboard=[buttons])
+
+
+def admin_edit_list_keyboard(users_orders: list) -> InlineKeyboardMarkup:
+    """users_orders: list of (user_dict, order_dict_or_None)"""
+    rows = []
+    pair = []
+    for u, o in users_orders:
+        if o and o.get("is_confirmed"):
+            m1 = "✅" if o["meal_1_status"] == "yes" else "❌"
+            m2 = "✅" if o["meal_2_status"] == "yes" else "❌"
+            label = f"{_short_name(u)} {m1}{m2}"
+        else:
+            label = f"{_short_name(u)} ⏳"
+        pair.append(InlineKeyboardButton(
+            text=label,
+            callback_data=AdminEditOrderCB(user_id=u["telegram_id"]).pack()
+        ))
+        if len(pair) == 2:
+            rows.append(pair)
+            pair = []
+    if pair:
+        rows.append(pair)
+
+    rows.append([
+        InlineKeyboardButton(text="🔄 Yangilash", callback_data=AdminPanelCB(section="edit").pack()),
+        InlineKeyboardButton(text="⬅️ Orqaga",   callback_data=AdminPanelCB(section="main").pack()),
+    ])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def admin_edit_user_keyboard(user_id: int, m1_status, m2_status) -> InlineKeyboardMarkup:
+    """Toggle buttons for a specific user's order."""
+    def toggle_btn(meal: int, status):
+        if status == "yes":
+            text = f"❌ {meal}-ovqatni yemaydi qilish"
+        elif status == "no":
+            text = f"✅ {meal}-ovqatni yeydi qilish"
+        else:
+            text = f"✅ {meal}-ovqat — tasdiqlash"
+        return InlineKeyboardButton(
+            text=text,
+            callback_data=AdminToggleMealCB(user_id=user_id, meal=meal).pack()
+        )
+
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [toggle_btn(1, m1_status)],
+        [toggle_btn(2, m2_status)],
+        [
+            InlineKeyboardButton(text="🔄 Yangilash", callback_data=AdminEditOrderCB(user_id=user_id).pack()),
+            InlineKeyboardButton(text="⬅️ Ro'yxat",  callback_data=AdminPanelCB(section="edit").pack()),
+        ],
+    ])
+
+
+def _short_name(u: dict) -> str:
+    if u.get("username"):
+        nick = f"@{u['username']}"
+        return nick[:15]
+    name = u.get("full_name") or f"ID{u['telegram_id']}"
+    return name[:15]

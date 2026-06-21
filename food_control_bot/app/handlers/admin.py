@@ -14,8 +14,9 @@ from app.services.menu_service import (
 )
 from app.services.report_service import build_order_report, build_final_report
 from app.keyboards import (
-    AdminPanelCB,
+    AdminPanelCB, AdminEditOrderCB, AdminToggleMealCB,
     admin_main_keyboard, admin_back_keyboard,
+    admin_edit_list_keyboard, admin_edit_user_keyboard,
 )
 
 log = logging.getLogger(__name__)
@@ -202,7 +203,105 @@ async def cb_admin_panel(query: CallbackQuery, callback_data: AdminPanelCB):
             text, reply_markup=admin_back_keyboard()
         )
 
+    elif section == "edit":
+        text, kb = await _build_edit_list()
+        await query.message.edit_text(text, reply_markup=kb)
+
     await query.answer()
+
+
+@router.callback_query(AdminEditOrderCB.filter(), F.from_user.func(lambda u: u.id == cfg.SUPER_ADMIN_ID))
+async def cb_admin_edit_order(query: CallbackQuery, callback_data: AdminEditOrderCB):
+    """Bitta xodimning buyurtmasini ko'rsatish va tahrirlash."""
+    user_id = callback_data.user_id
+    tomorrow = (_today() + timedelta(days=1)).isoformat()
+
+    user = await db.get_user(user_id)
+    order = await db.get_order(tomorrow, user_id)
+
+    from app.services.menu_service import get_menu_for_date
+    from datetime import date as dt
+    menu = await get_menu_for_date(dt.fromisoformat(tomorrow))
+
+    name = _dn(user) if user else f"User_{user_id}"
+    m1_name = menu["meal_1"] if menu else "1-ovqat"
+    m2_name = menu["meal_2"] if menu else "2-ovqat"
+
+    if order and order.get("is_confirmed"):
+        m1_st = order["meal_1_status"]
+        m2_st = order["meal_2_status"]
+        m1_icon = "✅ Yeydi" if m1_st == "yes" else "❌ Yemaydi"
+        m2_icon = "✅ Yeydi" if m2_st == "yes" else "❌ Yemaydi"
+    else:
+        m1_st = m2_st = None
+        m1_icon = m2_icon = "⏳ Javob bermagan"
+
+    text = (
+        f"✏️ <b>{name}</b> buyurtmasini tahrirlash\n"
+        f"📅 {menu['week_label'] if menu else tomorrow}\n\n"
+        f"<b>1-ovqat:</b> {m1_name}\n"
+        f"Holat: {m1_icon}\n\n"
+        f"<b>2-ovqat:</b> {m2_name}\n"
+        f"Holat: {m2_icon}"
+    )
+    await query.message.edit_text(
+        text,
+        reply_markup=admin_edit_user_keyboard(user_id, m1_st, m2_st)
+    )
+    await query.answer()
+
+
+@router.callback_query(AdminToggleMealCB.filter(), F.from_user.func(lambda u: u.id == cfg.SUPER_ADMIN_ID))
+async def cb_admin_toggle_meal(query: CallbackQuery, callback_data: AdminToggleMealCB):
+    """Xodimning bitta ovqat holatini toggle qilish."""
+    user_id = callback_data.user_id
+    meal = callback_data.meal
+    tomorrow = (_today() + timedelta(days=1)).isoformat()
+
+    order = await db.get_order(tomorrow, user_id)
+    current = None
+    if order and order.get("is_confirmed"):
+        current = order[f"meal_{meal}_status"]
+
+    new_status = "no" if current == "yes" else "yes"
+    await db.admin_toggle_meal(tomorrow, user_id, meal, new_status)
+
+    action = "❌ Yemaydi" if new_status == "no" else "✅ Yeydi"
+    await query.answer(f"{meal}-ovqat: {action}", show_alert=False)
+
+    # Refresh edit screen
+    updated_cb = AdminEditOrderCB(user_id=user_id)
+    fake_cb = query
+    fake_cb.data = updated_cb.pack()
+
+    user = await db.get_user(user_id)
+    order = await db.get_order(tomorrow, user_id)
+
+    from app.services.menu_service import get_menu_for_date
+    from datetime import date as dt
+    menu = await get_menu_for_date(dt.fromisoformat(tomorrow))
+
+    name = _dn(user) if user else f"User_{user_id}"
+    m1_name = menu["meal_1"] if menu else "1-ovqat"
+    m2_name = menu["meal_2"] if menu else "2-ovqat"
+
+    m1_st = order["meal_1_status"] if order else None
+    m2_st = order["meal_2_status"] if order else None
+    m1_icon = "✅ Yeydi" if m1_st == "yes" else "❌ Yemaydi" if m1_st == "no" else "⏳"
+    m2_icon = "✅ Yeydi" if m2_st == "yes" else "❌ Yemaydi" if m2_st == "no" else "⏳"
+
+    text = (
+        f"✏️ <b>{name}</b> buyurtmasini tahrirlash\n"
+        f"📅 {menu['week_label'] if menu else tomorrow}\n\n"
+        f"<b>1-ovqat:</b> {m1_name}\n"
+        f"Holat: {m1_icon}\n\n"
+        f"<b>2-ovqat:</b> {m2_name}\n"
+        f"Holat: {m2_icon}"
+    )
+    await query.message.edit_text(
+        text,
+        reply_markup=admin_edit_user_keyboard(user_id, m1_st, m2_st)
+    )
 
 
 async def _build_status_text() -> str:
@@ -255,6 +354,33 @@ async def _build_status_text() -> str:
         f"  Yemaydi ({len(m2_no)} ta): {', '.join(_dn(u) for u in m2_no) or '—'}",
     ]
     return "\n".join(parts)
+
+
+async def _build_edit_list():
+    """Barcha xodimlar va ularning ertangi buyurtma holati — tahrirlash uchun."""
+    tomorrow = (_today() + timedelta(days=1)).isoformat()
+    from app.services.menu_service import get_menu_for_date
+    from datetime import date as dt
+    menu = await get_menu_for_date(dt.fromisoformat(tomorrow))
+
+    users = await db.get_all_active_users()
+    orders = await db.get_orders_for_date(tomorrow)
+    order_map = {o["telegram_id"]: o for o in orders if o.get("is_confirmed")}
+
+    menu_label = menu["week_label"] if menu else tomorrow
+    m1_name = menu["meal_1"] if menu else "1-ovqat"
+    m2_name = menu["meal_2"] if menu else "2-ovqat"
+
+    lines = [
+        "✏️ <b>Buyurtmalarni tahrirlash</b>",
+        f"📅 {menu_label}",
+        f"1-ovqat: {m1_name}",
+        f"2-ovqat: {m2_name}\n",
+        "Xodimni tanlang:",
+    ]
+
+    users_orders = [(u, order_map.get(u["telegram_id"])) for u in users]
+    return "\n".join(lines), admin_edit_list_keyboard(users_orders)
 
 
 async def _build_employees_text() -> str:
