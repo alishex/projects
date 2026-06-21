@@ -328,3 +328,27 @@ async def get_user_meal_report(date_str: str, telegram_id: int,
             (date_str, telegram_id, meal_number)
         )).fetchone()
         return dict(row) if row else None
+
+
+async def admin_toggle_meal(date_str: str, telegram_id: int, meal_num: int, new_status: str):
+    """Admin bir xodimning buyurtmasidagi bitta ovqat holatini o'zgartiradi."""
+    now = NOW()
+    field = f"meal_{meal_num}_status"
+    async with aiosqlite.connect(DB_PATH) as db:
+        existing = await (await db.execute(
+            "SELECT id FROM daily_orders WHERE date=? AND telegram_id=?",
+            (date_str, telegram_id)
+        )).fetchone()
+        if existing:
+            await db.execute(
+                f"UPDATE daily_orders SET {field}=?, is_confirmed=1, updated_at=? WHERE date=? AND telegram_id=?",
+                (new_status, now, date_str, telegram_id)
+            )
+        else:
+            m1 = new_status if meal_num == 1 else "yes"
+            m2 = new_status if meal_num == 2 else "yes"
+            await db.execute("""
+                INSERT INTO daily_orders(date, telegram_id, meal_1_status, meal_2_status, is_confirmed, created_at, updated_at)
+                VALUES(?,?,?,?,1,?,?)
+            """, (date_str, telegram_id, m1, m2, now, now))
+        await db.commit()
