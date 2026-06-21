@@ -20,6 +20,7 @@
 | 6 | [instagram_bitrix_dm_lead_bot](#6-instagram_bitrix_dm_lead_bot) | Instagram DM → Bitrix24 CRM + Project → Telegram | 8002 | ~80 MB |
 | 7 | [telegram_ai_assistant](#7-telegram_ai_assistant) | Claude AI shaxsiy Telegram akkaunt assistenti | — | ~860 MB |
 | 8 | [allmax_ai_assistant](#8-allmax_ai_assistant) | Claude AI ALLMAX akkaunt assistenti | — | ~220 MB |
+| 9 | [food_control_bot](#9-food_control_bot) | Marketing bo'limi ovqat buyurtma va hisobot boti | — | ~50 MB |
 
 ---
 
@@ -757,6 +758,61 @@ admin:        6586004680
 
 ---
 
+## 9. food_control_bot
+
+> Marketing bo'limidagi **13 nafar xodim** uchun ovqat buyurtma va hisobot boti — 2 haftalik menyu sikli, video tasdiq.
+
+### Nima qiladi
+
+- Har kuni **13:30** da ertangi kunning menyusini xodimlarga yuboradi (inline keyboard)
+- Har bir xodim 2 ta ovqatdan birini tanlab tasdiqlaydi ("Yeyman" / "Yemayman")
+- Xodimlar **round video** yuborib ovqat yeb bo'lganini tasdiqleydi
+- Adminga va guruhga **22:00** da yakuniy hisobot (kim ovqat tanladi, kim video yubordi)
+- **2 haftalik** menyu sikli (`(anchor_index + days_diff) % 14` formula)
+
+### Texnologiyalar
+
+| Kutubxona | Vazifasi |
+|---|---|
+| `aiogram 3.x` | Router, FSM, CallbackData |
+| `APScheduler` | 13:30 menyu, 22:00 hisobot (Asia/Tashkent) |
+| `aiosqlite` | Async SQLite (users, menu, orders, reports) |
+| `pytz` | Toshkent timezone (server UTC da ishlaydi) |
+
+### Fayllar
+
+```
+food_control_bot/
+├── main.py
+├── requirements.txt
+├── .env.example
+└── app/
+    ├── config.py          — env vars (BOT_TOKEN, SUPER_ADMIN_ID, TIMEZONE, ANCHOR_*)
+    ├── database.py        — SQLite CRUD
+    ├── keyboards.py       — ReplyKeyboard + InlineKeyboard + CallbackData
+    ├── scheduler.py       — APScheduler: 13:30 menyu, 22:00 hisobot
+    ├── utils.py           — Toshkent timezone helper
+    ├── handlers/
+    │   ├── admin.py       — /start, /set_users, /set_group, /set_menu, /report, /today, /tomorrow
+    │   ├── user.py        — "Ovqat hisoboti" tugmasi, round video handler
+    │   └── callbacks.py   — MealSelectCB, MealChoiceCB, MealConfirmCB, ReportMealCB
+    └── services/
+        ├── menu_service.py   — 2-haftalik sikl logikasi
+        ├── order_service.py  — buyurtma CRUD
+        ├── report_service.py — hisobot formatlash
+        └── user_service.py   — admin/user tekshiruv
+```
+
+### Systemd
+
+```
+service: food-control-bot
+bot:     @ovqatnazoratiuzbot
+admin:   6368051557
+```
+
+---
+
 ## Infratuzilma
 
 ### Server holati
@@ -764,13 +820,14 @@ admin:        6586004680
 | Servis | Status | Port | Bot / Session | RAM |
 |---|---|---|---|---|
 | `allmax-telethon` | ✅ active | — | @allmaxshaxsiy | ~310 MB |
-| `allmax-hr-bot` | ✅ active | — | @allmax_jbot | ~170 MB |
+| `allmax-hr-bot` | ⏸ inactive | — | @allmax_jbot | ~170 MB |
 | `feedback-bot` | ✅ active | — | @allmax_feedback_bot | ~130 MB |
 | `bitrix-lead-alert-bot` | ✅ active | 8000 | — | ~70 MB |
 | `marketing-task-control-bot` | ✅ active | — | @allmax_vazifalarbot | ~115 MB |
 | `instagram-dm-lead-bot` | ✅ active | 8002 | — | ~80 MB |
 | `telegram-ai-assistant` | ✅ active | — | @Claude_ai_oBot | ~860 MB |
 | `allmax-ai-assistant` | ✅ active | — | @allmax_claude_aiBot | ~220 MB |
+| `food-control-bot` | ✅ active | — | @ovqatnazoratiuzbot | ~50 MB |
 
 Hammasi `systemctl enable`, `Restart=always` — server reboot bo'lsa avtomatik qayta ishga tushadi.
 
