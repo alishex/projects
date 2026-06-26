@@ -12,7 +12,7 @@ async def build_order_report(target_date_str: str) -> str:
     if not menu:
         return "Menyu topilmadi."
 
-    users = await db.get_all_active_employees()
+    users = await db.get_all_active_users()
     orders = await db.get_orders_for_date(target_date_str)
     order_map = {o["telegram_id"]: o for o in orders if o["is_confirmed"] == 1}
 
@@ -67,7 +67,7 @@ async def build_final_report(target_date_str: str) -> str:
     if not menu:
         return "Menyu topilmadi."
 
-    users = await db.get_all_active_employees()
+    users = await db.get_all_active_users()
     orders = await db.get_orders_for_date(target_date_str)
     reports = await db.get_meal_reports_for_date(target_date_str)
     order_map = {o["telegram_id"]: o for o in orders if o["is_confirmed"] == 1}

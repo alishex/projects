@@ -15,7 +15,7 @@ from app.services.menu_service import (
 from app.services.report_service import build_order_report, build_final_report
 from app.keyboards import (
     AdminPanelCB, AdminEditOrderCB, AdminToggleMealCB,
-    admin_main_keyboard, admin_back_keyboard, admin_settings_keyboard,
+    admin_main_keyboard, admin_back_keyboard,
     admin_edit_list_keyboard, admin_edit_user_keyboard,
 )
 
@@ -24,10 +24,9 @@ router = Router()
 
 
 class AdminSetup(StatesGroup):
-    waiting_employees    = State()
-    waiting_group        = State()
-    waiting_group_panel  = State()
-    waiting_menu         = State()
+    waiting_employees = State()
+    waiting_group     = State()
+    waiting_menu      = State()
 
 
 def is_admin_id(telegram_id: int) -> bool:
@@ -58,6 +57,7 @@ async def admin_start(msg: Message, state: FSMContext):
             "Marketing bo'limining ovqat nazorati botiga xush kelibsiz.\n\n"
             "Xodimlarning Telegram ID raqamlarini yuboring.\n"
             "Har bir ID ni yangi qatordan yozing.\n"
+            "Jami 12 ta xodim ID yuborilishi kerak."
         )
         await state.set_state(AdminSetup.waiting_employees)
     else:
@@ -91,12 +91,14 @@ async def receive_employees(msg: Message, state: FSMContext):
         await msg.answer(
             f"❌ Quyidagi qatorlar noto'g'ri (faqat raqam bo'lishi kerak):\n"
             + "\n".join(errors)
-            + "\n\nQaytadan yuboring."
+            + "\n\nQaytadan 12 ta ID yuboring."
         )
         return
 
-    if len(ids) < 1:
-        await msg.answer("❌ Kamida 1 ta ID yuborish kerak.")
+    if len(ids) != 12:
+        await msg.answer(
+            f"❌ {len(ids)} ta ID yuborildi. Aynan 12 ta kerak.\nQaytadan yuboring."
+        )
         return
 
     await db.clear_employees()
@@ -113,7 +115,7 @@ async def receive_employees(msg: Message, state: FSMContext):
 
     await state.update_data(employee_ids=ids)
     await msg.answer(
-        f"✅ {len(ids)} ta xodim qo'shildi.\n\n"
+        f"✅ {len(ids)} ta xodim + admin qo'shildi. Jami: {len(ids)+1} kishi.\n\n"
         "Endi hisobot yuboriladigan Telegram guruh ID sini yuboring."
     )
     await state.set_state(AdminSetup.waiting_group)
@@ -156,7 +158,7 @@ async def cmd_admin_panel(msg: Message):
 
 
 @router.callback_query(AdminPanelCB.filter(), F.from_user.func(lambda u: u.id in cfg.ADMIN_IDS))
-async def cb_admin_panel(query: CallbackQuery, callback_data: AdminPanelCB, state: FSMContext):
+async def cb_admin_panel(query: CallbackQuery, callback_data: AdminPanelCB):
     section = callback_data.section
 
     if section == "main":
@@ -186,31 +188,20 @@ async def cb_admin_panel(query: CallbackQuery, callback_data: AdminPanelCB, stat
 
     elif section == "settings":
         settings = await db.get_settings()
-        group_id = settings.get("group_id") if settings else None
+        group_id = settings.get("group_id") if settings else "—"
         text = (
             "⚙️ <b>Sozlamalar</b>\n\n"
-            f"Guruh ID: <code>{group_id or 'belgilanmagan'}</code>\n\n"
-            "Boshqa buyruqlar:\n"
+            f"Guruh ID: <code>{group_id}</code>\n\n"
+            "Buyruqlar:\n"
             "/set_users — xodimlar ID ro'yxatini yangilash\n"
+            "/set_group — hisobot guruh ID sini o'zgartirish\n"
             "/set_menu  — menyu tahrirlash\n"
             "/set_cycle — siklni sozlash\n"
             "/reset_day — bugungi buyurtmalarni tozalash"
         )
         await query.message.edit_text(
-            text, reply_markup=admin_settings_keyboard(group_id)
+            text, reply_markup=admin_back_keyboard()
         )
-
-    elif section == "set_group":
-        await query.message.edit_text(
-            "📍 <b>Guruh ID sozlash</b>\n\n"
-            "Hisobot yuboriladigan Telegram guruh ID sini yuboring.\n\n"
-            "<i>Maslahat: Guruh ID ni bilmasangiz, botni guruhga qo'shing "
-            "va guruh ichida /set_group yozing — bot o'zi aniqlaydi.</i>",
-            reply_markup=admin_back_keyboard(refresh_section="settings"),
-        )
-        await state.set_state(AdminSetup.waiting_group_panel)
-        await query.answer()
-        return
 
     elif section == "edit":
         text, kb = await _build_edit_list()
@@ -330,7 +321,7 @@ async def _build_status_text() -> str:
     from datetime import date as dt
     menu = await get_menu_for_date(dt.fromisoformat(tomorrow))
 
-    users = await db.get_all_active_employees()
+    users = await db.get_all_active_users()
     orders = await db.get_orders_for_date(tomorrow)
     order_map = {o["telegram_id"]: o for o in orders if o["is_confirmed"] == 1}
 
@@ -383,7 +374,7 @@ async def _build_edit_list():
     from datetime import date as dt
     menu = await get_menu_for_date(dt.fromisoformat(tomorrow))
 
-    users = await db.get_all_active_employees()
+    users = await db.get_all_active_users()
     orders = await db.get_orders_for_date(tomorrow)
     order_map = {o["telegram_id"]: o for o in orders if o.get("is_confirmed")}
 
@@ -404,7 +395,7 @@ async def _build_edit_list():
 
 
 async def _build_employees_text() -> str:
-    users = await db.get_all_active_employees()
+    users = await db.get_all_active_users()
     admins = [u for u in users if u.get("role") == "admin"]
     employees = [u for u in users if u.get("role") != "admin"]
 
@@ -434,6 +425,7 @@ async def cmd_set_users(msg: Message, state: FSMContext):
     await msg.answer(
         "Xodimlarning Telegram ID raqamlarini yuboring.\n"
         "Har bir ID ni yangi qatordan yozing.\n"
+        "Jami 12 ta xodim ID yuborilishi kerak."
     )
     await state.set_state(AdminSetup.waiting_employees)
 
@@ -443,35 +435,7 @@ async def cmd_set_users(msg: Message, state: FSMContext):
 @router.message(Command("set_group"), F.from_user.func(lambda u: u.id in cfg.ADMIN_IDS))
 async def cmd_set_group(msg: Message, state: FSMContext):
     await msg.answer("Hisobot yuboriladigan guruh ID sini yuboring.")
-    await state.set_state(AdminSetup.waiting_group_panel)
-
-
-@router.message(AdminSetup.waiting_group_panel, F.from_user.func(lambda u: u.id in cfg.ADMIN_IDS))
-async def receive_group_from_panel(msg: Message, state: FSMContext):
-    try:
-        group_id = int(msg.text.strip())
-    except (ValueError, AttributeError):
-        await msg.answer("❌ Guruh ID faqat raqam bo'lishi kerak. Qaytadan yuboring.")
-        return
-
-    settings = await db.get_settings()
-    if settings:
-        await db.update_group_id(group_id)
-    else:
-        await db.save_settings(
-            admin_id=msg.from_user.id,
-            group_id=group_id,
-            anchor_date=cfg.ANCHOR_DATE,
-            anchor_week=cfg.ANCHOR_WEEK,
-            anchor_day=cfg.ANCHOR_DAY,
-            anchor_index=cfg.ANCHOR_INDEX,
-        )
-    await state.clear()
-    await msg.answer(
-        f"✅ Guruh ID saqlandi: <code>{group_id}</code>\n\n"
-        "Endi 13:30 menyu va 22:00 yakuniy hisobot shu guruhga yuboriladi.\n\n"
-        "/admin — Admin panel",
-    )
+    await state.set_state(AdminSetup.waiting_group)
 
 
 # ── /set_menu ─────────────────────────────────────────────────────────────
