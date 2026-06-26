@@ -106,14 +106,6 @@ def admin_main_keyboard() -> InlineKeyboardMarkup:
     ])
 
 
-def admin_settings_keyboard(group_id=None) -> InlineKeyboardMarkup:
-    btn_label = "✏️ Guruh ID o'zgartirish" if group_id else "📍 Guruh ID sozlash"
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=btn_label, callback_data=AdminPanelCB(section="set_group").pack())],
-        [InlineKeyboardButton(text="⬅️ Orqaga", callback_data=AdminPanelCB(section="main").pack())],
-    ])
-
-
 def admin_back_keyboard(refresh_section: str = "") -> InlineKeyboardMarkup:
     buttons = []
     if refresh_section:

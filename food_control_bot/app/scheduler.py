@@ -20,13 +20,13 @@ TZ = pytz.timezone(cfg.TIMEZONE)
 
 
 async def send_tomorrow_menu(bot: Bot):
-    """13:30 — Barcha xodimlarga ertangi menyu yuboriladi."""
+    """17:30 — Barcha foydalanuvchilarga ertangi menyu yuboriladi."""
     menu = await get_tomorrow_menu()
     if not menu:
         log.warning("13:30: Ertangi menyu topilmadi.")
         return
 
-    users = await db.get_all_active_employees()
+    users = await db.get_all_active_users()
     text = format_menu_text(menu)
     kb = meal_selection_keyboard()
 

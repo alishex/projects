@@ -150,15 +150,6 @@ async def get_all_active_users() -> list[dict]:
         return [dict(r) for r in rows]
 
 
-
-async def get_all_active_employees() -> list[dict]:
-    async with aiosqlite.connect(DB_PATH) as db:
-        db.row_factory = aiosqlite.Row
-        rows = await (await db.execute(
-            "SELECT * FROM users WHERE is_active=1 AND role='employee'"
-        )).fetchall()
-        return [dict(r) for r in rows]
-
 async def clear_employees():
     async with aiosqlite.connect(DB_PATH) as db:
         await db.execute("DELETE FROM users WHERE role='employee'")
@@ -354,8 +345,8 @@ async def admin_toggle_meal(date_str: str, telegram_id: int, meal_num: int, new_
                 (new_status, now, date_str, telegram_id)
             )
         else:
-            m1 = new_status if meal_num == 1 else None
-            m2 = new_status if meal_num == 2 else None
+            m1 = new_status if meal_num == 1 else "yes"
+            m2 = new_status if meal_num == 2 else "yes"
             await db.execute("""
                 INSERT INTO daily_orders(date, telegram_id, meal_1_status, meal_2_status, is_confirmed, created_at, updated_at)
                 VALUES(?,?,?,?,1,?,?)
