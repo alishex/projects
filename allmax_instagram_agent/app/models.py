@@ -34,6 +34,8 @@ class IncomingMessage:
     is_echo: bool = False
     raw: dict[str, Any] = field(default_factory=dict)
     target: TargetInfo = field(default_factory=TargetInfo)
+    attachments: list[dict[str, Any]] = field(default_factory=list)
+    story_reply_url: Optional[str] = None
 
 
 @dataclass(slots=True)

@@ -127,6 +127,16 @@ class Settings:
     target_video_default_name: str = _env("TARGET_VIDEO_DEFAULT_NAME", "Instagram target")
     target_video_keywords: str = _env("TARGET_VIDEO_KEYWORDS", "target,reklama,ads,ad,instagram target")
 
+    # Community Agent (Claude AI auto-reply)
+    community_agent_enable: bool = _bool("COMMUNITY_AGENT_ENABLE", True)
+    community_work_start: int = _int("COMMUNITY_WORK_START", 9)
+    community_work_end: int = _int("COMMUNITY_WORK_END", 22)
+    community_address: str = _env("COMMUNITY_ADDRESS", "Toshkent sh., Bunyodkor Savdo Majmuasi (Korzinka -1-qavat, er osti qavat), metro: Mirzo Ulug'bek")
+    community_phone: str = _env("COMMUNITY_PHONE", "+998 78 555 31 31")
+
+    # MoySklad stok
+    moysklad_token: str = _env("MOYSKLAD_TOKEN", "")
+
     def ensure_dirs(self) -> None:
         Path(self.sqlite_path).parent.mkdir(parents=True, exist_ok=True)
         Path("logs").mkdir(exist_ok=True)
