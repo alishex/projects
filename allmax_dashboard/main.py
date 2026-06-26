@@ -98,6 +98,7 @@ def api_stats(request: Request):
         "total_msgs":     q1(con, "SELECT COUNT(*) FROM dm_events"),
         "total_leads":    q1(con, "SELECT COUNT(*) FROM lead_group_messages"),
         "today_contacts": q1(con, "SELECT COUNT(*) FROM daily_contacts WHERE date=?", (today,)),
+        "today_human":    q1(con, "SELECT COUNT(*) FROM daily_contacts WHERE date=? AND contact_type=?", (today, "human")),
         "ts": datetime.now().strftime("%H:%M:%S"),
     }
     con.close()
