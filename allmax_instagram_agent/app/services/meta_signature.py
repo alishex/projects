@@ -16,5 +16,7 @@ def verify_meta_signature(raw_body: bytes, signature_header: str | None, app_sec
         return False
     expected = "sha256=" + hmac.new(app_secret.encode("utf-8"), raw_body, hashlib.sha256).hexdigest()
     ok = hmac.compare_digest(expected, signature_header)
+    if not ok:
+        log.warning("Signature mismatch. Got: %s | Expected prefix: %s", signature_header[:20], expected[:20])
     log.info("Meta signature verification result: %s", ok)
     return ok

@@ -19,7 +19,7 @@ import anthropic
 import json
 from community_agent import CommunityAgent, AgentResult
 from media_handler import (
-    get_media_kind, transcribe_message, encode_image_for_claude,
+    get_media_kind, transcribe_message, encode_image_for_claude, prewarm_whisper,
 )
 
 # =========================
@@ -1654,6 +1654,8 @@ async def main():
 
     asyncio.create_task(_daily_report_loop())
     logging.info("Daily report loop started (har kuni 00:00 UZT)")
+
+    await prewarm_whisper()  # unload loop ishga tushadi, model lazy-load qilinadi
 
     await client.run_until_disconnected()
 

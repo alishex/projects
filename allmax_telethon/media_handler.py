@@ -5,10 +5,12 @@ SQLite cache: bir xil message_id ikkinchi marta transkribatsiya qilinmaydi.
 
 import asyncio
 import base64
+import gc
 import logging
 import sqlite3
 import subprocess
 import tempfile
+import time
 from pathlib import Path
 from typing import Any, Optional
 
@@ -17,8 +19,10 @@ log = logging.getLogger(__name__)
 _CACHE_DB = Path(__file__).parent / "analytics" / "media_cache.sqlite3"
 _whisper_model = None
 _model_lock = asyncio.Lock()
+_model_last_used: float = 0.0
+_MODEL_UNLOAD_AFTER = 600  # 10 daqiqa ishlatilmasa xotiradan tushirish
 
-WHISPER_MODEL_SIZE = "small"
+WHISPER_MODEL_SIZE = "base"
 MAX_DURATION_SEC   = 600  # 10 daqiqadan uzun bo'lsa skip
 
 SUPPORTED_IMAGE_MIME = {
@@ -108,10 +112,11 @@ def _img_cache_set(msg_id: int, mime: str, data: str, label: str):
 
 
 # ---------------------------------------------------------------------------
-# Whisper model (lazy load)
+# Whisper model (lazy load + auto-unload)
 # ---------------------------------------------------------------------------
 async def _get_model():
-    global _whisper_model
+    global _whisper_model, _model_last_used
+    _model_last_used = time.monotonic()
     if _whisper_model is None:
         async with _model_lock:
             if _whisper_model is None:
@@ -120,6 +125,22 @@ async def _get_model():
                 _whisper_model = WhisperModel(WHISPER_MODEL_SIZE, device="cpu", compute_type="int8")
                 log.info("Whisper model tayyor")
     return _whisper_model
+
+
+async def _model_unload_loop():
+    """Fon vazifasi: N daqiqa ovoz kelmasa modelni xotiradan tushiradi."""
+    global _whisper_model, _model_last_used
+    while True:
+        await asyncio.sleep(60)
+        if _whisper_model is None:
+            continue
+        idle = time.monotonic() - _model_last_used
+        if idle >= _MODEL_UNLOAD_AFTER:
+            async with _model_lock:
+                if _whisper_model is not None:
+                    _whisper_model = None
+                    gc.collect()
+                    log.info("Whisper model xotiradan tushirildi (%.0f sek ishlatilmadi)", idle)
 
 
 # ---------------------------------------------------------------------------
@@ -155,6 +176,22 @@ def media_label(kind: str) -> str:
         "video":      "🎥 Video",
         "audio":      "🎵 Audio",
     }.get(kind, "[media]")
+
+
+# ---------------------------------------------------------------------------
+# Audio stream mavjudligini tekshirish
+# ---------------------------------------------------------------------------
+def _has_audio_stream(path: Path) -> bool:
+    """ffprobe orqali faylda hech bo'lmasa bitta audio stream borligini tekshiradi."""
+    try:
+        r = subprocess.run(
+            ["ffprobe", "-v", "error", "-select_streams", "a",
+             "-show_entries", "stream=codec_type", "-of", "csv=p=0", str(path)],
+            capture_output=True, text=True,
+        )
+        return bool(r.stdout.strip())
+    except Exception:
+        return True  # ffprobe ishlamasa, harakat qilib ko'ramiz
 
 
 # ---------------------------------------------------------------------------
@@ -241,6 +278,13 @@ async def transcribe_message(tg_client, msg: Any) -> Optional[str]:
             media_path = await tg_client.download_media(msg, file=str(Path(tmpdir) / "media"))
             if not media_path:
                 return f"[{media_label(kind)} — yuklanmadi]"
+
+            # Audio stream yo'q bo'lsa (VP9 sticker, silent video) — transcribe qilmaylik
+            has_audio = await asyncio.to_thread(_has_audio_stream, Path(media_path))
+            if not has_audio:
+                result = f"[{media_label(kind)} — audio yo'q]"
+                _cache_set(msg.id, result)
+                return result
 
             audio_path = Path(tmpdir) / "audio.wav"
             await asyncio.to_thread(_extract_audio, Path(media_path), audio_path)
@@ -374,15 +418,12 @@ async def encode_sticker_for_claude(tg_client, msg: Any) -> Optional[list]:
 
 
 # ---------------------------------------------------------------------------
-# Prewarm (startup da chaqiriladi)
+# Startup (prewarm o'chirildi — lazy load + auto-unload ishlatiladi)
 # ---------------------------------------------------------------------------
 async def prewarm_whisper():
-    """Servis ishga tushganda Whisper modelini oldindan yuklaydi."""
-    try:
-        await _get_model()
-        log.info("Whisper prewarm: model tayyor")
-    except Exception as exc:
-        log.warning("Whisper prewarm xatosi: %s", exc)
+    """Unload loopini ishga tushiradi. Model endi lazy-load qilinadi."""
+    asyncio.create_task(_model_unload_loop())
+    log.info("Whisper: lazy-load rejimi, %d sek inactivity = unload", _MODEL_UNLOAD_AFTER)
 
 
 # ---------------------------------------------------------------------------

@@ -10,16 +10,18 @@
 
 ## Loyihalar ro'yxati
 
-| # | Loyiha | Tavsif | Port | RAM |
-|---|---|---|---|---|
-| 1 | [allmax_telethon](#1-allmax_telethon) | Telegram DM Community Agent — Claude AI auto-reply + MoySklad + Bitrix24 | — | ~310 MB |
-| 2 | [allmax_hr_bot](#2-allmax_hr_bot) | HR onboarding, AI intervyu, reglament, Clockster | — | ~170 MB |
-| 3 | [feedback_bot](#3-feedback_bot) | Mijoz fikr-mulohaza yig'ish boti | — | ~130 MB |
-| 4 | [bitrix_lead_alert_bot](#4-bitrix_lead_alert_bot) | Bitrix24 yangi lead → Telegram guruh alert | 8000 | ~70 MB |
-| 5 | [marketing_task_control_bot](#5-marketing_task_control_bot) | Marketing jamoasi vazifalar + grafik hisobotlar | — | ~115 MB |
-| 6 | [instagram_bitrix_dm_lead_bot](#6-instagram_bitrix_dm_lead_bot) | Instagram DM → Bitrix24 CRM + Project → Telegram | 8002 | ~80 MB |
-| 7 | [telegram_ai_assistant](#7-telegram_ai_assistant) | Claude AI shaxsiy Telegram akkaunt assistenti | — | ~860 MB |
-| 8 | [allmax_ai_assistant](#8-allmax_ai_assistant) | Claude AI ALLMAX akkaunt assistenti | — | ~220 MB |
+| # | Loyiha | Holat | Tavsif | Port | RAM (haqiqiy) |
+|---|---|---|---|---|---|
+| 1 | [allmax_telethon](#1-allmax_telethon) | ✅ Faol | Telegram DM Community Agent — Claude AI auto-reply + MoySklad + Bitrix24 | — | ~1.56 GB |
+| 2 | [allmax_instagram_agent](#2-allmax_instagram_agent) | ✅ Faol | Instagram DM Community Agent — Claude AI + MoySklad + Bitrix24 | 8002 | ~271 MB |
+| 3 | [telegram_ai_assistant](#3-telegram_ai_assistant) | ✅ Faol | Claude AI shaxsiy Telegram akkaunt assistenti | — | ~820 MB |
+| 4 | [food_control_bot](#4-food_control_bot) | ✅ Faol | Marketing bo'limi ovqat buyurtma va nazorat boti (13 xodim) | — | ~39 MB |
+| 5 | [bitrix_lead_alert_bot](#5-bitrix_lead_alert_bot) | ✅ Faol | Bitrix24 yangi lead → Telegram guruh real-time alert | 8000 | ~34 MB |
+| 6 | [marketing_task_control_bot](#6-marketing_task_control_bot) | ✅ Faol | Marketing jamoasi vazifalar + Eisenhower grafik hisobotlar | — | ~23 MB |
+| 7 | [feedback_bot](#7-feedback_bot) | ✅ Faol | Mijoz fikr-mulohaza (reyting, rasm, telefon) yig'ish boti | — | ~24 MB |
+| 8 | [allmax_hr_bot](#8-allmax_hr_bot) | ⏹ To'xtatilgan | HR onboarding, AI intervyu, reglament, Clockster | — | — |
+
+> **Jami RAM:** ~2.8 GB foydalanilmoqda / 3.8 GB (SWAP: ~1.5 GB ishlatilmoqda)
 
 ---
 
