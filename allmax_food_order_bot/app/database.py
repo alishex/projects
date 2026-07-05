@@ -6,20 +6,20 @@ from app.config import DB_PATH
 _NOW = lambda: datetime.now().isoformat(sep=" ", timespec="seconds")
 
 DEFAULT_MENU = [
-    (1, "Dushanba",   "Kuritsa s gribami & garnir", "Chuchvara"),
-    (1, "Seshanba",   "Pyure & go'shtli qayla",     "Akaroshka"),
-    (1, "Chorshanba", "Kurka file & garnir",         "Tiftel sho'rva"),
-    (1, "Payshanba",  "Choyxona osh",                "Merjimek sho'rva"),
-    (1, "Juma",       "Shashlik",                    "Kuksi"),
-    (1, "Shanba",     "Tabaka",                      "Mampar"),
-    (1, "Yakshanba",  "Kurinny kotlet & garnir",     "Dimlama"),
-    (2, "Dushanba",   "Go'sht say",                  "Kurinny bulyon"),
-    (2, "Seshanba",   "Kiyevskiy katlet",             "Moshxo'rda"),
-    (2, "Chorshanba", "Xonim",                        "Akaroshka"),
-    (2, "Payshanba",  "To'y oshi",                   "Qaynatma sho'rva"),
-    (2, "Juma",       "Bifshteks",                   "Mampar"),
-    (2, "Shanba",     "Tovuq say",                   "Mastava"),
-    (2, "Yakshanba",  "Jarkob",                      "Kuksi"),
+    (1, "Dushanba",   "Myasa po damashni",   "Kurinni bulyon"),
+    (1, "Seshanba",   "Tabaka",              "Tiftel bulyon"),
+    (1, "Chorshanba", "Loli kabob",          "Xonim"),
+    (1, "Payshanba",  "Choyxona palov",      "Akroshka"),
+    (1, "Juma",       "Do'lma asarti",       "Mampar"),
+    (1, "Shanba",     "Qovurma lag'mon",     "Tovuq jarkop"),
+    (1, "Yakshanba",  "Go'sht say",          "Chechivitsa"),
+    (2, "Dushanba",   "Bifshteks",           "Moxora"),
+    (2, "Seshanba",   "Manti",               "Akaroshka"),
+    (2, "Chorshanba", "Kiviski & garnir",    "Spagetti"),
+    (2, "Payshanba",  "To'y oshi",           "Ovashnoy fasol"),
+    (2, "Juma",       "Tiftel jarkop",       "Kurinniy bulyon"),
+    (2, "Shanba",     "Kuritsa & gribami",   "Chuchvara"),
+    (2, "Yakshanba",  "Shashlik",            "Moshxo'rda"),
 ]
 
 
