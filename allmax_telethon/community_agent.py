@@ -339,6 +339,27 @@ def _strip_images_from_assistant(messages: list[dict]) -> list[dict]:
     return out
 
 
+def _strip_orphan_tool_use(messages: list[dict]) -> list[dict]:
+    """Har bir assistant tool_use darhol keyingi user xabaridagi mos tool_result bilan
+    juftlashgan bo'lishi shart, aks holda Claude API 400 qaytaradi. Saqlangan tarixda
+    jarayon kutilmaganda uzilib qolgan holatlarda bunday juftlik buzilishi mumkin —
+    juftlashmagan tool_use bloklarini olib tashlaymiz."""
+    out = []
+    for i, msg in enumerate(messages):
+        content = msg.get("content")
+        if msg["role"] == "assistant" and isinstance(content, list):
+            next_msg = messages[i + 1] if i + 1 < len(messages) else None
+            paired_ids = set()
+            if next_msg and next_msg.get("role") == "user" and isinstance(next_msg.get("content"), list):
+                paired_ids = {b.get("tool_use_id") for b in next_msg["content"] if isinstance(b, dict) and b.get("type") == "tool_result"}
+            kept = [b for b in content if not (isinstance(b, dict) and b.get("type") == "tool_use" and b.get("id") not in paired_ids)]
+            if not kept:
+                continue
+            msg = {"role": "assistant", "content": kept}
+        out.append(msg)
+    return out
+
+
 def _merge_consecutive(messages: list[dict]) -> list[dict]:
     """Bir-biriga ketma-ket bir xil role xabarlarni birlashtiradi (Claude talabi)."""
     if not messages:
@@ -387,6 +408,7 @@ class CommunityAgent:
 
         prepared = _merge_consecutive(messages)
         prepared = _strip_images_from_assistant(prepared)
+        prepared = _strip_orphan_tool_use(prepared)
 
         while prepared and prepared[0]["role"] == "assistant":
             prepared.pop(0)
