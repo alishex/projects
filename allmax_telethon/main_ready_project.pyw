@@ -134,6 +134,11 @@ MIN_REPLY_INTERVAL = float(os.getenv("MIN_REPLY_INTERVAL", "0.8"))
 MESSAGE_BURST_WINDOW = float(os.getenv("MESSAGE_BURST_WINDOW", "1.8"))
 MAX_BURST_MESSAGES = int(os.getenv("MAX_BURST_MESSAGES", "5"))
 ONLY_TEXT_MESSAGES = os.getenv("ONLY_TEXT_MESSAGES", "false").lower() == "true"
+
+# Yangi/sovuq suhbatda operatorga ustuvorlik berish uchun kutish vaqti
+OPERATOR_GRACE_PERIOD_SECONDS = float(os.getenv("OPERATOR_GRACE_PERIOD_SECONDS", "180"))   # 3 daqiqa
+# Shundan ko'p vaqt javobsiz qolsa, suhbat "sovuq/yangi" hisoblanadi (qayta 3 daqiqa kutiladi)
+CONVERSATION_STALE_SECONDS = float(os.getenv("CONVERSATION_STALE_SECONDS", "1800"))        # 30 daqiqa
 COMMUNITY_AGENT_ENABLE = os.getenv("COMMUNITY_AGENT_ENABLE", "false").lower() == "true"
 
 LEAD_GROUP = os.getenv("LEAD_GROUP", "").strip()
@@ -196,6 +201,11 @@ user_queues = {}
 user_workers = {}
 resolved_entities = {"lead_group": None}
 
+# ── Operator ustuvorligi holati ──
+last_outbound_at = {}    # user_id -> oxirgi bot/operator xabari vaqti (suhbat "yangi"ligini aniqlash uchun)
+operator_active = {}     # user_id -> True bo'lsa, operator suhbatga aralashgan — agent shu userga javob bermaydi
+_bot_sent_ids = set()    # (chat_id, message_id) — botning o'z yuborgan xabarlari, operator sifatida hisoblanmasin deb
+
 lead_state = defaultdict(lambda: {
     "name": "",
     "phone": "",
@@ -251,6 +261,12 @@ def split_text_into_chunks(text: str, max_length: int = 3500) -> list[str]:
     return chunks
 
 
+def _mark_bot_sent(chat_id: int, message_id: int):
+    """Botning o'zi yuborgan xabar ID'sini belgilaydi — operator-aniqlash handler'i buni
+    begona (operator) xabar deb noto'g'ri hisoblamasligi uchun."""
+    _bot_sent_ids.add((chat_id, message_id))
+
+
 async def send_long_message(event, text: str, reply_to_message_id: Optional[int] = None):
     chunks = split_text_into_chunks(text, max_length=3500)
     if not chunks:
@@ -258,7 +274,8 @@ async def send_long_message(event, text: str, reply_to_message_id: Optional[int]
 
     first_reply_to = reply_to_message_id or event.id
     for chunk in chunks:
-        await event.client.send_message(event.chat_id, chunk, reply_to=first_reply_to)
+        sent = await event.client.send_message(event.chat_id, chunk, reply_to=first_reply_to)
+        _mark_bot_sent(event.chat_id, sent.id)
         await asyncio.sleep(0.25)
 
 
@@ -1299,7 +1316,7 @@ async def process_with_community_agent(event, sender, user_id: int) -> bool:
     if result.send_location:
         try:
             peer = await client.get_input_entity(event.chat_id)
-            await client(SendMediaRequest(
+            geo_result = await client(SendMediaRequest(
                 peer=peer,
                 media=InputMediaGeoPoint(
                     geo_point=InputGeoPoint(lat=41.283123, long=69.212336)
@@ -1307,6 +1324,11 @@ async def process_with_community_agent(event, sender, user_id: int) -> bool:
                 message="",
                 random_id=int(time.monotonic() * 1e6),
             ))
+            for upd in getattr(geo_result, "updates", []) or []:
+                sent_msg = getattr(upd, "message", None)
+                if sent_msg is not None and getattr(sent_msg, "out", False):
+                    _mark_bot_sent(event.chat_id, sent_msg.id)
+                    break
             logging.info("Geolokatsiya yuborildi user=%s", user_id)
         except Exception as _geo_err:
             logging.warning("Geolokatsiya yuborishda xato: %s", _geo_err)
@@ -1540,7 +1562,32 @@ async def ensure_user_worker(user_id: int):
             while not can_reply_now(user_id):
                 await asyncio.sleep(0.2)
 
+            # ── Yangi/sovuq suhbat boshlanishi: operatorga ustuvorlik beramiz ──
+            now = asyncio.get_event_loop().time()
+            is_new_round = (
+                user_id not in last_outbound_at
+                or (now - last_outbound_at[user_id]) > CONVERSATION_STALE_SECONDS
+            )
+
+            if is_new_round:
+                operator_active[user_id] = False
+                deadline = now + OPERATOR_GRACE_PERIOD_SECONDS
+                while (
+                    asyncio.get_event_loop().time() < deadline
+                    and not operator_active.get(user_id)
+                ):
+                    await asyncio.sleep(2)
+
+            if operator_active.get(user_id):
+                logging.info(
+                    "Operator suhbatni boshqarmoqda — agent javob bermaydi | user=%s",
+                    user_id,
+                )
+                last_outbound_at[user_id] = asyncio.get_event_loop().time()
+                continue
+
             await process_burst_events(batch)
+            last_outbound_at[user_id] = asyncio.get_event_loop().time()
 
     user_workers[user_id] = asyncio.create_task(worker())
 
@@ -1548,6 +1595,31 @@ async def ensure_user_worker(user_id: int):
 # =========================
 # EVENT HANDLER
 # =========================
+@client.on(events.NewMessage(outgoing=True))
+async def handle_operator_message(event):
+    """
+    Xuddi shu Telegram akkountidan (boshqa qurilma/odam orqali) yuborilgan xabarlarni
+    aniqlaydi — bular operatorning qo'lda yozgan xabarlari. Botning o'z yuborgan
+    xabarlari _bot_sent_ids orqali bundan istisno qilinadi.
+    """
+    try:
+        if not event.is_private:
+            return
+
+        key = (event.chat_id, event.id)
+        if key in _bot_sent_ids:
+            _bot_sent_ids.discard(key)
+            return
+
+        user_id = event.chat_id
+        operator_active[user_id] = True
+        last_outbound_at[user_id] = asyncio.get_event_loop().time()
+        logging.info("Operator xabari aniqlandi — agent shu userga to'xtaydi | user=%s", user_id)
+
+    except Exception as e:
+        logging.exception("Operator handler xatosi: %s", e)
+
+
 @client.on(events.NewMessage(incoming=True))
 async def handle_new_private_message(event):
     try:
