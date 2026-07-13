@@ -7,7 +7,8 @@ from aiogram.enums import ParseMode
 from aiogram.fsm.storage.memory import MemoryStorage
 
 from app.config import BOT_TOKEN
-from app.database import init_db
+import app.config as cfg
+from app.database import init_db, refresh_admin_ids
 from app.handlers import admin, user, callbacks
 from app.scheduler import setup_scheduler
 
@@ -22,7 +23,8 @@ async def main():
     log.info("Bot ishga tushmoqda...")
 
     await init_db()
-    log.info("Database va menyu tayyor.")
+    await refresh_admin_ids()
+    log.info("Database va menyu tayyor. Adminlar: %s", cfg.ADMIN_IDS)
 
     bot = Bot(
         token=BOT_TOKEN,

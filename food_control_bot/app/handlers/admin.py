@@ -8,6 +8,7 @@ from aiogram.fsm.state import State, StatesGroup
 
 import app.database as db
 import app.config as cfg
+import app.scheduler as sched
 from app.utils import today as _today
 from app.services.menu_service import (
     get_today_menu, get_tomorrow_menu, format_menu_text, CYCLE_LABELS
@@ -15,8 +16,15 @@ from app.services.menu_service import (
 from app.services.report_service import build_order_report, build_final_report
 from app.keyboards import (
     AdminPanelCB, AdminEditOrderCB, AdminToggleMealCB,
+    AdminEmployeeRemoveCB, AdminEmployeeAddCB,
+    AdminAdminAddCB, AdminAdminRemoveCB,
+    AdminScheduleEditCB, AdminMenuWeekCB, AdminMenuDayCB, AdminMenuEditStartCB,
+    AdminCycleSetCB,
     admin_main_keyboard, admin_back_keyboard,
     admin_edit_list_keyboard, admin_edit_user_keyboard,
+    admin_employees_keyboard, admin_admins_keyboard, admin_schedule_keyboard,
+    admin_menu_week_keyboard, admin_menu_day_keyboard, admin_menu_day_detail_keyboard,
+    admin_cycle_keyboard,
 )
 
 log = logging.getLogger(__name__)
@@ -29,8 +37,25 @@ class AdminSetup(StatesGroup):
     waiting_menu      = State()
 
 
+class AdminEdit(StatesGroup):
+    waiting_employee_id  = State()
+    waiting_admin_id     = State()
+    waiting_schedule_time = State()
+    waiting_menu_day_text = State()
+
+
 def is_admin_id(telegram_id: int) -> bool:
     return telegram_id in cfg.ADMIN_IDS
+
+
+def _extract_id_from_message(msg: Message) -> "int | None":
+    """Xodim/admin ID sini oladi: forward qilingan xabardan yoki qo'lda kiritilgan raqamdan."""
+    if msg.forward_from:
+        return msg.forward_from.id
+    text = (msg.text or "").strip()
+    if text.lstrip("-").isdigit():
+        return int(text)
+    return None
 
 
 def _dn(u: dict) -> str:
@@ -175,8 +200,10 @@ async def cb_admin_panel(query: CallbackQuery, callback_data: AdminPanelCB):
 
     elif section == "employees":
         text = await _build_employees_text()
+        users = await db.get_all_active_users()
+        employees = [u for u in users if u.get("role") != "admin"]
         await query.message.edit_text(
-            text, reply_markup=admin_back_keyboard(refresh_section="employees")
+            text, reply_markup=admin_employees_keyboard(employees)
         )
 
     elif section == "tomorrow":
@@ -192,11 +219,11 @@ async def cb_admin_panel(query: CallbackQuery, callback_data: AdminPanelCB):
         text = (
             "⚙️ <b>Sozlamalar</b>\n\n"
             f"Guruh ID: <code>{group_id}</code>\n\n"
-            "Buyruqlar:\n"
-            "/set_users — xodimlar ID ro'yxatini yangilash\n"
+            "Xodimlar, adminlar, menyu, sikl va vaqtlarni asosiy panel tugmalari orqali boshqarishingiz mumkin.\n\n"
+            "Qo'shimcha matnli buyruqlar:\n"
+            "/set_users — xodimlar ID ro'yxatini to'liq almashtirish (12 ta)\n"
             "/set_group — hisobot guruh ID sini o'zgartirish\n"
-            "/set_menu  — menyu tahrirlash\n"
-            "/set_cycle — siklni sozlash\n"
+            "/set_menu  — menyuni bir vaqtda to'liq qayta yozish\n"
             "/reset_day — bugungi buyurtmalarni tozalash"
         )
         await query.message.edit_text(
@@ -206,6 +233,42 @@ async def cb_admin_panel(query: CallbackQuery, callback_data: AdminPanelCB):
     elif section == "edit":
         text, kb = await _build_edit_list()
         await query.message.edit_text(text, reply_markup=kb)
+
+    elif section == "schedule":
+        settings = await db.get_settings()
+        menu_time = (settings or {}).get("menu_send_time") or "13:30"
+        report_time = (settings or {}).get("report_time") or "22:00"
+        text = (
+            "🕐 <b>Vaqtlar</b>\n\n"
+            f"Menyu yuborish vaqti: <code>{menu_time}</code>\n"
+            f"Yakuniy hisobot vaqti: <code>{report_time}</code>\n\n"
+            "O'zgartirish uchun tugmani bosing."
+        )
+        await query.message.edit_text(text, reply_markup=admin_schedule_keyboard())
+
+    elif section == "admins":
+        admins = await db.get_admin_users()
+        text = (
+            f"👑 <b>Adminlar</b> (jami {len(admins)} kishi)\n\n"
+            + "\n".join(f"  {'👑' if u['telegram_id'] == cfg.SUPER_ADMIN_ID else '•'} {_dn(u)}" for u in admins)
+        )
+        await query.message.edit_text(
+            text, reply_markup=admin_admins_keyboard(admins, cfg.SUPER_ADMIN_ID)
+        )
+
+    elif section == "menu_edit":
+        await query.message.edit_text(
+            "📝 <b>Menyu tahrirlash</b>\n\nHaftani tanlang:",
+            reply_markup=admin_menu_week_keyboard(),
+        )
+
+    elif section == "cycle":
+        await query.message.edit_text(
+            "🔄 <b>Sikl sozlash</b>\n\n"
+            "Bugun aslida qaysi hafta/kun menyusi bo'lishi kerakligini tanlang "
+            "(sikl bugungi sanaga bog'lab qo'yiladi):",
+            reply_markup=admin_cycle_keyboard(),
+        )
 
     await query.answer()
 
@@ -287,8 +350,8 @@ async def cb_admin_toggle_meal(query: CallbackQuery, callback_data: AdminToggleM
             f"{meal}-ovqat: {meal_name}\n\n"
             f"{old_icon} → {new_icon}"
         )
-    except Exception:
-        pass  # Xodim botni bloklagan yoki boshmagan bo'lishi mumkin
+    except Exception as e:
+        log.warning("Xodim %s ga buyurtma o'zgarishi haqida xabar yubora olmadim: %s", user_id, e)
 
     # Edit screen yangilash
     order = await db.get_order(tomorrow, user_id)
@@ -313,6 +376,204 @@ async def cb_admin_toggle_meal(query: CallbackQuery, callback_data: AdminToggleM
         text,
         reply_markup=admin_edit_user_keyboard(user_id, m1_st, m2_st)
     )
+
+
+# ── Xodimlarni birma-bir boshqarish ─────────────────────────────────────────
+
+@router.callback_query(AdminEmployeeRemoveCB.filter(), F.from_user.func(lambda u: u.id in cfg.ADMIN_IDS))
+async def cb_admin_employee_remove(query: CallbackQuery, callback_data: AdminEmployeeRemoveCB):
+    await db.remove_employee(callback_data.user_id)
+    text = await _build_employees_text()
+    users = await db.get_all_active_users()
+    employees = [u for u in users if u.get("role") != "admin"]
+    await query.message.edit_text(text, reply_markup=admin_employees_keyboard(employees))
+    await query.answer("✅ Xodim o'chirildi.")
+
+
+@router.callback_query(AdminEmployeeAddCB.filter(), F.from_user.func(lambda u: u.id in cfg.ADMIN_IDS))
+async def cb_admin_employee_add(query: CallbackQuery, state: FSMContext):
+    await state.set_state(AdminEdit.waiting_employee_id)
+    await query.message.edit_text(
+        "➕ <b>Xodim qo'shish</b>\n\n"
+        "Xodimning Telegram ID raqamini yuboring,\n"
+        "yoki uning istalgan xabarini shu chatga forward qiling.",
+        reply_markup=admin_back_keyboard(),
+    )
+    await query.answer()
+
+
+@router.message(AdminEdit.waiting_employee_id)
+async def receive_new_employee(msg: Message, state: FSMContext):
+    tid = _extract_id_from_message(msg)
+    if tid is None:
+        await msg.answer("❌ ID topilmadi. Raqam yuboring yoki xabarni forward qiling.")
+        return
+    await db.add_employee_id(tid)
+    await state.clear()
+    await msg.answer(f"✅ Xodim qo'shildi (ID: <code>{tid}</code>).\n\n/admin — panelga qaytish")
+
+
+# ── Adminlarni boshqarish ───────────────────────────────────────────────────
+
+@router.callback_query(AdminAdminAddCB.filter(), F.from_user.func(lambda u: u.id in cfg.ADMIN_IDS))
+async def cb_admin_admin_add(query: CallbackQuery, state: FSMContext):
+    await state.set_state(AdminEdit.waiting_admin_id)
+    await query.message.edit_text(
+        "➕ <b>Admin qo'shish</b>\n\n"
+        "Yangi adminning Telegram ID raqamini yuboring,\n"
+        "yoki uning istalgan xabarini shu chatga forward qiling.",
+        reply_markup=admin_back_keyboard(),
+    )
+    await query.answer()
+
+
+@router.message(AdminEdit.waiting_admin_id)
+async def receive_new_admin(msg: Message, state: FSMContext):
+    tid = _extract_id_from_message(msg)
+    if tid is None:
+        await msg.answer("❌ ID topilmadi. Raqam yuboring yoki xabarni forward qiling.")
+        return
+    await db.set_user_role(tid, "admin")
+    await db.refresh_admin_ids()
+    await state.clear()
+    await msg.answer(f"✅ Yangi admin qo'shildi (ID: <code>{tid}</code>).\n\n/admin — panelga qaytish")
+
+
+@router.callback_query(AdminAdminRemoveCB.filter(), F.from_user.func(lambda u: u.id in cfg.ADMIN_IDS))
+async def cb_admin_admin_remove(query: CallbackQuery, callback_data: AdminAdminRemoveCB):
+    if callback_data.user_id == cfg.SUPER_ADMIN_ID:
+        await query.answer("❌ Bosh adminni olib tashlab bo'lmaydi.", show_alert=True)
+        return
+    await db.set_user_role(callback_data.user_id, "employee")
+    await db.refresh_admin_ids()
+    admins = await db.get_admin_users()
+    text = (
+        f"👑 <b>Adminlar</b> (jami {len(admins)} kishi)\n\n"
+        + "\n".join(f"  {'👑' if u['telegram_id'] == cfg.SUPER_ADMIN_ID else '•'} {_dn(u)}" for u in admins)
+    )
+    await query.message.edit_text(text, reply_markup=admin_admins_keyboard(admins, cfg.SUPER_ADMIN_ID))
+    await query.answer("✅ Admin huquqi olib tashlandi.")
+
+
+# ── Vaqtlarni sozlash ────────────────────────────────────────────────────────
+
+@router.callback_query(AdminScheduleEditCB.filter(), F.from_user.func(lambda u: u.id in cfg.ADMIN_IDS))
+async def cb_admin_schedule_edit(query: CallbackQuery, callback_data: AdminScheduleEditCB, state: FSMContext):
+    await state.update_data(schedule_field=callback_data.field)
+    await state.set_state(AdminEdit.waiting_schedule_time)
+    label = "Menyu yuborish" if callback_data.field == "menu" else "Yakuniy hisobot"
+    await query.message.edit_text(
+        f"✏️ <b>{label} vaqti</b>\n\n"
+        "Yangi vaqtni HH:MM formatida yuboring (masalan: 14:00).",
+        reply_markup=admin_back_keyboard(),
+    )
+    await query.answer()
+
+
+@router.message(AdminEdit.waiting_schedule_time)
+async def receive_schedule_time(msg: Message, state: FSMContext):
+    text = (msg.text or "").strip()
+    try:
+        hh_str, mm_str = text.split(":")
+        hh, mm = int(hh_str), int(mm_str)
+        assert 0 <= hh <= 23 and 0 <= mm <= 59
+    except (ValueError, AssertionError):
+        await msg.answer("❌ Format noto'g'ri. HH:MM ko'rinishida yuboring (masalan: 14:00).")
+        return
+
+    data = await state.get_data()
+    field = data.get("schedule_field")
+    await state.clear()
+
+    if field == "menu":
+        await sched.reschedule_menu_time(hh, mm)
+        await msg.answer(f"✅ Menyu yuborish vaqti <code>{hh:02d}:{mm:02d}</code> ga o'zgartirildi.\n\n/admin")
+    elif field == "report":
+        await sched.reschedule_report_time(hh, mm)
+        await msg.answer(f"✅ Yakuniy hisobot vaqti <code>{hh:02d}:{mm:02d}</code> ga o'zgartirildi.\n\n/admin")
+    else:
+        await msg.answer("❌ Xatolik: qaysi vaqt ekani aniqlanmadi. /admin dan qaytadan urinib ko'ring.")
+
+
+# ── Menyu tahrirlash (tugmali) ───────────────────────────────────────────────
+
+@router.callback_query(AdminMenuWeekCB.filter(), F.from_user.func(lambda u: u.id in cfg.ADMIN_IDS))
+async def cb_admin_menu_week(query: CallbackQuery, callback_data: AdminMenuWeekCB):
+    await query.message.edit_text(
+        f"📝 <b>{callback_data.week}-hafta</b>\n\nKunni tanlang:",
+        reply_markup=admin_menu_day_keyboard(callback_data.week),
+    )
+    await query.answer()
+
+
+@router.callback_query(AdminMenuDayCB.filter(), F.from_user.func(lambda u: u.id in cfg.ADMIN_IDS))
+async def cb_admin_menu_day(query: CallbackQuery, callback_data: AdminMenuDayCB):
+    item = await db.get_menu_item(callback_data.week, callback_data.day)
+    m1 = item["meal_1"] if item else "—"
+    m2 = item["meal_2"] if item else "—"
+    text = (
+        f"📝 <b>{callback_data.week}-hafta {callback_data.day}</b>\n\n"
+        f"1-ovqat: {m1}\n"
+        f"2-ovqat: {m2}"
+    )
+    await query.message.edit_text(
+        text, reply_markup=admin_menu_day_detail_keyboard(callback_data.week, callback_data.day)
+    )
+    await query.answer()
+
+
+@router.callback_query(AdminMenuEditStartCB.filter(), F.from_user.func(lambda u: u.id in cfg.ADMIN_IDS))
+async def cb_admin_menu_edit_start(query: CallbackQuery, callback_data: AdminMenuEditStartCB, state: FSMContext):
+    await state.update_data(menu_week=callback_data.week, menu_day=callback_data.day)
+    await state.set_state(AdminEdit.waiting_menu_day_text)
+    await query.message.edit_text(
+        f"✏️ <b>{callback_data.week}-hafta {callback_data.day}</b>\n\n"
+        "Yangi taomlarni yuboring. Format:\n"
+        "<code>1-ovqat nomi | 2-ovqat nomi</code>",
+        reply_markup=admin_back_keyboard(),
+    )
+    await query.answer()
+
+
+@router.message(AdminEdit.waiting_menu_day_text)
+async def receive_menu_day_text(msg: Message, state: FSMContext):
+    text = (msg.text or "").strip()
+    if "|" not in text:
+        await msg.answer("❌ '|' ajratuvchisi topilmadi. Format: <code>1-ovqat | 2-ovqat</code>")
+        return
+
+    data = await state.get_data()
+    week = data.get("menu_week")
+    day = data.get("menu_day")
+    if not week or not day:
+        await state.clear()
+        await msg.answer("❌ Xatolik: qaysi kun ekani aniqlanmadi. /admin dan qaytadan urinib ko'ring.")
+        return
+
+    meal_1, meal_2 = [p.strip() for p in text.split("|", 1)]
+    await db.update_menu_item(week, day, meal_1, meal_2)
+    await state.clear()
+    await msg.answer(f"✅ {week}-hafta {day} menyusi yangilandi.\n\n/admin — panelga qaytish")
+
+
+# ── Sikl sozlash (bir bosishda) ──────────────────────────────────────────────
+
+@router.callback_query(AdminCycleSetCB.filter(), F.from_user.func(lambda u: u.id in cfg.ADMIN_IDS))
+async def cb_admin_cycle_set(query: CallbackQuery, callback_data: AdminCycleSetCB):
+    label_map = {(w, d): i for i, (w, d) in enumerate(CYCLE_LABELS)}
+    idx = label_map.get((callback_data.week, callback_data.day))
+    if idx is None:
+        await query.answer("❌ Xatolik.", show_alert=True)
+        return
+
+    anchor_date = _today().isoformat()
+    await db.update_cycle(anchor_date, callback_data.week, callback_data.day, idx)
+    await query.message.edit_text(
+        f"✅ <b>Sikl yangilandi!</b>\n\n"
+        f"Bugun ({anchor_date}) = {callback_data.week}-hafta {callback_data.day}",
+        reply_markup=admin_back_keyboard(),
+    )
+    await query.answer("✅ Saqlandi!")
 
 
 async def _build_status_text() -> str:
