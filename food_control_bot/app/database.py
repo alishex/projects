@@ -2,6 +2,7 @@ import aiosqlite
 from datetime import datetime, date
 from typing import Optional
 from app.config import DB_PATH
+import app.config as cfg
 
 NOW = lambda: datetime.now().isoformat(sep=" ", timespec="seconds")
 
@@ -83,6 +84,10 @@ async def init_db():
         """)
         await db.commit()
 
+        await _ensure_column(db, "settings", "menu_send_time", "TEXT DEFAULT '13:30'")
+        await _ensure_column(db, "settings", "report_time", "TEXT DEFAULT '22:00'")
+        await db.commit()
+
         row = await (await db.execute("SELECT COUNT(*) FROM menu")).fetchone()
         if row[0] == 0:
             await db.executemany(
@@ -90,6 +95,23 @@ async def init_db():
                 DEFAULT_MENU,
             )
             await db.commit()
+
+        if cfg.SUPER_ADMIN_ID:
+            await db.execute("""
+                INSERT INTO users(telegram_id, full_name, username, role, is_active, has_started, created_at, updated_at)
+                VALUES(?,?,?,?,1,0,?,?)
+                ON CONFLICT(telegram_id) DO UPDATE SET role='admin', is_active=1, updated_at=excluded.updated_at
+            """, (cfg.SUPER_ADMIN_ID, f"User_{cfg.SUPER_ADMIN_ID}", None, "admin",
+                  NOW(), NOW()))
+            await db.commit()
+
+
+async def _ensure_column(db, table: str, column: str, coltype_default: str):
+    """ALTER TABLE ... ADD COLUMN faqat ustun hali mavjud bo'lmasa (qayta ishga tushirishda xavfsiz)."""
+    cols = await (await db.execute(f"PRAGMA table_info({table})")).fetchall()
+    existing = {c[1] for c in cols}
+    if column not in existing:
+        await db.execute(f"ALTER TABLE {table} ADD COLUMN {column} {coltype_default}")
 
 
 # ── Users ──────────────────────────────────────────────────────────────────
@@ -156,6 +178,46 @@ async def clear_employees():
         await db.commit()
 
 
+async def remove_employee(telegram_id: int):
+    """Bitta xodimni ro'yxatdan chiqaradi (soft-delete — tarix saqlanadi, qayta qo'shsa tiklanadi)."""
+    now = NOW()
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            "UPDATE users SET is_active=0, updated_at=? WHERE telegram_id=? AND role='employee'",
+            (now, telegram_id),
+        )
+        await db.commit()
+
+
+async def get_admin_users() -> list[dict]:
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        rows = await (await db.execute(
+            "SELECT * FROM users WHERE role='admin' AND is_active=1"
+        )).fetchall()
+        return [dict(r) for r in rows]
+
+
+async def set_user_role(telegram_id: int, role: str):
+    """Foydalanuvchini admin/xodim qilib belgilaydi (mavjud bo'lmasa yangi qator yaratadi)."""
+    now = NOW()
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("""
+            INSERT INTO users(telegram_id, full_name, username, role, is_active, has_started, created_at, updated_at)
+            VALUES(?,?,?,?,1,0,?,?)
+            ON CONFLICT(telegram_id) DO UPDATE SET role=excluded.role, is_active=1, updated_at=excluded.updated_at
+        """, (telegram_id, f"User_{telegram_id}", None, role, now, now))
+        await db.commit()
+
+
+async def refresh_admin_ids():
+    """cfg.ADMIN_IDS ni bazadagi role='admin' foydalanuvchilar bilan yangilaydi (restart shart emas)."""
+    admins = await get_admin_users()
+    new_ids = {cfg.SUPER_ADMIN_ID} | {u["telegram_id"] for u in admins}
+    new_ids.discard(0)
+    cfg.ADMIN_IDS = new_ids
+
+
 # ── Settings ───────────────────────────────────────────────────────────────
 
 async def get_settings() -> Optional[dict]:
@@ -197,6 +259,24 @@ async def update_cycle(anchor_date: str, anchor_week: int, anchor_day: str, anch
         await db.execute("""
             UPDATE settings SET anchor_date=?, anchor_week=?, anchor_day=?, anchor_index=?, updated_at=?
         """, (anchor_date, anchor_week, anchor_day, anchor_index, now))
+        await db.commit()
+
+
+async def update_schedule_times(menu_send_time: Optional[str] = None, report_time: Optional[str] = None):
+    """menu_send_time / report_time — 'HH:MM' formatida. Faqat berilgan qiymat yangilanadi."""
+    now = NOW()
+    async with aiosqlite.connect(DB_PATH) as db:
+        existing = await (await db.execute("SELECT id FROM settings LIMIT 1")).fetchone()
+        if not existing:
+            await db.execute("""
+                INSERT INTO settings(anchor_date, anchor_week, anchor_day, anchor_index,
+                                      timezone, menu_send_time, report_time, created_at, updated_at)
+                VALUES('2026-06-21',1,'Yakshanba',6,'Asia/Tashkent',?,?,?,?)
+            """, (menu_send_time or "13:30", report_time or "22:00", now, now))
+        if menu_send_time is not None:
+            await db.execute("UPDATE settings SET menu_send_time=?, updated_at=?", (menu_send_time, now))
+        if report_time is not None:
+            await db.execute("UPDATE settings SET report_time=?, updated_at=?", (report_time, now))
         await db.commit()
 
 

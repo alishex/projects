@@ -18,12 +18,28 @@ from app.handlers.callbacks import UserState
 log = logging.getLogger(__name__)
 TZ = pytz.timezone(cfg.TIMEZONE)
 
+_scheduler: AsyncIOScheduler | None = None
+
+MENU_JOB_ID = "send_menu_1330"
+REPORT_JOB_ID = "final_report_2200"
+
+
+def _parse_hhmm(value: str, fallback: tuple[int, int]) -> tuple[int, int]:
+    try:
+        h, m = value.strip().split(":")
+        h, m = int(h), int(m)
+        if 0 <= h <= 23 and 0 <= m <= 59:
+            return h, m
+    except (ValueError, AttributeError):
+        pass
+    return fallback
+
 
 async def send_tomorrow_menu(bot: Bot):
-    """17:30 — Barcha foydalanuvchilarga ertangi menyu yuboriladi."""
+    """Barcha foydalanuvchilarga ertangi menyu yuboriladi (vaqti sozlanadigan)."""
     menu = await get_tomorrow_menu()
     if not menu:
-        log.warning("13:30: Ertangi menyu topilmadi.")
+        log.warning("Ertangi menyu topilmadi.")
         return
 
     users = await db.get_all_active_users()
@@ -61,16 +77,16 @@ async def send_tomorrow_menu(bot: Bot):
             try:
                 await bot.send_message(
                     admin_id,
-                    f"⚠️ Quyidagi xodimlar botga ulanmaganlar (13:30 xabar yuborilamdi):\n{names}"
+                    f"⚠️ Quyidagi xodimlar botga ulanmaganlar (menyu xabari yuborilmadi):\n{names}"
                 )
-            except Exception:
-                pass
+            except Exception as e:
+                log.warning("Adminga 'ulanmaganlar' xabarini yubora olmadim: %s", e)
 
-    log.info("13:30: %d foydalanuvchiga menyu yuborildi.", len(users) - len(not_started))
+    log.info("Ertangi menyu yuborildi: %d foydalanuvchiga.", len(users) - len(not_started))
 
 
 async def send_daily_final_report(bot: Bot):
-    """22:00 — Bugungi yakuniy hisobot adminga va guruhga."""
+    """Bugungi yakuniy hisobot adminga va guruhga (vaqti sozlanadigan)."""
     today = _today().isoformat()
     report = await build_final_report(today)
 
@@ -90,27 +106,52 @@ async def send_daily_final_report(bot: Bot):
         except Exception as e:
             log.warning("Guruhga yakuniy hisobot yubora olmadim: %s", e)
 
-    log.info("22:00: Yakuniy hisobot yuborildi.")
+    log.info("Yakuniy hisobot yuborildi.")
 
 
 async def setup_scheduler(bot: Bot) -> AsyncIOScheduler:
+    global _scheduler
     scheduler = AsyncIOScheduler(timezone=TZ)
+
+    settings = await db.get_settings()
+    menu_h, menu_m = _parse_hhmm((settings or {}).get("menu_send_time") or "13:30", (13, 30))
+    rep_h, rep_m = _parse_hhmm((settings or {}).get("report_time") or "22:00", (22, 0))
 
     scheduler.add_job(
         send_tomorrow_menu,
-        CronTrigger(hour=13, minute=30, timezone=TZ),
+        CronTrigger(hour=menu_h, minute=menu_m, timezone=TZ),
         kwargs={"bot": bot},
-        id="send_menu_1330",
+        id=MENU_JOB_ID,
         replace_existing=True,
     )
 
     scheduler.add_job(
         send_daily_final_report,
-        CronTrigger(hour=22, minute=0, timezone=TZ),
+        CronTrigger(hour=rep_h, minute=rep_m, timezone=TZ),
         kwargs={"bot": bot},
-        id="final_report_2200",
+        id=REPORT_JOB_ID,
         replace_existing=True,
     )
 
-    log.info("Scheduler tayyor: 13:30 menyu, 22:00 hisobot (TZ: %s)", cfg.TIMEZONE)
+    log.info("Scheduler tayyor: %02d:%02d menyu, %02d:%02d hisobot (TZ: %s)",
+              menu_h, menu_m, rep_h, rep_m, cfg.TIMEZONE)
+    _scheduler = scheduler
     return scheduler
+
+
+async def reschedule_menu_time(hh: int, mm: int):
+    """Admin panel orqali menyu yuborish vaqtini qayta ishga tushirmasdan o'zgartiradi."""
+    if _scheduler is None:
+        raise RuntimeError("Scheduler hali ishga tushmagan.")
+    _scheduler.reschedule_job(MENU_JOB_ID, trigger=CronTrigger(hour=hh, minute=mm, timezone=TZ))
+    await db.update_schedule_times(menu_send_time=f"{hh:02d}:{mm:02d}")
+    log.info("Menyu yuborish vaqti %02d:%02d ga o'zgartirildi.", hh, mm)
+
+
+async def reschedule_report_time(hh: int, mm: int):
+    """Admin panel orqali yakuniy hisobot vaqtini qayta ishga tushirmasdan o'zgartiradi."""
+    if _scheduler is None:
+        raise RuntimeError("Scheduler hali ishga tushmagan.")
+    _scheduler.reschedule_job(REPORT_JOB_ID, trigger=CronTrigger(hour=hh, minute=mm, timezone=TZ))
+    await db.update_schedule_times(report_time=f"{hh:02d}:{mm:02d}")
+    log.info("Yakuniy hisobot vaqti %02d:%02d ga o'zgartirildi.", hh, mm)
