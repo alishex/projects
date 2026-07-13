@@ -9,6 +9,7 @@
 
 # Telegram sessions
 *.session
+*.session-journal
 
 # Python
 __pycache__/
