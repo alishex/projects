@@ -1,5 +1,7 @@
+import asyncio
 import logging
 from aiogram import Router, F
+from aiogram.filters import Command, StateFilter
 from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
 
@@ -10,6 +12,19 @@ import app.database as db
 
 logger = logging.getLogger(__name__)
 router = Router()
+
+# Har bir admin uchun alohida lock — bitta chatdan bir vaqtda kelgan ikki
+# callback (double-tap yoki tarmoq qayta urinishi) confirm_order'ni bir vaqtda
+# ishga tushirib, FSM state'ni ikki marta o'qib qolishining oldini oladi.
+_confirm_locks: dict[int, asyncio.Lock] = {}
+
+
+def _get_confirm_lock(user_id: int) -> asyncio.Lock:
+    lock = _confirm_locks.get(user_id)
+    if lock is None:
+        lock = asyncio.Lock()
+        _confirm_locks[user_id] = lock
+    return lock
 
 
 def _is_admin(user_id: int) -> bool:
@@ -39,6 +54,12 @@ async def start_order(call: CallbackQuery, callback_data: StartOrderCb, state: F
             parse_mode="HTML"
         )
         return
+
+    if await state.get_state() is not None:
+        # Boshqa kunga tegishli eskirgan oqim hali tugallanmagan — yangisini
+        # boshlashdan oldin tozalab qo'yamiz, aks holda ikkalasi aralashib
+        # ketishi mumkin.
+        await state.clear()
 
     meal1_name, meal2_name = await _get_meal_names(target_date)
     await state.set_state(OrderStates.waiting_meal1)
@@ -107,28 +128,49 @@ async def confirm_order(call: CallbackQuery, callback_data: MealStepCb, state: F
         await call.answer("Sizda ruxsat yo'q.", show_alert=True)
         return
 
-    data = await state.get_data()
-    dept = ADMIN_TO_DEPT[call.from_user.id]
+    async with _get_confirm_lock(call.from_user.id):
+        current_state = await state.get_state()
+        data = await state.get_data()
 
-    await db.upsert_order(
-        date_str=callback_data.date,
-        dept_key=dept["key"],
-        admin_id=call.from_user.id,
-        meal1_count=data.get("meal1_count", 0),
-        meal2_count=data.get("meal2_count", 0),
-        confirmed=True
-    )
-    await state.clear()
-    await call.answer()
-    await call.message.edit_text(
-        f"✅ <b>Buyurtma qabul qilindi!</b>\n\n"
-        f"🥘 Tushlik: <b>{data.get('meal1_count', 0)} ta</b>\n"
-        f"🌙 Kechki: <b>{data.get('meal2_count', 0)} ta</b>\n\n"
-        f"Rahmat, {dept['emoji']} {dept['name']}!",
-        parse_mode="HTML"
-    )
-    logger.info(f"Order confirmed: dept={dept['key']} date={callback_data.date} "
-                f"m1={data.get('meal1_count')} m2={data.get('meal2_count')}")
+        # Eskirgan (avvalgi kunga tegishli) tugma yoki takroriy bosish —
+        # ikkinchisida state allaqachon tozalangan yoki boshqa sanaga
+        # tegishli bo'ladi, shu yerda ushlab qolamiz.
+        if current_state != OrderStates.confirming or data.get("target_date") != callback_data.date:
+            await call.answer("Bu tugma eskirgan. Iltimos, /edit buyrug'i bilan qaytadan kiriting.", show_alert=True)
+            return
+
+        dept = ADMIN_TO_DEPT[call.from_user.id]
+        meal1_count = data["meal1_count"]
+        meal2_count = data["meal2_count"]
+
+        # State'ni yozishdan OLDIN tozalaymiz — shu bilan ikkinchi (parallel
+        # yoki keyingi) chaqiruv yuqoridagi tekshiruvdan o'tolmaydi.
+        await state.clear()
+
+        try:
+            await db.upsert_order(
+                date_str=callback_data.date,
+                dept_key=dept["key"],
+                admin_id=call.from_user.id,
+                meal1_count=meal1_count,
+                meal2_count=meal2_count,
+                confirmed=True
+            )
+        except Exception as e:
+            logger.error(f"confirm_order: DB yozishda xato — dept={dept['key']} date={callback_data.date}: {e}")
+            await call.answer("❌ Xatolik yuz berdi, qayta urinib ko'ring.", show_alert=True)
+            return
+
+        await call.answer()
+        await call.message.edit_text(
+            f"✅ <b>Buyurtma qabul qilindi!</b>\n\n"
+            f"🥘 Tushlik: <b>{meal1_count} ta</b>\n"
+            f"🌙 Kechki: <b>{meal2_count} ta</b>\n\n"
+            f"Rahmat, {dept['emoji']} {dept['name']}!",
+            parse_mode="HTML"
+        )
+        logger.info(f"Order confirmed: dept={dept['key']} date={callback_data.date} "
+                    f"m1={meal1_count} m2={meal2_count}")
 
 
 @router.callback_query(MealStepCb.filter(F.action == "edit"))
@@ -150,6 +192,36 @@ async def edit_order(call: CallbackQuery, callback_data: MealStepCb, state: FSMC
         meal2_count=None,
     )
     await call.message.answer(
+        f"✏️ Qaytadan kiriting ({callback_data.date}):\n\n"
+        f"🥘 <b>Tushlik:</b> {meal1_name}\n\n"
+        f"Nechta porsiya buyurtma berasiz?\n"
+        f"<i>(Faqat raqam kiriting)</i>",
+        parse_mode="HTML"
+    )
+
+
+@router.message(Command("edit"))
+async def cmd_edit(message: Message, state: FSMContext):
+    if not _is_admin(message.from_user.id):
+        return
+
+    from datetime import date as date_cls, timedelta
+    dept = ADMIN_TO_DEPT[message.from_user.id]
+    target_date = (date_cls.today() + timedelta(days=1)).isoformat()
+
+    existing = await db.get_order(target_date, dept["key"])
+    if not existing:
+        await message.answer("Tahrirlash uchun avval tasdiqlangan buyurtma topilmadi.")
+        return
+
+    meal1_name, meal2_name = await _get_meal_names(target_date)
+    await state.set_state(OrderStates.waiting_meal1)
+    await state.update_data(
+        target_date=target_date,
+        meal1_name=meal1_name,
+        meal2_name=meal2_name,
+    )
+    await message.answer(
         f"✏️ Qaytadan kiriting:\n\n"
         f"🥘 <b>Tushlik:</b> {meal1_name}\n\n"
         f"Nechta porsiya buyurtma berasiz?\n"
@@ -158,15 +230,24 @@ async def edit_order(call: CallbackQuery, callback_data: MealStepCb, state: FSMC
     )
 
 
+@router.message(Command("cancel"), StateFilter(OrderStates))
+async def cmd_cancel(message: Message, state: FSMContext):
+    if not _is_admin(message.from_user.id):
+        return
+    await state.clear()
+    await message.answer("❌ Bekor qilindi.")
+
+
 # ── Helpers ────────────────────────────────────────────────────────────────
 
 def _parse_int(text: str | None) -> int | None:
     if not text:
         return None
     text = text.strip()
-    if not text.isdigit():
+    try:
+        val = int(text)
+    except ValueError:
         return None
-    val = int(text)
     return val if val >= 0 else None
 
 
