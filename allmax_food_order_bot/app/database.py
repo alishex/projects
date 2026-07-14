@@ -1,7 +1,7 @@
 import aiosqlite
 from datetime import datetime
 from typing import Optional
-from app.config import DB_PATH
+from app.config import DB_PATH, ANCHOR_DATE, ANCHOR_INDEX
 
 _NOW = lambda: datetime.now().isoformat(sep=" ", timespec="seconds")
 
@@ -25,7 +25,9 @@ DEFAULT_MENU = [
 
 async def init_db():
     import os
-    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+    dirname = os.path.dirname(DB_PATH)
+    if dirname:
+        os.makedirs(dirname, exist_ok=True)
     async with aiosqlite.connect(DB_PATH) as db:
         await db.executescript("""
             CREATE TABLE IF NOT EXISTS menu (
@@ -39,8 +41,8 @@ async def init_db():
 
             CREATE TABLE IF NOT EXISTS settings (
                 id           INTEGER PRIMARY KEY AUTOINCREMENT,
-                anchor_date  TEXT DEFAULT '2026-06-21',
-                anchor_index INTEGER DEFAULT 6,
+                anchor_date  TEXT,
+                anchor_index INTEGER,
                 updated_at   TEXT
             );
 
@@ -71,7 +73,7 @@ async def init_db():
         if row[0] == 0:
             await db.execute(
                 "INSERT INTO settings(anchor_date, anchor_index, updated_at) VALUES(?,?,?)",
-                ("2026-06-21", 6, _NOW())
+                (ANCHOR_DATE, ANCHOR_INDEX, _NOW())
             )
             await db.commit()
 
@@ -80,7 +82,7 @@ async def get_settings() -> dict:
     async with aiosqlite.connect(DB_PATH) as db:
         db.row_factory = aiosqlite.Row
         row = await (await db.execute("SELECT * FROM settings LIMIT 1")).fetchone()
-        return dict(row) if row else {"anchor_date": "2026-06-21", "anchor_index": 6}
+        return dict(row) if row else {"anchor_date": ANCHOR_DATE, "anchor_index": ANCHOR_INDEX}
 
 
 async def get_menu_item(week_number: int, day_name: str) -> Optional[dict]:

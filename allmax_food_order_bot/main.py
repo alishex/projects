@@ -18,17 +18,21 @@ logger = logging.getLogger(__name__)
 
 
 async def main():
-    await init_db()
+    try:
+        await init_db()
 
-    bot = Bot(token=BOT_TOKEN)
-    dp = Dispatcher(storage=MemoryStorage())
-    dp.include_router(admin.router)
+        bot = Bot(token=BOT_TOKEN)
+        dp = Dispatcher(storage=MemoryStorage())
+        dp.include_router(admin.router)
 
-    scheduler = setup_scheduler(bot)
-    scheduler.start()
+        scheduler = setup_scheduler(bot)
+        scheduler.start()
 
-    logger.info("Allmax Food Order Bot ishga tushdi")
-    await dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types())
+        logger.info("Allmax Food Order Bot ishga tushdi")
+        await dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types())
+    except Exception:
+        logger.critical("Bot ishga tushmadi yoki kutilmagan xatolik bilan to'xtadi", exc_info=True)
+        raise
 
 
 if __name__ == "__main__":

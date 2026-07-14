@@ -1,5 +1,4 @@
 import logging
-from datetime import date, timedelta
 
 import pytz
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -17,14 +16,25 @@ TZ = pytz.timezone("Asia/Tashkent")
 
 
 def setup_scheduler(bot: Bot) -> AsyncIOScheduler:
-    scheduler = AsyncIOScheduler(timezone=TZ)
+    scheduler = AsyncIOScheduler(
+        timezone=TZ,
+        # Default misfire_grace_time apscheduler'da 1 soniya — restart/deploy
+        # yoki event loop bir zum band bo'lishi kunlik jobni butunlay
+        # o'tkazib yubormasligi uchun kengroq qildik.
+        job_defaults={"misfire_grace_time": 3600, "coalesce": True},
+    )
     scheduler.add_job(send_daily_poll,   CronTrigger(hour=17, minute=0, timezone=TZ), args=[bot])
     scheduler.add_job(send_owner_report, CronTrigger(hour=18, minute=0, timezone=TZ), args=[bot])
     return scheduler
 
 
 async def send_daily_poll(bot: Bot):
-    menu = await get_tomorrow_menu()
+    try:
+        menu = await get_tomorrow_menu()
+    except Exception:
+        logger.error("send_daily_poll: menyuni olishda xato", exc_info=True)
+        return
+
     if not menu:
         logger.warning("send_daily_poll: menu topilmadi")
         return
@@ -59,23 +69,27 @@ async def send_daily_poll(bot: Bot):
 
 
 async def send_owner_report(bot: Bot):
-    target_date = (date.today() + timedelta(days=1)).isoformat()
-    menu = await get_tomorrow_menu()
-    if not menu:
-        logger.warning("send_owner_report: menu topilmadi")
+    if not OWNER_ID:
+        logger.error("send_owner_report: OWNER_ID sozlanmagan — hisobot yuborilmadi")
         return
 
-    orders = await db.get_orders_for_date(target_date)
-
-    report = build_owner_report(
-        date_display=menu["date_display"],
-        meal1_name=menu["meal_1"],
-        meal2_name=menu["meal_2"],
-        orders=orders
-    )
-
     try:
+        menu = await get_tomorrow_menu()
+        if not menu:
+            logger.warning("send_owner_report: menu topilmadi")
+            return
+
+        target_date = menu["date_str"]
+        orders = await db.get_orders_for_date(target_date)
+
+        report = build_owner_report(
+            date_display=menu["date_display"],
+            meal1_name=menu["meal_1"],
+            meal2_name=menu["meal_2"],
+            orders=orders
+        )
+
         await bot.send_message(OWNER_ID, report, parse_mode="HTML")
         logger.info(f"send_owner_report: ownerga yuborildi, sana={target_date}")
     except Exception as e:
-        logger.error(f"send_owner_report: ownerga yuborib bo'lmadi — {e}")
+        logger.error(f"send_owner_report: xatolik — {e}", exc_info=True)
