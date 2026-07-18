@@ -60,6 +60,24 @@ async def send_daily_poll(bot: Bot):
     # bo'limlardan biri so'rovsiz qolib ketardi).
     sent = 0
     for dept in DEPARTMENTS:
+        if dept.get("fixed_meal1") is not None and dept.get("fixed_meal2") is not None:
+            # Doimiy sonli bo'lim (masalan Boshliqlar) — soni hech qachon
+            # o'zgarmaydi, shuning uchun so'rov yuborilmaydi, to'g'ridan-to'g'ri
+            # tasdiqlangan buyurtma sifatida yoziladi (hisobotda ko'rinishi uchun).
+            try:
+                await db.upsert_order(
+                    date_str=target_date,
+                    dept_key=dept["key"],
+                    admin_id=0,
+                    meal1_count=dept["fixed_meal1"],
+                    meal2_count=dept["fixed_meal2"],
+                    confirmed=True,
+                )
+                sent += 1
+            except Exception as e:
+                logger.error(f"send_daily_poll: {dept['key']} doimiy buyurtmani yozib bo'lmadi — {e}")
+            continue
+
         admin_id = dept.get("admin_id")
         if admin_id is None:
             continue

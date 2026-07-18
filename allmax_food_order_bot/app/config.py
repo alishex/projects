@@ -43,7 +43,10 @@ OWNER_IDS: list[int] = [
 ]
 
 DEPARTMENTS = [
-    {"key": "boshliqlar", "name": "Boshliqlar",      "emoji": "👔", "env": "ADMIN_BOSHLIQLAR", "deputy_env": "DEPUTY_BOSHLIQLAR"},
+    # Boshliqlar soni doim bir xil (o'zgarmaydi) — admin/deputy YO'Q, kunlik
+    # so'rov yuborilmaydi, har kuni avtomatik shu doimiy son bilan yoziladi.
+    {"key": "boshliqlar", "name": "Boshliqlar",      "emoji": "👔", "env": "ADMIN_BOSHLIQLAR", "deputy_env": "DEPUTY_BOSHLIQLAR",
+     "fixed_meal1": _int_env("FIXED_BOSHLIQLAR_MEAL1", "3"), "fixed_meal2": _int_env("FIXED_BOSHLIQLAR_MEAL2", "2")},
     {"key": "umumiy1",    "name": "Umumiy bo'lim 1", "emoji": "🏢", "env": "ADMIN_UMUMIY1",    "deputy_env": "DEPUTY_UMUMIY1"},
     {"key": "umumiy2",    "name": "Umumiy bo'lim 2", "emoji": "🏢", "env": "ADMIN_UMUMIY2",    "deputy_env": "DEPUTY_UMUMIY2"},
     {"key": "moliya",     "name": "Moliya",           "emoji": "💰", "env": "ADMIN_MOLIYA",     "deputy_env": "DEPUTY_MOLIYA"},
