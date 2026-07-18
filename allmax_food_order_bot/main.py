@@ -5,8 +5,8 @@ from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
 
 from app.config import BOT_TOKEN
-from app.database import init_db
-from app.handlers import admin
+from app.database import init_db, refresh_runtime_config
+from app.handlers import admin, owner
 from app.scheduler import setup_scheduler
 
 logging.basicConfig(
@@ -20,12 +20,18 @@ logger = logging.getLogger(__name__)
 async def main():
     try:
         await init_db()
+        await refresh_runtime_config()
 
         bot = Bot(token=BOT_TOKEN)
         dp = Dispatcher(storage=MemoryStorage())
+        # admin.router avval — bo'lim admin/o'rinbosarlarga xos /start filtri
+        # bilan cheklangan, mos kelmasa navbatdagi routerga o'tadi. owner.router
+        # o'z filtri bilan tekshiradi, ikkalasiga ham mos kelmasa oxirgi
+        # fallback ("Sizda ruxsat yo'q.") owner.py ichida ishga tushadi.
         dp.include_router(admin.router)
+        dp.include_router(owner.router)
 
-        scheduler = setup_scheduler(bot)
+        scheduler = await setup_scheduler(bot)
         scheduler.start()
 
         logger.info("Allmax Food Order Bot ishga tushdi")

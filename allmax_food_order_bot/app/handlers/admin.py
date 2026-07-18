@@ -5,7 +5,7 @@ from aiogram.filters import Command, StateFilter
 from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
 
-from app.config import DEPT_BY_KEY, ADMIN_DEPTS, DEPUTY_DEPTS, AUTHORIZED_IDS, GROUP_ID, OWNER_IDS
+import app.config as cfg
 from app.states import OrderStates, ReportStates, FeedbackStates
 from app.keyboards import (
     StartOrderCb, MealStepCb, EditPickCb, ReportPickCb, FeedbackPickCb, DelegateCb,
@@ -33,14 +33,14 @@ def _get_confirm_lock(user_id: int) -> asyncio.Lock:
 
 
 def _is_authorized(user_id: int) -> bool:
-    return user_id in AUTHORIZED_IDS
+    return user_id in cfg.AUTHORIZED_IDS
 
 
 def _depts_for(user_id: int) -> list:
     """Berilgan odam mas'ul (admin sifatida yoki o'rinbosar sifatida)
     bo'lgan barcha bo'limlar — ikkalasi teng huquqli."""
     seen: dict[str, dict] = {}
-    for d in ADMIN_DEPTS.get(user_id, []) + DEPUTY_DEPTS.get(user_id, []):
+    for d in cfg.ADMIN_DEPTS.get(user_id, []) + cfg.DEPUTY_DEPTS.get(user_id, []):
         seen[d["key"]] = d
     return list(seen.values())
 
@@ -55,11 +55,8 @@ async def _guard_no_conflict(target: Message, state: FSMContext) -> bool:
     return True
 
 
-@router.message(Command("start"))
+@router.message(Command("start"), F.from_user.func(lambda u: u.id in cfg.AUTHORIZED_IDS))
 async def cmd_start(message: Message):
-    if not _is_authorized(message.from_user.id):
-        await message.answer("Sizda ruxsat yo'q.")
-        return
     await message.answer(
         "👋 Xush kelibsiz!\n\n"
         "Kunlik buyurtma so'rovi va tugmalar shu yerda ko'rinadi.\n"
@@ -79,7 +76,7 @@ async def start_order(call: CallbackQuery, callback_data: StartOrderCb, state: F
     # nechta bo'limga mas'ul bo'lsa, har bir tugma o'z bo'limini to'g'ri
     # aniqlaydi. Bu bosuvchi shu bo'limning admin'i YOKI o'rinbosari
     # ekanini tekshiramiz — ikkalasi teng huquqli.
-    dept = DEPT_BY_KEY.get(callback_data.dept_key)
+    dept = cfg.DEPT_BY_KEY.get(callback_data.dept_key)
     if dept is None or call.from_user.id not in (dept.get("admin_id"), dept.get("deputy_id")):
         await call.answer("Sizda ruxsat yo'q.", show_alert=True)
         return
@@ -112,7 +109,7 @@ async def start_order(call: CallbackQuery, callback_data: StartOrderCb, state: F
             # Boshqa bo'lim (yoki boshqa kun)ga, yoki boshqa turdagi oqimga
             # (yakuniy hisobot/feedback) tegishli ish hali tugallanmagan —
             # ustidan yozib yubormaymiz.
-            prev_dept = DEPT_BY_KEY.get(data.get("dept_key"))
+            prev_dept = cfg.DEPT_BY_KEY.get(data.get("dept_key"))
             prev_label = f"{prev_dept['emoji']} {prev_dept['name']}" if prev_dept else "boshqa amal"
             await call.message.answer(
                 f"⚠️ Sizda tugallanmagan amal bor ({prev_label}).\n"
@@ -191,7 +188,7 @@ async def confirm_order(call: CallbackQuery, callback_data: MealStepCb, state: F
     async with _get_confirm_lock(call.from_user.id):
         current_state = await state.get_state()
         data = await state.get_data()
-        dept = DEPT_BY_KEY.get(data.get("dept_key"))
+        dept = cfg.DEPT_BY_KEY.get(data.get("dept_key"))
 
         # Eskirgan (avvalgi kunga yoki boshqa bo'limga tegishli) tugma yoki
         # takroriy bosish — bunday holatlarda state allaqachon tozalangan
@@ -283,7 +280,7 @@ async def edit_pick(call: CallbackQuery, callback_data: EditPickCb, state: FSMCo
         await call.answer("Sizda ruxsat yo'q.", show_alert=True)
         return
 
-    dept = DEPT_BY_KEY.get(callback_data.dept_key)
+    dept = cfg.DEPT_BY_KEY.get(callback_data.dept_key)
     if dept is None or call.from_user.id not in (dept.get("admin_id"), dept.get("deputy_id")):
         await call.answer("Sizda ruxsat yo'q.", show_alert=True)
         return
@@ -324,7 +321,7 @@ async def _begin_edit(target: Message, state: FSMContext, dept: dict):
 
 @router.callback_query(DelegateCb.filter())
 async def delegate_to_deputy(call: CallbackQuery, callback_data: DelegateCb, state: FSMContext):
-    dept = DEPT_BY_KEY.get(callback_data.dept_key)
+    dept = cfg.DEPT_BY_KEY.get(callback_data.dept_key)
     # Faqat shu bo'limning ASOSIY admin'i delegatsiya qila oladi (o'rinbosar
     # yoki begona odam emas).
     if dept is None or dept.get("admin_id") != call.from_user.id:
@@ -388,7 +385,7 @@ async def report_pick(call: CallbackQuery, callback_data: ReportPickCb, state: F
         await call.answer("Sizda ruxsat yo'q.", show_alert=True)
         return
 
-    dept = DEPT_BY_KEY.get(callback_data.dept_key)
+    dept = cfg.DEPT_BY_KEY.get(callback_data.dept_key)
     if dept is None or call.from_user.id not in (dept.get("admin_id"), dept.get("deputy_id")):
         await call.answer("Sizda ruxsat yo'q.", show_alert=True)
         return
@@ -416,10 +413,10 @@ async def handle_final_report_video(message: Message, state: FSMContext):
         return
 
     data = await state.get_data()
-    dept = DEPT_BY_KEY.get(data.get("dept_key"))
+    dept = cfg.DEPT_BY_KEY.get(data.get("dept_key"))
     await state.clear()
 
-    if not GROUP_ID:
+    if not cfg.GROUP_ID:
         logger.error("handle_final_report_video: GROUP_ID sozlanmagan")
         await message.answer("⚠️ Guruh sozlanmagan — video yuborilmadi. Administratorga xabar bering.")
         return
@@ -427,11 +424,11 @@ async def handle_final_report_video(message: Message, state: FSMContext):
     dept_label = f"{dept['emoji']} {dept['name']}" if dept else "Noma'lum bo'lim"
     try:
         await message.bot.send_message(
-            GROUP_ID,
+            cfg.GROUP_ID,
             f"🎥 <b>Yakuniy hisobot</b>\n{dept_label} — {message.from_user.full_name}",
             parse_mode="HTML"
         )
-        await message.bot.send_video_note(GROUP_ID, message.video_note.file_id)
+        await message.bot.send_video_note(cfg.GROUP_ID, message.video_note.file_id)
     except Exception as e:
         logger.error(f"handle_final_report_video: guruhga yuborib bo'lmadi — {e}")
         await message.answer("❌ Video guruhga yuborilmadi, xatolik yuz berdi.")
@@ -466,7 +463,7 @@ async def feedback_pick(call: CallbackQuery, callback_data: FeedbackPickCb, stat
         await call.answer("Sizda ruxsat yo'q.", show_alert=True)
         return
 
-    dept = DEPT_BY_KEY.get(callback_data.dept_key)
+    dept = cfg.DEPT_BY_KEY.get(callback_data.dept_key)
     if dept is None or call.from_user.id not in (dept.get("admin_id"), dept.get("deputy_id")):
         await call.answer("Sizda ruxsat yo'q.", show_alert=True)
         return
@@ -489,12 +486,12 @@ async def handle_feedback_text(message: Message, state: FSMContext):
         return
 
     data = await state.get_data()
-    dept = DEPT_BY_KEY.get(data.get("dept_key"))
+    dept = cfg.DEPT_BY_KEY.get(data.get("dept_key"))
     text = message.text
     await state.clear()
 
-    if not OWNER_IDS:
-        logger.error("handle_feedback_text: OWNER_ID_1/OWNER_ID_2 sozlanmagan")
+    if not cfg.OWNER_IDS:
+        logger.error("handle_feedback_text: owner sozlanmagan")
         await message.answer("⚠️ Owner sozlanmagan — fikr yuborilmadi.")
         return
 
@@ -502,7 +499,7 @@ async def handle_feedback_text(message: Message, state: FSMContext):
     forward_text = f"💬 <b>Fikr-mulohaza</b>\n{dept_label} — {message.from_user.full_name}\n\n{text}"
 
     sent = 0
-    for owner_id in OWNER_IDS:
+    for owner_id in cfg.OWNER_IDS:
         try:
             await message.bot.send_message(owner_id, forward_text, parse_mode="HTML")
             sent += 1
@@ -520,10 +517,8 @@ async def handle_feedback_wrong_type(message: Message):
     await message.answer("❌ Iltimos, fikringizni MATN ko'rinishida yuboring.")
 
 
-@router.message(Command("cancel"), StateFilter("*"))
+@router.message(Command("cancel"), StateFilter("*"), F.from_user.func(lambda u: u.id in cfg.AUTHORIZED_IDS))
 async def cmd_cancel(message: Message, state: FSMContext):
-    if not _is_authorized(message.from_user.id):
-        return
     await state.clear()
     await message.answer("❌ Bekor qilindi.")
 

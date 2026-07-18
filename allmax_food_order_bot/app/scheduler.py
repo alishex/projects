@@ -5,7 +5,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from aiogram import Bot
 
-from app.config import DEPARTMENTS, OWNER_IDS
+import app.config as cfg
 from app.keyboards import poll_keyboard
 from app.services.menu_service import get_tomorrow_menu
 from app.services.report_service import build_owner_report
@@ -14,8 +14,25 @@ import app.database as db
 logger = logging.getLogger(__name__)
 TZ = pytz.timezone("Asia/Tashkent")
 
+POLL_JOB_ID = "send_daily_poll"
+REPORT_JOB_ID = "send_owner_report"
 
-def setup_scheduler(bot: Bot) -> AsyncIOScheduler:
+_scheduler: AsyncIOScheduler | None = None
+
+
+def _parse_hhmm(value: str, fallback: tuple[int, int]) -> tuple[int, int]:
+    try:
+        h, m = value.strip().split(":")
+        h, m = int(h), int(m)
+        if 0 <= h <= 23 and 0 <= m <= 59:
+            return h, m
+    except (ValueError, AttributeError):
+        pass
+    return fallback
+
+
+async def setup_scheduler(bot: Bot) -> AsyncIOScheduler:
+    global _scheduler
     scheduler = AsyncIOScheduler(
         timezone=TZ,
         # Default misfire_grace_time apscheduler'da 1 soniya — restart/deploy
@@ -23,9 +40,40 @@ def setup_scheduler(bot: Bot) -> AsyncIOScheduler:
         # o'tkazib yubormasligi uchun kengroq qildik.
         job_defaults={"misfire_grace_time": 3600, "coalesce": True},
     )
-    scheduler.add_job(send_daily_poll,   CronTrigger(hour=17, minute=0, timezone=TZ), args=[bot])
-    scheduler.add_job(send_owner_report, CronTrigger(hour=18, minute=0, timezone=TZ), args=[bot])
+
+    settings = await db.get_settings()
+    poll_h, poll_m = _parse_hhmm((settings or {}).get("poll_time") or cfg.DEFAULT_POLL_TIME, (17, 0))
+    rep_h, rep_m = _parse_hhmm((settings or {}).get("report_time") or cfg.DEFAULT_REPORT_TIME, (18, 0))
+
+    scheduler.add_job(
+        send_daily_poll, CronTrigger(hour=poll_h, minute=poll_m, timezone=TZ),
+        args=[bot], id=POLL_JOB_ID, replace_existing=True,
+    )
+    scheduler.add_job(
+        send_owner_report, CronTrigger(hour=rep_h, minute=rep_m, timezone=TZ),
+        args=[bot], id=REPORT_JOB_ID, replace_existing=True,
+    )
+    logger.info("Scheduler tayyor: %02d:%02d so'rov, %02d:%02d hisobot", poll_h, poll_m, rep_h, rep_m)
+    _scheduler = scheduler
     return scheduler
+
+
+async def reschedule_poll_time(hh: int, mm: int):
+    """Owner panel orqali so'rov yuborish vaqtini qayta ishga tushirmasdan o'zgartiradi."""
+    if _scheduler is None:
+        raise RuntimeError("Scheduler hali ishga tushmagan.")
+    _scheduler.reschedule_job(POLL_JOB_ID, trigger=CronTrigger(hour=hh, minute=mm, timezone=TZ))
+    await db.update_schedule_times(poll_time=f"{hh:02d}:{mm:02d}")
+    logger.info("So'rov yuborish vaqti %02d:%02d ga o'zgartirildi.", hh, mm)
+
+
+async def reschedule_report_time(hh: int, mm: int):
+    """Owner panel orqali hisobot vaqtini qayta ishga tushirmasdan o'zgartiradi."""
+    if _scheduler is None:
+        raise RuntimeError("Scheduler hali ishga tushmagan.")
+    _scheduler.reschedule_job(REPORT_JOB_ID, trigger=CronTrigger(hour=hh, minute=mm, timezone=TZ))
+    await db.update_schedule_times(report_time=f"{hh:02d}:{mm:02d}")
+    logger.info("Hisobot vaqti %02d:%02d ga o'zgartirildi.", hh, mm)
 
 
 async def send_daily_poll(bot: Bot):
@@ -54,12 +102,12 @@ async def send_daily_poll(bot: Bot):
         f"Porsiyalar sonini kiriting 👇"
     )
 
-    # DEPARTMENTS bo'yicha (admin_id bo'yicha emas) aylanamiz — shunda bitta
-    # admin bir nechta bo'limga mas'ul bo'lsa ham, har bir bo'limga alohida
-    # so'rov boradi (aks holda ular bitta admin ID'da "qo'shilib" ketib,
-    # bo'limlardan biri so'rovsiz qolib ketardi).
+    # cfg.DEPARTMENTS (DB'dan) bo'yicha aylanamiz — shunda owner panelda
+    # qo'shilgan/o'chirilgan/o'zgartirilgan bo'limlar ham restart shart
+    # bo'lmasdan darhol to'g'ri hisobga olinadi. Bitta admin bir nechta
+    # bo'limga mas'ul bo'lsa ham, har bir bo'limga alohida so'rov boradi.
     sent = 0
-    for dept in DEPARTMENTS:
+    for dept in cfg.DEPARTMENTS:
         if dept.get("fixed_meal1") is not None and dept.get("fixed_meal2") is not None:
             # Doimiy sonli bo'lim (masalan Boshliqlar) — soni hech qachon
             # o'zgarmaydi, shuning uchun so'rov yuborilmaydi, to'g'ridan-to'g'ri
@@ -94,12 +142,12 @@ async def send_daily_poll(bot: Bot):
         except Exception as e:
             logger.warning(f"send_daily_poll: {dept['key']} (admin {admin_id}) ga yuborib bo'lmadi — {e}")
 
-    logger.info(f"send_daily_poll: {sent}/{len(DEPARTMENTS)} bo'limga yuborildi, sana={target_date}")
+    logger.info(f"send_daily_poll: {sent}/{len(cfg.DEPARTMENTS)} bo'limga yuborildi, sana={target_date}")
 
 
 async def send_owner_report(bot: Bot):
-    if not OWNER_IDS:
-        logger.error("send_owner_report: OWNER_ID_1/OWNER_ID_2 sozlanmagan — hisobot yuborilmadi")
+    if not cfg.OWNER_IDS:
+        logger.error("send_owner_report: owner belgilanmagan — hisobot yuborilmadi")
         return
 
     try:
@@ -118,16 +166,16 @@ async def send_owner_report(bot: Bot):
             orders=orders
         )
 
-        # Ikkala owner ham teng huquqli — biriga yuborilmasa ham ikkinchisi
+        # Barcha ownerlar teng huquqli — biriga yuborilmasa ham qolganlari
         # o'z hisobotini olishi kerak, shuning uchun alohida try/except.
         sent = 0
-        for owner_id in OWNER_IDS:
+        for owner_id in cfg.OWNER_IDS:
             try:
                 await bot.send_message(owner_id, report, parse_mode="HTML")
                 sent += 1
             except Exception as e:
                 logger.warning(f"send_owner_report: owner {owner_id} ga yuborib bo'lmadi — {e}")
 
-        logger.info(f"send_owner_report: {sent}/{len(OWNER_IDS)} ownerga yuborildi, sana={target_date}")
+        logger.info(f"send_owner_report: {sent}/{len(cfg.OWNER_IDS)} ownerga yuborildi, sana={target_date}")
     except Exception as e:
         logger.error(f"send_owner_report: xatolik — {e}", exc_info=True)
