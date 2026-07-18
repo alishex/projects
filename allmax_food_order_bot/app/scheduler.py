@@ -5,7 +5,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from aiogram import Bot
 
-from app.config import DEPARTMENTS, OWNER_ID
+from app.config import DEPARTMENTS, OWNER_IDS
 from app.keyboards import poll_keyboard
 from app.services.menu_service import get_tomorrow_menu
 from app.services.report_service import build_owner_report
@@ -68,7 +68,9 @@ async def send_daily_poll(bot: Bot):
                 admin_id,
                 text,
                 parse_mode="HTML",
-                reply_markup=poll_keyboard(target_date, dept["key"])
+                # O'rinbosar belgilangan bo'limlarda admin bugungi so'rovni
+                # o'rinbosarga yuborish tugmasini ham ko'radi.
+                reply_markup=poll_keyboard(target_date, dept["key"], show_delegate=bool(dept.get("deputy_id")))
             )
             sent += 1
         except Exception as e:
@@ -78,8 +80,8 @@ async def send_daily_poll(bot: Bot):
 
 
 async def send_owner_report(bot: Bot):
-    if not OWNER_ID:
-        logger.error("send_owner_report: OWNER_ID sozlanmagan — hisobot yuborilmadi")
+    if not OWNER_IDS:
+        logger.error("send_owner_report: OWNER_ID_1/OWNER_ID_2 sozlanmagan — hisobot yuborilmadi")
         return
 
     try:
@@ -98,7 +100,16 @@ async def send_owner_report(bot: Bot):
             orders=orders
         )
 
-        await bot.send_message(OWNER_ID, report, parse_mode="HTML")
-        logger.info(f"send_owner_report: ownerga yuborildi, sana={target_date}")
+        # Ikkala owner ham teng huquqli — biriga yuborilmasa ham ikkinchisi
+        # o'z hisobotini olishi kerak, shuning uchun alohida try/except.
+        sent = 0
+        for owner_id in OWNER_IDS:
+            try:
+                await bot.send_message(owner_id, report, parse_mode="HTML")
+                sent += 1
+            except Exception as e:
+                logger.warning(f"send_owner_report: owner {owner_id} ga yuborib bo'lmadi — {e}")
+
+        logger.info(f"send_owner_report: {sent}/{len(OWNER_IDS)} ownerga yuborildi, sana={target_date}")
     except Exception as e:
         logger.error(f"send_owner_report: xatolik — {e}", exc_info=True)
