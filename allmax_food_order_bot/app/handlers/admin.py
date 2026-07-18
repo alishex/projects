@@ -5,9 +5,9 @@ from aiogram.filters import Command, StateFilter
 from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
 
-from app.config import ADMIN_TO_DEPT
+from app.config import DEPT_BY_KEY, ADMIN_DEPTS, ADMIN_IDS
 from app.states import OrderStates
-from app.keyboards import StartOrderCb, MealStepCb, confirm_keyboard
+from app.keyboards import StartOrderCb, MealStepCb, EditPickCb, confirm_keyboard, edit_pick_keyboard
 import app.database as db
 
 logger = logging.getLogger(__name__)
@@ -28,12 +28,22 @@ def _get_confirm_lock(user_id: int) -> asyncio.Lock:
 
 
 def _is_admin(user_id: int) -> bool:
-    return user_id in ADMIN_TO_DEPT
+    return user_id in ADMIN_IDS
 
 
 @router.callback_query(StartOrderCb.filter())
 async def start_order(call: CallbackQuery, callback_data: StartOrderCb, state: FSMContext):
     if not _is_admin(call.from_user.id):
+        await call.answer("Sizda ruxsat yo'q.", show_alert=True)
+        return
+
+    # Bo'lim endi tugma bilan birga keladi (callback_data.dept_key), global
+    # bitta-adminga-bitta-bo'lim lug'atidan emas — shunda bitta admin bir
+    # nechta bo'limga mas'ul bo'lsa, har bir tugma o'z bo'limini to'g'ri
+    # aniqlaydi. Baribir shu admin haqiqatan ham shu bo'limga tayinlanganini
+    # tekshiramiz (masalan .env keyin o'zgargan bo'lsa, eski tugma ishlamasin).
+    dept = DEPT_BY_KEY.get(callback_data.dept_key)
+    if dept is None or dept.get("admin_id") != call.from_user.id:
         await call.answer("Sizda ruxsat yo'q.", show_alert=True)
         return
 
@@ -43,11 +53,10 @@ async def start_order(call: CallbackQuery, callback_data: StartOrderCb, state: F
         *await _get_cycle(target_date)
     )
 
-    existing = await db.get_order(target_date, ADMIN_TO_DEPT[call.from_user.id]["key"])
+    existing = await db.get_order(target_date, dept["key"])
     if existing and existing["is_confirmed"]:
-        dept = ADMIN_TO_DEPT[call.from_user.id]
         await call.message.answer(
-            f"✅ Siz allaqachon buyurtma berdingiz:\n\n"
+            f"✅ Siz allaqachon buyurtma berdingiz ({dept['emoji']} {dept['name']}):\n\n"
             f"🥘 Tushlik: <b>{existing['meal1_count']} ta</b>\n"
             f"🌙 Kechki: <b>{existing['meal2_count']} ta</b>\n\n"
             f"O'zgartirish uchun /edit buyrug'ini yuboring.",
@@ -55,16 +64,32 @@ async def start_order(call: CallbackQuery, callback_data: StartOrderCb, state: F
         )
         return
 
-    if await state.get_state() is not None:
-        # Boshqa kunga tegishli eskirgan oqim hali tugallanmagan — yangisini
-        # boshlashdan oldin tozalab qo'yamiz, aks holda ikkalasi aralashib
-        # ketishi mumkin.
-        await state.clear()
+    current_state = await state.get_state()
+    if current_state is not None:
+        data = await state.get_data()
+        if data.get("target_date") == target_date and data.get("dept_key") == dept["key"]:
+            # Xuddi shu bo'lim/kun uchun tugma qayta bosilgan — tozalab
+            # qaytadan boshlaymiz.
+            await state.clear()
+        else:
+            # Boshqa bo'lim (yoki boshqa kun)ga tegishli oqim hali
+            # tugallanmagan — ustidan yozib yubormaymiz, aks holda admin
+            # bitta bo'lim uchun kiritgan sonlari sezdirmasdan yo'qolib
+            # qolishi mumkin (endi bitta admin bir nechta bo'limga mas'ul
+            # bo'lishi mumkin, shuning uchun bu holat kundalik uchrashi mumkin).
+            prev_dept = DEPT_BY_KEY.get(data.get("dept_key"))
+            prev_label = f"{prev_dept['emoji']} {prev_dept['name']}" if prev_dept else "boshqa buyurtma"
+            await call.message.answer(
+                f"⚠️ Sizda tugallanmagan buyurtma bor ({prev_label}).\n"
+                f"Avval uni yakunlang yoki /cancel yozing."
+            )
+            return
 
     meal1_name, meal2_name = await _get_meal_names(target_date)
     await state.set_state(OrderStates.waiting_meal1)
     await state.update_data(
         target_date=target_date,
+        dept_key=dept["key"],
         meal1_name=meal1_name,
         meal2_name=meal2_name,
     )
@@ -131,15 +156,17 @@ async def confirm_order(call: CallbackQuery, callback_data: MealStepCb, state: F
     async with _get_confirm_lock(call.from_user.id):
         current_state = await state.get_state()
         data = await state.get_data()
+        dept = DEPT_BY_KEY.get(data.get("dept_key"))
 
-        # Eskirgan (avvalgi kunga tegishli) tugma yoki takroriy bosish —
-        # ikkinchisida state allaqachon tozalangan yoki boshqa sanaga
-        # tegishli bo'ladi, shu yerda ushlab qolamiz.
-        if current_state != OrderStates.confirming or data.get("target_date") != callback_data.date:
+        # Eskirgan (avvalgi kunga yoki, endi bitta admin bir nechta bo'limga
+        # mas'ul bo'lishi mumkinligi sababli, boshqa bo'limga tegishli) tugma
+        # yoki takroriy bosish — bunday holatlarda state allaqachon
+        # tozalangan yoki boshqa sana/bo'limga tegishli bo'ladi, shu yerda
+        # ushlab qolamiz.
+        if current_state != OrderStates.confirming or data.get("target_date") != callback_data.date or dept is None:
             await call.answer("Bu tugma eskirgan. Iltimos, /edit buyrug'i bilan qaytadan kiriting.", show_alert=True)
             return
 
-        dept = ADMIN_TO_DEPT[call.from_user.id]
         meal1_count = data["meal1_count"]
         meal2_count = data["meal2_count"]
 
@@ -205,24 +232,55 @@ async def cmd_edit(message: Message, state: FSMContext):
     if not _is_admin(message.from_user.id):
         return
 
+    depts = ADMIN_DEPTS.get(message.from_user.id, [])
+    if len(depts) > 1:
+        # Bitta admin bir nechta bo'limga mas'ul — qaysi birini tahrirlashni
+        # so'raymiz, chunki buyruq matnidan buni bilib bo'lmaydi.
+        await message.answer(
+            "Qaysi bo'lim uchun tahrirlaysiz?",
+            reply_markup=edit_pick_keyboard(depts)
+        )
+        return
+
+    await _begin_edit(message, state, depts[0])
+
+
+@router.callback_query(EditPickCb.filter())
+async def edit_pick(call: CallbackQuery, callback_data: EditPickCb, state: FSMContext):
+    if not _is_admin(call.from_user.id):
+        await call.answer("Sizda ruxsat yo'q.", show_alert=True)
+        return
+
+    dept = DEPT_BY_KEY.get(callback_data.dept_key)
+    if dept is None or dept.get("admin_id") != call.from_user.id:
+        await call.answer("Sizda ruxsat yo'q.", show_alert=True)
+        return
+
+    await call.answer()
+    await _begin_edit(call.message, state, dept)
+
+
+async def _begin_edit(target: Message, state: FSMContext, dept: dict):
     from datetime import date as date_cls, timedelta
-    dept = ADMIN_TO_DEPT[message.from_user.id]
     target_date = (date_cls.today() + timedelta(days=1)).isoformat()
 
     existing = await db.get_order(target_date, dept["key"])
     if not existing:
-        await message.answer("Tahrirlash uchun avval tasdiqlangan buyurtma topilmadi.")
+        await target.answer(
+            f"Tahrirlash uchun avval tasdiqlangan buyurtma topilmadi ({dept['emoji']} {dept['name']})."
+        )
         return
 
     meal1_name, meal2_name = await _get_meal_names(target_date)
     await state.set_state(OrderStates.waiting_meal1)
     await state.update_data(
         target_date=target_date,
+        dept_key=dept["key"],
         meal1_name=meal1_name,
         meal2_name=meal2_name,
     )
-    await message.answer(
-        f"✏️ Qaytadan kiriting:\n\n"
+    await target.answer(
+        f"✏️ Qaytadan kiriting ({dept['emoji']} {dept['name']}):\n\n"
         f"🥘 <b>Tushlik:</b> {meal1_name}\n\n"
         f"Nechta porsiya buyurtma berasiz?\n"
         f"<i>(Faqat raqam kiriting)</i>",

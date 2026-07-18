@@ -5,7 +5,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from aiogram import Bot
 
-from app.config import ADMIN_TO_DEPT, OWNER_ID
+from app.config import DEPARTMENTS, OWNER_ID
 from app.keyboards import poll_keyboard
 from app.services.menu_service import get_tomorrow_menu
 from app.services.report_service import build_owner_report
@@ -54,18 +54,27 @@ async def send_daily_poll(bot: Bot):
         f"Porsiyalar sonini kiriting 👇"
     )
 
-    for admin_id in ADMIN_TO_DEPT:
+    # DEPARTMENTS bo'yicha (admin_id bo'yicha emas) aylanamiz — shunda bitta
+    # admin bir nechta bo'limga mas'ul bo'lsa ham, har bir bo'limga alohida
+    # so'rov boradi (aks holda ular bitta admin ID'da "qo'shilib" ketib,
+    # bo'limlardan biri so'rovsiz qolib ketardi).
+    sent = 0
+    for dept in DEPARTMENTS:
+        admin_id = dept.get("admin_id")
+        if admin_id is None:
+            continue
         try:
             await bot.send_message(
                 admin_id,
                 text,
                 parse_mode="HTML",
-                reply_markup=poll_keyboard(target_date)
+                reply_markup=poll_keyboard(target_date, dept["key"])
             )
+            sent += 1
         except Exception as e:
-            logger.warning(f"send_daily_poll: admin {admin_id} ga yuborib bo'lmadi — {e}")
+            logger.warning(f"send_daily_poll: {dept['key']} (admin {admin_id}) ga yuborib bo'lmadi — {e}")
 
-    logger.info(f"send_daily_poll: {len(ADMIN_TO_DEPT)} adminga yuborildi, sana={target_date}")
+    logger.info(f"send_daily_poll: {sent}/{len(DEPARTMENTS)} bo'limga yuborildi, sana={target_date}")
 
 
 async def send_owner_report(bot: Bot):

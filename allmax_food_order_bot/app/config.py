@@ -30,11 +30,23 @@ DEPARTMENTS = [
     {"key": "savdo",      "name": "Savdo",            "emoji": "🛒", "env": "ADMIN_SAVDO"},
 ]
 
-ADMIN_TO_DEPT: dict[int, dict] = {}
+# Bitta admin bir nechta bo'limga mas'ul bo'lishi mumkin (masalan Umumiy
+# bo'lim 1 va 2), shuning uchun bo'lim->admin ko'p-ga-bir; ADMIN_DEPTS esa
+# admin->bo'lim(lar) bir-ko'pga (har bir admin uchun ro'yxat qaytaradi).
+DEPT_BY_KEY: dict[str, dict] = {}
+ADMIN_DEPTS: dict[int, list] = {}
+
 for _dept in DEPARTMENTS:
     _env_val = os.getenv(_dept["env"])
+    _admin_id = None
     if _env_val:
         try:
-            ADMIN_TO_DEPT[int(_env_val)] = _dept
+            _admin_id = int(_env_val)
         except ValueError:
             print(f"OGOHLANTIRISH: {_dept['env']}={_env_val!r} raqam emas, e'tiborga olinmadi", file=sys.stderr)
+    _dept["admin_id"] = _admin_id
+    DEPT_BY_KEY[_dept["key"]] = _dept
+    if _admin_id is not None:
+        ADMIN_DEPTS.setdefault(_admin_id, []).append(_dept)
+
+ADMIN_IDS = set(ADMIN_DEPTS.keys())
