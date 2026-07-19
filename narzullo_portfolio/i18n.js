@@ -309,9 +309,31 @@
     ]
   };
 
+  var BOOT = {
+    en: [
+      "booting secure session...",
+      "loading profile: narzullo_muhammad_ali",
+      "verifying clearance: OSCP",
+      "access granted"
+    ],
+    uz: [
+      "xavfsiz sessiya ishga tushirilmoqda...",
+      "profil yuklanmoqda: narzullo_muhammad_ali",
+      "ruxsat tekshirilmoqda: OSCP",
+      "kirish tasdiqlandi"
+    ],
+    ru: [
+      "запуск защищённой сессии...",
+      "загрузка профиля: narzullo_muhammad_ali",
+      "проверка допуска: OSCP",
+      "доступ разрешён"
+    ]
+  };
+
   window.I18N = {
     strings: STRINGS,
     terminal: TERMINAL,
+    boot: BOOT,
     t: function (key, lang) {
       var entry = STRINGS[key];
       if (!entry) return null;

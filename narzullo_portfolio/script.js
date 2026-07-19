@@ -69,6 +69,71 @@
     });
   }
 
+  function initBoot() {
+    var overlay = document.getElementById("boot");
+    if (!overlay) return;
+
+    var alreadyShown = false;
+    try {
+      alreadyShown = sessionStorage.getItem("bootShown") === "1";
+    } catch (e) {}
+
+    if (reduceMotion || alreadyShown) {
+      overlay.remove();
+      return;
+    }
+
+    var lang = document.documentElement.getAttribute("lang") || "en";
+    var lines = (window.I18N && window.I18N.boot && window.I18N.boot[lang]) || [];
+    var linesEl = overlay.querySelector("[data-boot-lines]");
+    var fillEl = overlay.querySelector("[data-boot-fill]");
+    var done = false;
+
+    function finish() {
+      if (done) return;
+      done = true;
+      try {
+        sessionStorage.setItem("bootShown", "1");
+      } catch (e) {}
+      overlay.classList.add("is-hidden");
+      window.removeEventListener("keydown", finish);
+      window.removeEventListener("pointerdown", finish);
+      setTimeout(function () {
+        overlay.remove();
+      }, 500);
+    }
+
+    window.addEventListener("keydown", finish);
+    window.addEventListener("pointerdown", finish);
+    setTimeout(finish, 3500);
+
+    if (!lines.length || !linesEl || !fillEl) {
+      finish();
+      return;
+    }
+
+    var i = 0;
+    function nextLine() {
+      if (done) return;
+      if (i >= lines.length) {
+        fillEl.style.width = "100%";
+        setTimeout(finish, 350);
+        return;
+      }
+      var isLast = i === lines.length - 1;
+      var row = document.createElement("div");
+      row.className = "line" + (isLast ? " ok" : "");
+      row.innerHTML =
+        "<span>" + (isLast ? "✓" : "&gt;") + "</span><span>" + lines[i] + "</span>";
+      linesEl.appendChild(row);
+      fillEl.style.width = Math.round(((i + 1) / lines.length) * 100) + "%";
+      i++;
+      setTimeout(nextLine, 260);
+    }
+
+    setTimeout(nextLine, 150);
+  }
+
   function initReveal() {
     var items = document.querySelectorAll(".reveal");
     if (reduceMotion || !("IntersectionObserver" in window)) {
@@ -167,6 +232,7 @@
     var ctx = canvas.getContext("2d");
     var wrap = canvas.parentElement;
     var nodes = [];
+    var mouse = { x: -9999, y: -9999, active: false };
     var W = 0,
       H = 0,
       dpr = Math.max(1, window.devicePixelRatio || 1);
@@ -224,6 +290,30 @@
           }
         }
       }
+      if (mouse.active) {
+        var reach = Math.min(W, H) * 0.38;
+        for (var k = 0; k < nodes.length; k++) {
+          var node = nodes[k];
+          var mdx = node.x - mouse.x,
+            mdy = node.y - mouse.y;
+          var md = Math.sqrt(mdx * mdx + mdy * mdy);
+          if (md < reach) {
+            ctx.globalAlpha = (1 - md / reach) * 0.9;
+            ctx.strokeStyle = c.edge;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(node.x, node.y);
+            ctx.lineTo(mouse.x, mouse.y);
+            ctx.stroke();
+          }
+        }
+        ctx.globalAlpha = 0.9;
+        ctx.fillStyle = c.node;
+        ctx.beginPath();
+        ctx.arc(mouse.x, mouse.y, 2.6, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
       ctx.globalAlpha = 1;
       ctx.fillStyle = c.node;
       nodes.forEach(function (n) {
@@ -259,6 +349,43 @@
         draw();
       }, 150);
     });
+
+    if (!reduceMotion && window.matchMedia("(pointer: fine)").matches) {
+      var hero = canvas.closest(".hero") || wrap;
+      hero.addEventListener("pointermove", function (e) {
+        var rect = wrap.getBoundingClientRect();
+        mouse.x = e.clientX - rect.left;
+        mouse.y = e.clientY - rect.top;
+        mouse.active = true;
+      });
+      hero.addEventListener("pointerleave", function () {
+        mouse.active = false;
+      });
+    }
+  }
+
+  function initScrollProgress() {
+    var fill = document.querySelector("[data-scroll-fill]");
+    if (!fill) return;
+    var ticking = false;
+    function update() {
+      var doc = document.documentElement;
+      var scrollable = doc.scrollHeight - doc.clientHeight;
+      var pct = scrollable > 0 ? (doc.scrollTop / scrollable) * 100 : 0;
+      fill.style.width = pct + "%";
+      ticking = false;
+    }
+    window.addEventListener(
+      "scroll",
+      function () {
+        if (!ticking) {
+          requestAnimationFrame(update);
+          ticking = true;
+        }
+      },
+      { passive: true }
+    );
+    update();
   }
 
   function initYear() {
@@ -268,8 +395,10 @@
 
   document.addEventListener("DOMContentLoaded", function () {
     initLang();
+    initBoot();
     initReveal();
     initNetGraph();
+    initScrollProgress();
     initYear();
   });
 })();

@@ -9,7 +9,7 @@
 <meta property="og:description" data-i18n-attr="content:meta.ogDescription" content="Think Like an Attacker. Protect Like an Engineer." />
 <meta property="og:type" content="website" />
 <meta name="theme-color" content="#0a0d14" />
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230A0D14'/%3E%3Ctext x='32' y='42' font-family='monospace' font-size='26' font-weight='700' fill='%23FF5A1F' text-anchor='middle'%3E%3E_%3C/text%3E%3C/svg%3E" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230A0D14'/%3E%3Ctext x='32' y='42' font-family='monospace' font-size='26' font-weight='700' fill='%23F4F5F9' text-anchor='middle'%3E%3E_%3C/text%3E%3C/svg%3E" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -17,7 +17,16 @@
 </head>
 <body>
 
+<div class="boot" id="boot" aria-hidden="true">
+  <div class="boot-inner mono">
+    <div class="boot-lines" data-boot-lines></div>
+    <div class="boot-bar"><div class="boot-bar-fill" data-boot-fill></div></div>
+  </div>
+</div>
+
 <a class="visually-hidden" href="#main">Skip to content</a>
+
+<div class="scroll-progress" aria-hidden="true"><div class="scroll-progress-fill" data-scroll-fill></div></div>
 
 <header class="nav">
   <div class="container nav-row">
@@ -117,7 +126,7 @@
 <section id="experience">
   <div class="container">
     <p class="eyebrow" data-i18n="eyebrow.experience">experience</p>
-    <div class="exp-card reveal">
+    <div class="exp-card reveal scan-hover">
       <div class="exp-head">
         <p class="role mono" data-i18n="exp.role">IT Systems Engineer</p>
         <p class="org" data-i18n="exp.org">Infrastructure &amp; Security</p>
@@ -141,7 +150,7 @@
   <div class="container">
     <p class="eyebrow" data-i18n="eyebrow.certifications">certifications</p>
 
-    <div class="cert-card reveal">
+    <div class="cert-card reveal scan-hover">
       <div class="cert-media">
         <a href="assets/oscp-full.png" target="_blank" rel="noopener" data-i18n-attr="aria-label:aria.oscpFull" aria-label="Open full-resolution OSCP certificate in a new tab">
           <img src="assets/oscp-preview.jpg" data-i18n-attr="alt:alt.oscpCert" alt="Offensive Security Certified Professional certificate awarded to Narzullo Muhammad Ali Nazirjonovich, issued July 2, 2026" loading="lazy" />
@@ -165,7 +174,7 @@
       </div>
     </div>
 
-    <div class="cert-card reveal">
+    <div class="cert-card reveal scan-hover">
       <div class="cert-media">
         <a href="assets/sat-score.jpg" target="_blank" rel="noopener" data-i18n-attr="aria-label:aria.satFull" aria-label="Open full-resolution SAT score report in a new tab">
           <img src="assets/sat-score.jpg" data-i18n-attr="alt:alt.satCert" alt="SAT Score Report — Total Score 1270 out of 1600" loading="lazy" />
@@ -188,7 +197,7 @@
       </div>
     </div>
 
-    <div class="cert-card reveal">
+    <div class="cert-card reveal scan-hover">
       <div class="cert-media">
         <a href="assets/ielts-score.jpg" target="_blank" rel="noopener" data-i18n-attr="aria-label:aria.ieltsFull" aria-label="Open full-resolution IELTS Test Report Form in a new tab">
           <img src="assets/ielts-score.jpg" data-i18n-attr="alt:alt.ieltsCert" alt="IELTS Test Report Form — Overall Band Score 8.0, CEFR C1" loading="lazy" />
@@ -219,7 +228,7 @@
   <div class="container">
     <p class="eyebrow" data-i18n="eyebrow.skills">skills</p>
     <div class="skills-grid">
-      <div class="skill-group reveal">
+      <div class="skill-group reveal scan-hover">
         <h3 data-i18n="skills.group1">Offensive Security</h3>
         <div class="tag-row">
           <span class="tag">Penetration Testing</span>
@@ -233,7 +242,7 @@
           <span class="tag">Security Research</span>
         </div>
       </div>
-      <div class="skill-group reveal">
+      <div class="skill-group reveal scan-hover">
         <h3 data-i18n="skills.group2">Programming</h3>
         <div class="tag-row">
           <span class="tag">Python</span>
@@ -242,7 +251,7 @@
           <span class="tag">Bash</span>
         </div>
       </div>
-      <div class="skill-group reveal">
+      <div class="skill-group reveal scan-hover">
         <h3 data-i18n="skills.group3">Operating Systems</h3>
         <div class="tag-row">
           <span class="tag">Linux</span>
@@ -250,7 +259,7 @@
           <span class="tag">Windows Server</span>
         </div>
       </div>
-      <div class="skill-group reveal">
+      <div class="skill-group reveal scan-hover">
         <h3 data-i18n="skills.group4">Networking</h3>
         <div class="tag-row">
           <span class="tag">TCP/IP</span>
@@ -261,7 +270,7 @@
           <span class="tag">Switching</span>
         </div>
       </div>
-      <div class="skill-group reveal">
+      <div class="skill-group reveal scan-hover">
         <h3 data-i18n="skills.group5">Tools</h3>
         <div class="tag-row">
           <span class="tag">Burp Suite</span>
@@ -327,27 +336,27 @@
 <section id="values">
   <div class="container">
     <p class="eyebrow" data-i18n="eyebrow.values">core values</p>
-    <div class="values-grid reveal">
-      <div class="value-chip" data-i18n="values.1">Integrity</div>
-      <div class="value-chip" data-i18n="values.2">Discipline</div>
-      <div class="value-chip" data-i18n="values.3">Continuous Learning</div>
-      <div class="value-chip" data-i18n="values.4">Innovation</div>
-      <div class="value-chip" data-i18n="values.5">Curiosity</div>
-      <div class="value-chip" data-i18n="values.6">Responsibility</div>
-      <div class="value-chip" data-i18n="values.7">Precision</div>
-      <div class="value-chip" data-i18n="values.8">Excellence</div>
-      <div class="value-chip" data-i18n="values.9">Professionalism</div>
+    <div class="values-grid">
+      <div class="value-chip reveal" data-i18n="values.1">Integrity</div>
+      <div class="value-chip reveal" data-i18n="values.2">Discipline</div>
+      <div class="value-chip reveal" data-i18n="values.3">Continuous Learning</div>
+      <div class="value-chip reveal" data-i18n="values.4">Innovation</div>
+      <div class="value-chip reveal" data-i18n="values.5">Curiosity</div>
+      <div class="value-chip reveal" data-i18n="values.6">Responsibility</div>
+      <div class="value-chip reveal" data-i18n="values.7">Precision</div>
+      <div class="value-chip reveal" data-i18n="values.8">Excellence</div>
+      <div class="value-chip reveal" data-i18n="values.9">Professionalism</div>
     </div>
   </div>
 </section>
 
 <section id="mission-vision">
   <div class="container mv-grid">
-    <div class="mv-card reveal">
+    <div class="mv-card reveal scan-hover">
       <p class="eyebrow" data-i18n="eyebrow.mission">mission</p>
       <p data-i18n="mv.mission">To help organizations strengthen their cybersecurity posture through practical offensive security, continuous learning, and ethical responsibility.</p>
     </div>
-    <div class="mv-card reveal">
+    <div class="mv-card reveal scan-hover">
       <p class="eyebrow" data-i18n="eyebrow.vision">vision</p>
       <p data-i18n="mv.vision">To become a globally recognized Offensive Security Engineer, contributing to innovative technologies, protecting critical infrastructures, and advancing cybersecurity through research and practical expertise.</p>
     </div>
@@ -368,7 +377,7 @@
     <p class="eyebrow" data-i18n="eyebrow.contact">contact</p>
     <p class="contact-cmd reveal mono"><span class="prompt">$</span> contact --list<span class="res" data-i18n="contact.resolved">5 channels resolved &#10003;</span></p>
 
-    <div class="contact-card reveal">
+    <div class="contact-card reveal scan-hover">
       <div class="contact-id">
         <div class="contact-avatar">
           <img src="assets/profile.jpg" width="200" height="200" data-i18n-attr="alt:alt.profileContact" alt="Narzullo Muhammad Ali" loading="lazy" />
@@ -385,7 +394,7 @@
         <a class="contact-btn" href="https://www.instagram.com/the_.narzullayev/" target="_blank" rel="noopener"><span class="chev">&gt;</span>Instagram</a>
         <a class="contact-btn" href="https://github.com/alishex" target="_blank" rel="noopener"><span class="chev">&gt;</span>GitHub</a>
         <a class="contact-btn" href="mailto:muhammadalinarzullo5@gmail.com"><span class="chev">&gt;</span>Email</a>
-        <a class="contact-btn" href="tel:+998771140028"><span class="chev">&gt;</span>Phone</a>
+        <a class="contact-btn" href="tel:+998947181177"><span class="chev">&gt;</span>Phone</a>
       </div>
     </div>
 
