@@ -222,6 +222,15 @@ async def cb_owner_panel(query: CallbackQuery, callback_data: OwnerPanelCB):
             parse_mode="HTML", reply_markup=owner_cycle_keyboard()
         )
 
+    elif section == "report_now":
+        # Kunlik avtomatik hisobotni (odatda belgilangan vaqtda, standart 18:00)
+        # kutmasdan hozir olish — bir xil sched.send_owner_report funksiyasi
+        # ishlatiladi, shuning uchun format/qabul qiluvchilar avtomatik
+        # postdan farq qilmaydi.
+        await sched.send_owner_report(query.bot)
+        await query.answer("✅ Hisobot yuborildi!")
+        return
+
     await query.answer()
 
 

@@ -102,7 +102,7 @@ def main_menu_keyboard() -> ReplyKeyboardMarkup:
 # ══════════════════════════════════════════════════════════════════════════
 
 class OwnerPanelCB(CallbackData, prefix="op"):
-    section: str  # main, status, depts, owners, schedule, menu_edit, cycle, override_pick
+    section: str  # main, status, depts, owners, schedule, menu_edit, cycle, override_pick, report_now
 
 
 class OwnerDeptDetailCB(CallbackData, prefix="odd"):
@@ -195,6 +195,7 @@ def owner_main_keyboard() -> InlineKeyboardMarkup:
         ],
         [
             InlineKeyboardButton(text="🕐 Vaqtlar", callback_data=OwnerPanelCB(section="schedule").pack()),
+            InlineKeyboardButton(text="📋 Hisobotni hozir olish", callback_data=OwnerPanelCB(section="report_now").pack()),
         ],
     ])
 
