@@ -4,6 +4,7 @@ Port : 8080
 Auth : session cookie, 7 kun
 DB   : /opt/AllmaxProjects/allmax_telethon/analytics/telegram_dm_log.sqlite3
 """
+import os
 import secrets
 import sqlite3
 import time
@@ -13,9 +14,12 @@ from pathlib import Path
 from fastapi import FastAPI, Form, Request
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from dotenv import load_dotenv
 
-EMAIL    = "allmaxfixprice.work@gmail.com"
-PASSWORD = "@llm@x20260101"
+load_dotenv()
+
+EMAIL    = os.getenv("DASHBOARD_EMAIL")
+PASSWORD = os.getenv("DASHBOARD_PASSWORD")
 DB_PATH  = Path("/opt/AllmaxProjects/allmax_telethon/analytics/telegram_dm_log.sqlite3")
 TTL      = 86400 * 7
 UZT      = timezone(timedelta(hours=5))
