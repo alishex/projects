@@ -115,7 +115,7 @@ nginx:   https://allmax.tizm.uz/dashboard/  →  proxy_pass http://127.0.0.1:808
 ### Nima qiladi
 
 **A) Bo'lim admini / o'rinbosar oqimi:**
-1. Har kuni belgilangan vaqtda (standart **17:00**, DB orqali o'zgartiriladi) scheduler har bo'lim adminiga ertangi menyuni (2 haftalik aylanma sikldan) va "📝 Buyurtma berish" tugmasini yuboradi
+1. Har kuni belgilangan vaqtda (standart **17:00**, DB orqali o'zgartiriladi) scheduler har bo'lim adminiga ertangi menyuni (**3 haftalik** aylanma sikldan, 2026-08-08da Sharqona Cateringning yangi menyusi bilan 2 haftadan kengaytirildi) va "📝 Buyurtma berish" tugmasini yuboradi
 2. Admin tushlik va kechki ovqat porsiya sonini kiritadi → tasdiqlaydi → `department_orders` jadvaliga yoziladi
 3. `/edit` — tasdiqlangan buyurtmani qayta tahrirlash
 4. **O'rinbosarga yuborish** — admin kunlik so'rovni o'rinbosarga bir martalik topshirishi mumkin
@@ -128,7 +128,7 @@ nginx:   https://allmax.tizm.uz/dashboard/  →  proxy_pass http://127.0.0.1:808
 - ✏️ Buyurtma kiritish — istalgan bo'lim uchun to'g'ridan-to'g'ri override
 - 🏢 Bo'limlar — to'liq CRUD: qo'shish/o'chirish, admin/o'rinbosar tayinlash, "kunlik so'ralsin" ↔ "fixed" rejim almashtirish
 - 👑 Ownerlar — qo'shish/o'chirish (oxirgi ownerni o'chirishga yo'l qo'ymaydi)
-- 📝 Menyu — 14 kunlik siklni ko'rish/tahrirlash
+- 📝 Menyu — 21 kunlik (3 haftalik) siklni ko'rish/tahrirlash
 - 🔄 Sikl — "bugun siklning qaysi kuni" ni bir bosishda qayta belgilash
 - 🕐 Vaqtlar — so'rov va hisobot vaqtini o'zgartirish (APScheduler `reschedule_job` — restart shart emas)
 - 📋 **Hisobotni hozir olish** (eng yangi funksiya, 2026-08-07 qo'shilgan)
@@ -308,7 +308,7 @@ bot:     @allmax_feedback_bot (id 8629969732)
 
 ### Nima qiladi
 
-1. **Menyu yuborish** (scheduler, DB-konfiguratsiya qilinadigan vaqt, **jonlida hozir 13:30** Toshkent — eski hujjatda 17:30 deb yozilgan edi, bu eskirgan) — 14 kunlik aylanma sikldan ertangi menyu, inline "1-ovqat/2-ovqat" tugmalari bilan yuboriladi
+1. **Menyu yuborish** (scheduler, DB-konfiguratsiya qilinadigan vaqt, **jonlida hozir 13:30** Toshkent — eski hujjatda 17:30 deb yozilgan edi, bu eskirgan) — **21 kunlik (3 haftalik)** aylanma sikldan ertangi menyu (2026-08-08da 2 haftadan kengaytirildi), inline "1-ovqat/2-ovqat" tugmalari bilan yuboriladi. Ikkala ovqat mahali (1-ovqat/2-ovqat) uchun bir xil taom ko'rsatiladi — yangi menyuda kuniga bitta taom beriladi.
 2. Foydalanuvchi ha/yo'q tanlaydi, tasdiqlaydi → agar **barcha** faol foydalanuvchilar javob bersa, admin avtomatik to'liq hisobotni oladi
 3. **Ovqat eyilgani isboti** — "ha" deganlar uchun "🍽 Ovqat hisoboti" tugmasi, qaysi ovqatligini tanlab **video-note** (dumaloq video) yuboradi — bu admin va guruhga yuboriladi
 4. **Yakuniy hisobot** (DB-konfiguratsiya, hozir 22:00) — kunlik to'liq hisob-kitob (buyurtma/tugatilgan/javob bermagan, "qoldiq ovqat" soni)
