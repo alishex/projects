@@ -711,6 +711,9 @@ async def cmd_set_menu(msg: Message, state: FSMContext):
         "...\n\n"
         "2-HAFTA\n"
         "Dushanba: 1-ovqat | 2-ovqat\n"
+        "...\n\n"
+        "3-HAFTA\n"
+        "Dushanba: 1-ovqat | 2-ovqat\n"
         "..."
     )
     await state.set_state(AdminSetup.waiting_menu)
@@ -734,6 +737,9 @@ async def receive_menu(msg: Message, state: FSMContext):
             continue
         if line.startswith("2-HAFTA"):
             current_week = 2
+            continue
+        if line.startswith("3-HAFTA"):
+            current_week = 3
             continue
         if current_week and ":" in line:
             parts = line.split(":", 1)
@@ -764,7 +770,7 @@ async def cmd_set_cycle(msg: Message):
         await msg.answer(
             "Format: /set_cycle SANA HAFTA KUN\n"
             "Misol: /set_cycle 2026-06-21 1 Yakshanba\n\n"
-            "HAFTA: 1 yoki 2\n"
+            "HAFTA: 1, 2 yoki 3\n"
             "KUN: Dushanba, Seshanba, Chorshanba, Payshanba, Juma, Shanba, Yakshanba"
         )
         return
@@ -780,9 +786,9 @@ async def cmd_set_cycle(msg: Message):
 
     try:
         week_number = int(week_str)
-        assert week_number in (1, 2)
+        assert week_number in (1, 2, 3)
     except (ValueError, AssertionError):
-        await msg.answer("❌ Hafta 1 yoki 2 bo'lishi kerak.")
+        await msg.answer("❌ Hafta 1, 2 yoki 3 bo'lishi kerak.")
         return
 
     label_map = {(w, d): i for i, (w, d) in enumerate(CYCLE_LABELS)}

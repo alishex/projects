@@ -8,13 +8,15 @@ CYCLE_LABELS = [
     (1, "Juma"),     (1, "Shanba"),   (1, "Yakshanba"),
     (2, "Dushanba"), (2, "Seshanba"), (2, "Chorshanba"), (2, "Payshanba"),
     (2, "Juma"),     (2, "Shanba"),   (2, "Yakshanba"),
+    (3, "Dushanba"), (3, "Seshanba"), (3, "Chorshanba"), (3, "Payshanba"),
+    (3, "Juma"),     (3, "Shanba"),   (3, "Yakshanba"),
 ]
 
 
 def get_cycle_index(target_date: date, anchor_date: str, anchor_index: int) -> int:
     anchor = date.fromisoformat(anchor_date)
     days_diff = (target_date - anchor).days
-    return (anchor_index + days_diff) % 14
+    return (anchor_index + days_diff) % 21
 
 
 async def get_menu_for_date(target_date: date) -> Optional[dict]:

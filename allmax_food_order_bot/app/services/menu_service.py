@@ -8,6 +8,8 @@ CYCLE_LABELS = [
     (1, "Juma"),     (1, "Shanba"),   (1, "Yakshanba"),
     (2, "Dushanba"), (2, "Seshanba"), (2, "Chorshanba"), (2, "Payshanba"),
     (2, "Juma"),     (2, "Shanba"),   (2, "Yakshanba"),
+    (3, "Dushanba"), (3, "Seshanba"), (3, "Chorshanba"), (3, "Payshanba"),
+    (3, "Juma"),     (3, "Shanba"),   (3, "Yakshanba"),
 ]
 
 UZ_MONTHS = [
@@ -28,7 +30,7 @@ async def get_menu_for_date(target_date: date) -> Optional[dict]:
 
     anchor = date.fromisoformat(anchor_date)
     days_diff = (target_date - anchor).days
-    idx = (int(anchor_index) + days_diff) % 14
+    idx = (int(anchor_index) + days_diff) % 21
     week_number, day_name = CYCLE_LABELS[idx]
 
     menu = await db.get_menu_item(week_number, day_name)

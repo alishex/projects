@@ -328,6 +328,7 @@ def owner_menu_week_keyboard() -> InlineKeyboardMarkup:
         [
             InlineKeyboardButton(text="1-hafta", callback_data=OwnerMenuWeekCB(week=1).pack()),
             InlineKeyboardButton(text="2-hafta", callback_data=OwnerMenuWeekCB(week=2).pack()),
+            InlineKeyboardButton(text="3-hafta", callback_data=OwnerMenuWeekCB(week=3).pack()),
         ],
         [InlineKeyboardButton(text="⬅️ Orqaga", callback_data=OwnerPanelCB(section="main").pack())],
     ])
@@ -356,7 +357,7 @@ def owner_menu_day_detail_keyboard(week: int, day: str) -> InlineKeyboardMarkup:
 
 def owner_cycle_keyboard() -> InlineKeyboardMarkup:
     rows = []
-    for week in (1, 2):
+    for week in (1, 2, 3):
         pair = []
         for day in DAY_NAMES:
             pair.append(InlineKeyboardButton(
