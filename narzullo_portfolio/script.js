@@ -393,72 +393,11 @@
     if (el) el.textContent = "2026";
   }
 
-  /* ---- real logo as a standalone floating 3D object — entrance animation +
-     continuous idle motion + pointer-follow tilt. Pure CSS 3D transform, no canvas. ---- */
-  function initBrandMark3D() {
-    var mark = document.querySelector("[data-brand-mark]");
-    if (!mark || reduceMotion) return;
-
-    var idle = { x: 6, y: -10 };
-    var t0 = performance.now();
-    var pointerActive = false;
-    var pointerTilt = { x: 0, y: 0 };
-
-    function idleAngle() {
-      var t = (performance.now() - t0) / 1000;
-      return {
-        x: Math.sin(t * 0.55) * idle.x,
-        y: Math.cos(t * 0.4) * idle.y
-      };
-    }
-
-    function apply() {
-      var base = pointerActive ? pointerTilt : idleAngle();
-      mark.style.transform = "rotateX(" + base.x + "deg) rotateY(" + base.y + "deg)";
-      requestAnimationFrame(apply);
-    }
-    requestAnimationFrame(apply);
-
-    if (window.matchMedia("(pointer: fine)").matches) {
-      var dock = mark.closest(".brand-mark-dock");
-      dock.addEventListener("pointermove", function (e) {
-        var r = dock.getBoundingClientRect();
-        var px = (e.clientX - r.left) / r.width - 0.5;
-        var py = (e.clientY - r.top) / r.height - 0.5;
-        pointerTilt = { x: -py * 34, y: px * 34 };
-        pointerActive = true;
-      });
-      dock.addEventListener("pointerleave", function () { pointerActive = false; });
-    }
-  }
-
-  /* ---- subtle 3D pointer-tilt on cards ---- */
-  function initCardTilt() {
-    if (reduceMotion || !window.matchMedia("(pointer: fine)").matches) return;
-    var cards = document.querySelectorAll(".tilt-card");
-    var MAX = 5;
-    cards.forEach(function (card) {
-      card.addEventListener("pointermove", function (e) {
-        var r = card.getBoundingClientRect();
-        var px = (e.clientX - r.left) / r.width - 0.5;
-        var py = (e.clientY - r.top) / r.height - 0.5;
-        card.style.transition = "transform 0.05s linear";
-        card.style.transform = "perspective(900px) rotateX(" + (-py * MAX * 2) + "deg) rotateY(" + (px * MAX * 2) + "deg) translateZ(2px)";
-      });
-      card.addEventListener("pointerleave", function () {
-        card.style.transition = "transform 0.5s cubic-bezier(.16,.84,.44,1)";
-        card.style.transform = "perspective(900px) rotateX(0deg) rotateY(0deg)";
-      });
-    });
-  }
-
   document.addEventListener("DOMContentLoaded", function () {
     initLang();
     initBoot();
     initReveal();
     initNetGraph();
-    initBrandMark3D();
-    initCardTilt();
     initScrollProgress();
     initYear();
   });
