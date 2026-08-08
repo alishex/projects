@@ -64,10 +64,15 @@
       uz: "SAT ball hisobotini to'liq o'lchamda yangi oynada ochish",
       ru: "Открыть отчёт о результатах SAT в полном разрешении в новой вкладке"
     },
-    "aria.ieltsFull": {
-      en: "Open full-resolution IELTS Test Report Form in a new tab",
-      uz: "IELTS sertifikatini to'liq o'lchamda yangi oynada ochish",
-      ru: "Открыть сертификат IELTS в полном разрешении в новой вкладке"
+    "aria.grantFull": {
+      en: "Open full-resolution PDP University grant certificate in a new tab",
+      uz: "PDP University grant sertifikatini to'liq o'lchamda yangi oynada ochish",
+      ru: "Открыть сертификат гранта PDP University в полном разрешении в новой вкладке"
+    },
+    "aria.dtmFull": {
+      en: "Open full-resolution national admission test results in a new tab",
+      uz: "Milliy qabul imtihoni natijalarini to'liq o'lchamda yangi oynada ochish",
+      ru: "Открыть результаты национального вступительного теста в полном разрешении в новой вкладке"
     },
     "alt.oscpCert": {
       en: "Offensive Security Certified Professional certificate awarded to Narzullo Muhammad Ali Nazirjonovich, issued July 2, 2026",
@@ -79,10 +84,15 @@
       uz: "SAT ball hisoboti — Umumiy ball 1270 / 1600",
       ru: "Отчёт о результатах SAT — общий балл 1270 из 1600"
     },
-    "alt.ieltsCert": {
-      en: "IELTS Test Report Form — Overall Band Score 8.0, CEFR C1",
-      uz: "IELTS sertifikati — Umumiy ball 8.0, CEFR C1",
-      ru: "Сертификат IELTS — общий балл 8.0, уровень CEFR C1"
+    "alt.grantCert": {
+      en: "PDP University Grant certificate awarded to Narzullo Muhammad Ali — 12,000,000 so'm",
+      uz: "Narzullo Muhammad Aliga berilgan PDP University Grant sertifikati — 12 000 000 so'm",
+      ru: "Сертификат гранта PDP University, выданный Narzullo Muhammad Ali — 12 000 000 сум"
+    },
+    "alt.dtmCert": {
+      en: "National university entrance examination results — recommended for admission to Tashkent University of Information Technologies (TUIT)",
+      uz: "Milliy oliy o'quv yurtiga kirish imtihoni natijalari — Tashkent University of Information Technologies (TUIT)ga tavsiya etilgan",
+      ru: "Результаты национального вступительного экзамена в вуз — рекомендация к зачислению в Tashkent University of Information Technologies (TUIT)"
     },
 
     "eyebrow.about": { en: "about", uz: "haqida", ru: "обо мне" },
@@ -90,7 +100,8 @@
     "eyebrow.experience": { en: "experience", uz: "tajriba", ru: "опыт" },
     "eyebrow.certifications": { en: "certifications", uz: "sertifikatlar", ru: "сертификаты" },
     "eyebrow.skills": { en: "skills", uz: "ko'nikmalar", ru: "навыки" },
-    "eyebrow.timeline": { en: "career timeline", uz: "karyera xronologiyasi", ru: "карьерная хронология" },
+    "eyebrow.timeline": { en: "my journey", uz: "mening yo'lim", ru: "мой путь" },
+    "eyebrow.education": { en: "education", uz: "ta'lim", ru: "образование" },
     "eyebrow.values": { en: "core values", uz: "asosiy qadriyatlar", ru: "основные ценности" },
     "eyebrow.mission": { en: "mission", uz: "missiya", ru: "миссия" },
     "eyebrow.vision": { en: "vision", uz: "vizyon", ru: "видение" },
@@ -145,14 +156,14 @@
     },
 
     "summary.lead": {
-      en: "Cyber Security Engineer with hands-on experience in Offensive Security, Penetration Testing, Linux Administration, Active Directory, Network Security, and IT Infrastructure Management.",
-      uz: "Offensive Security, Penetration Testing, Linux administratsiyasi, Active Directory, tarmoq xavfsizligi va IT infratuzilmasini boshqarishda amaliy tajribaga ega kiberxavfsizlik muhandisi.",
-      ru: "Инженер по кибербезопасности с практическим опытом в Offensive Security, Penetration Testing, администрировании Linux, Active Directory, сетевой безопасности и управлении IT-инфраструктурой."
+      en: "Cyber Security Engineer with a strong academic foundation and practical experience in Offensive Security, enterprise IT infrastructure, and Information Security.",
+      uz: "Offensive Security, korporativ IT infratuzilmasi va Axborot xavfsizligi bo'yicha mustahkam akademik bilim va amaliy tajribaga ega kiberxavfsizlik muhandisi.",
+      ru: "Инженер по кибербезопасности с прочной академической базой и практическим опытом в Offensive Security, корпоративной IT-инфраструктуре и информационной безопасности."
     },
     "summary.p": {
-      en: "Passionate about identifying security weaknesses, strengthening enterprise environments, and continuously improving technical skills through practical experience, research, and internationally recognized certifications. Committed to building secure systems by understanding how attackers think and operate.",
-      uz: "Xavfsizlik zaifliklarini aniqlash, korporativ muhitlarni mustahkamlash va amaliy tajriba, tadqiqot hamda xalqaro darajada tan olingan sertifikatlar orqali texnik ko'nikmalarni uzluksiz oshirishga ishtiyoqmandman. Xavfsiz tizimlarni hujumchilar qanday fikrlashi va harakat qilishini tushunish orqali qurishga sodiqman.",
-      ru: "Увлечён поиском слабых мест в безопасности, укреплением корпоративных сред и постоянным развитием технических навыков через практический опыт, исследования и признанные во всём мире сертификации. Стремлюсь создавать защищённые системы, понимая, как мыслят и действуют атакующие."
+      en: "Currently working as an IT Systems Engineer while pursuing a Bachelor's degree in Information Security at TUIT. OSCP-certified with a passion for penetration testing, security research, and continuous professional development.",
+      uz: "Hozirda TUITda Axborot xavfsizligi yo'nalishi bo'yicha bakalavriatni davom ettirgan holda IT tizimlar muhandisi sifatida ishlayman. OSCP sertifikatiga ega bo'lib, penetration testing, xavfsizlik tadqiqotlari va uzluksiz kasbiy rivojlanishga ishtiyoqmandman.",
+      ru: "В настоящее время работаю инженером IT-систем, параллельно обучаясь на бакалавриате по информационной безопасности в TUIT. Сертифицирован по OSCP, увлечён penetration testing, исследованиями в области безопасности и непрерывным профессиональным развитием."
     },
 
     "exp.role": { en: "IT Systems Engineer", uz: "IT tizimlar muhandisi", ru: "Инженер IT-систем" },
@@ -206,22 +217,40 @@
       ru: "93-й процентиль (Nationally Representative Sample)"
     },
 
-    "cert.ielts.issuer": {
-      en: "International English Language Testing System — British Council / IDP / Cambridge Assessment English",
-      uz: "International English Language Testing System — British Council / IDP / Cambridge Assessment English",
-      ru: "International English Language Testing System — British Council / IDP / Cambridge Assessment English"
+    "cert.grant.issuer": {
+      en: "Republic Mathematics Olympiad, Selection Stage — PDP University",
+      uz: "Respublika matematika olimpiadasi, Saralash bosqichi — PDP University",
+      ru: "Республиканская олимпиада по математике, отборочный этап — PDP University"
     },
-    "cert.ielts.date": { en: "Issued November 2024", uz: "2024-yil noyabrda berilgan", ru: "Выдан в ноябре 2024 года" },
-    "cert.ielts.desc": {
-      en: "Internationally recognized proof of advanced English proficiency — enabling clear communication with international clients, teams, and the wider security community, along with confident technical reading and report writing in English.",
-      uz: "Xalqaro darajada tan olingan yuqori darajadagi ingliz tili malakasi sertifikati — xalqaro mijozlar, jamoalar va xavfsizlik hamjamiyati bilan erkin muloqot qilish, texnik matnlarni o'qish va ingliz tilida aniq hisobot yozish qobiliyatini tasdiqlaydi.",
-      ru: "Международно признанное подтверждение продвинутого владения английским языком — обеспечивает свободное общение с международными клиентами, командами и сообществом специалистов по безопасности, а также уверенное чтение технических материалов и написание отчётов на английском."
+    "cert.grant.date": { en: "Issued February 7, 2023", uz: "2023-yil 7-fevralda berilgan", ru: "Выдан 7 февраля 2023 года" },
+    "cert.grant.desc": {
+      en: "Awarded a full merit grant for a top result in the Republic Mathematics Olympiad selection stage, covering winter admission to PDP University's Foundation Programme.",
+      uz: "Respublika matematika olimpiadasining saralash bosqichida yuqori natija ko'rsatganim uchun PDP University Foundation Programme'siga qishki qabul uchun to'liq grant bilan taqdirlandim.",
+      ru: "Награждён полным грантом за высокий результат на отборочном этапе Республиканской олимпиады по математике — грант покрыл зимнее поступление на Foundation Programme в PDP University."
     },
-    "cert.ielts.check1": { en: "Listening — 8.5", uz: "Tinglab tushunish (Listening) — 8.5", ru: "Аудирование (Listening) — 8.5" },
-    "cert.ielts.check2": { en: "Reading — 7.5", uz: "O'qish (Reading) — 7.5", ru: "Чтение (Reading) — 7.5" },
-    "cert.ielts.check3": { en: "Writing — 8.0", uz: "Yozish (Writing) — 8.0", ru: "Письмо (Writing) — 8.0" },
-    "cert.ielts.check4": { en: "Speaking — 7.5", uz: "Gapirish (Speaking) — 7.5", ru: "Говорение (Speaking) — 7.5" },
-    "cert.ielts.check5": { en: "Overall Band Score — 8.0 (CEFR C1)", uz: "Umumiy ball — 8.0 (CEFR C1)", ru: "Общий балл — 8.0 (CEFR C1)" },
+    "cert.grant.check1": {
+      en: "Republic Mathematics Olympiad — Selection Stage",
+      uz: "Respublika matematika olimpiadasi — Saralash bosqichi",
+      ru: "Республиканская олимпиада по математике — отборочный этап"
+    },
+    "cert.grant.check2": { en: "12,000,000 so'm merit grant", uz: "12 000 000 so'mlik grant", ru: "Грант — 12 000 000 сум" },
+    "cert.grant.check3": { en: "Winter admission, Foundation Programme", uz: "Qishki qabul, Foundation Programme", ru: "Зимнее поступление, Foundation Programme" },
+
+    "cert.dtm.issuer": {
+      en: "National University Entrance Examination — Agency for Assessment of Knowledge and Skills",
+      uz: "Milliy oliy o'quv yurtiga kirish imtihoni — Bilim va malakalarni baholash agentligi",
+      ru: "Национальный вступительный экзамен в вуз — Агентство по оценке знаний и навыков"
+    },
+    "cert.dtm.date": { en: "Issued July 19, 2024", uz: "2024-yil 19-iyulda berilgan", ru: "Выдан 19 июля 2024 года" },
+    "cert.dtm.desc": {
+      en: "State admission test results, recommended for enrollment at Tashkent University of Information Technologies (TUIT).",
+      uz: "Davlat qabul imtihoni natijalari — Tashkent University of Information Technologies (TUIT)ga talabalikka tavsiya etildim.",
+      ru: "Результаты государственного вступительного теста — рекомендован к зачислению в Tashkent University of Information Technologies (TUIT)."
+    },
+    "cert.dtm.check1": { en: "Overall score — 183.60", uz: "Umumiy ball — 183.60", ru: "Общий балл — 183.60" },
+    "cert.dtm.check2": { en: "Mandatory subjects", uz: "Majburiy fanlar", ru: "Обязательные предметы" },
+    "cert.dtm.check3": { en: "Mathematics", uz: "Matematika", ru: "Математика" },
+    "cert.dtm.check4": { en: "Physics", uz: "Fizika", ru: "Физика" },
 
     "skills.group1": { en: "Offensive Security", uz: "Hujumkor xavfsizlik", ru: "Наступательная безопасность" },
     "skills.group2": { en: "Programming", uz: "Dasturlash", ru: "Программирование" },
@@ -229,21 +258,96 @@
     "skills.group4": { en: "Networking", uz: "Tarmoq", ru: "Сети" },
     "skills.group5": { en: "Tools", uz: "Vositalar", ru: "Инструменты" },
 
-    "tl.2022": { en: "Started programming journey", uz: "Dasturlash yo'limni boshladim", ru: "Начал путь в программировании" },
-    "tl.2023": { en: "Python development & automation", uz: "Python dasturlash va avtomatlashtirish", ru: "Разработка на Python и автоматизация" },
-    "tl.2023.sat": { en: "SAT — 1270", uz: "SAT — 1270", ru: "SAT — 1270" },
-    "tl.2024": { en: "Cyber security & penetration testing", uz: "Kiberxavfsizlik va penetration testing", ru: "Кибербезопасность и penetration testing" },
-    "tl.2024.ielts": { en: "IELTS — Band 8.0", uz: "IELTS — Band 8.0", ru: "IELTS — Band 8.0" },
-    "tl.2025": { en: "Advanced offensive security training", uz: "Ilg'or hujumkor xavfsizlik bo'yicha tayyorgarlik", ru: "Углублённая подготовка по наступательной безопасности" },
-    "tl.2026": {
+    "journey.intro": {
+      en: "From replacing high school with university-level cybersecurity education at PDP University, to earning the OSCP certification and pursuing a Bachelor's degree in Information Security at TUIT, my journey has been driven by one principle: never stop learning. Every milestone represents not only an achievement but also a commitment to becoming a better security professional.",
+      uz: "Maktabni PDP University'dagi universitet darajasidagi kiberxavfsizlik ta'limiga almashtirishdan tortib, OSCP sertifikatini qo'lga kiritish va TUITda Axborot xavfsizligi yo'nalishi bo'yicha bakalavriatni davom ettirishgacha — mening yo'lim bitta tamoyilga asoslangan: hech qachon o'rganishni to'xtatmaslik. Har bir bosqich nafaqat yutuq, balki yaxshiroq xavfsizlik mutaxassisi bo'lishga bo'lgan sodiqlikni ham anglatadi.",
+      ru: "От замены школы университетским образованием в сфере кибербезопасности в PDP University до получения сертификата OSCP и обучения на бакалавриате по информационной безопасности в TUIT — мой путь основан на одном принципе: никогда не переставать учиться. Каждый этап — это не только достижение, но и приверженность становлению более сильным специалистом по безопасности."
+    },
+
+    "tl.2022.title": { en: "PDP University", uz: "PDP University", ru: "PDP University" },
+    "tl.2022.desc": {
+      en: "Started the Foundation Programme in Cyber Security, replacing the traditional 10th and 11th grades with university-level education. During this period, I built a strong foundation in programming, networking, Linux, cybersecurity fundamentals, and computer science.",
+      uz: "An'anaviy 10- va 11-sinflar o'rniga universitet darajasidagi ta'lim beruvchi Kiberxavfsizlik yo'nalishidagi Foundation Programme'ni boshladim. Shu davrda dasturlash, tarmoqlar, Linux, kiberxavfsizlik asoslari va kompyuter fanlari bo'yicha mustahkam bilim poydevorini yaratdim.",
+      ru: "Начал Foundation Programme по кибербезопасности — эта программа заменила традиционные 10 и 11 классы университетским образованием. За это время я заложил прочную основу в программировании, сетях, Linux, основах кибербезопасности и информатике."
+    },
+
+    "tl.2023.title": { en: "SAT — 1270", uz: "SAT — 1270", ru: "SAT — 1270" },
+    "tl.2023.desc": {
+      en: "Successfully achieved a 1270 SAT score, demonstrating strong analytical thinking, mathematical reasoning, and problem-solving skills.",
+      uz: "1270 ball SAT natijasiga muvaffaqiyatli erishdim — bu kuchli analitik fikrlash, matematik mulohaza va muammolarni yechish qobiliyatimni namoyish etadi.",
+      ru: "Успешно набрал 1270 баллов по SAT, что демонстрирует сильное аналитическое мышление, математическое рассуждение и способность решать задачи."
+    },
+
+    "tl.2024.diploma.title": { en: "Foundation Diploma", uz: "Foundation Diploma", ru: "Foundation Diploma" },
+    "tl.2024.diploma.desc": {
+      en: "Successfully completed the two-year Foundation Programme in Cyber Security at PDP University and earned my Foundation Diploma.",
+      uz: "PDP University'dagi ikki yillik Kiberxavfsizlik yo'nalishidagi Foundation Programme'ni muvaffaqiyatli tamomlab, Foundation Diploma'ga ega bo'ldim.",
+      ru: "Успешно завершил двухлетнюю Foundation Programme по кибербезопасности в PDP University и получил Foundation Diploma."
+    },
+    "tl.2024.tuit.title": {
+      en: "Tashkent University of Information Technologies (TUIT)",
+      uz: "Tashkent University of Information Technologies (TUIT)",
+      ru: "Tashkent University of Information Technologies (TUIT)"
+    },
+    "tl.2024.tuit.desc": {
+      en: "Admitted to the Bachelor's programme in Information Security, where I continue to deepen my expertise in cybersecurity, secure systems, cryptography, network defense, and modern information protection technologies.",
+      uz: "Axborot xavfsizligi yo'nalishi bo'yicha bakalavriatga qabul qilindim — bu yerda kiberxavfsizlik, xavfsiz tizimlar, kriptografiya, tarmoqni himoya qilish va zamonaviy axborotni himoya qilish texnologiyalari bo'yicha bilimlarimni chuqurlashtirishda davom etmoqdaman.",
+      ru: "Поступил на бакалавриат по информационной безопасности, где продолжаю углублять экспертизу в кибербезопасности, защищённых системах, криптографии, сетевой защите и современных технологиях защиты информации."
+    },
+
+    "tl.2026.title": {
       en: "Offensive Security Certified Professional (OSCP)",
       uz: "Offensive Security Certified Professional (OSCP)",
       ru: "Offensive Security Certified Professional (OSCP)"
     },
+    "tl.2026.desc": {
+      en: "Earned the internationally recognized OSCP certification on July 2, 2026, demonstrating practical expertise in real-world penetration testing, Active Directory security, privilege escalation, web application security, and professional penetration testing methodologies.",
+      uz: "2026-yil 2-iyulda xalqaro darajada tan olingan OSCP sertifikatiga ega bo'ldim — bu real hayotiy penetration testing, Active Directory xavfsizligi, imtiyozlarni oshirish (privilege escalation), veb-ilovalar xavfsizligi va professional penetration testing metodologiyalari bo'yicha amaliy tajribamni namoyish etadi.",
+      ru: "2 июля 2026 года получил международно признанный сертификат OSCP, подтверждающий практическую экспертизу в реальном penetration testing, безопасности Active Directory, повышении привилегий (privilege escalation), безопасности веб-приложений и профессиональных методологиях penetration testing."
+    },
+
+    "tl.present.label": { en: "Present", uz: "Hozir", ru: "Настоящее время" },
+    "tl.present.title": { en: "IT Systems Engineer", uz: "IT tizimlar muhandisi", ru: "Инженер IT-систем" },
+    "tl.present.desc": {
+      en: "Working as an IT Systems Engineer while continuously improving my skills in offensive security, enterprise infrastructure, penetration testing, and security research.",
+      uz: "IT tizimlar muhandisi sifatida ishlayotgan bo'lsam-da, hujumkor xavfsizlik, korporativ infratuzilma, penetration testing va xavfsizlik tadqiqotlari bo'yicha ko'nikmalarimni doimiy oshirib bormoqdaman.",
+      ru: "Работаю инженером IT-систем, одновременно постоянно развивая навыки в наступательной безопасности, корпоративной инфраструктуре, penetration testing и исследованиях в области безопасности."
+    },
+
     "tl.future": {
       en: "Senior Offensive Security Engineer",
       uz: "Katta hujumkor xavfsizlik muhandisi (Senior Offensive Security Engineer)",
       ru: "Старший инженер по наступательной безопасности (Senior Offensive Security Engineer)"
+    },
+
+    "edu.tuit.org": {
+      en: "Tashkent University of Information Technologies (TUIT)",
+      uz: "Tashkent University of Information Technologies (TUIT)",
+      ru: "Tashkent University of Information Technologies (TUIT)"
+    },
+    "edu.tuit.degree": {
+      en: "Bachelor's Degree in Information Security",
+      uz: "Axborot xavfsizligi yo'nalishi bo'yicha bakalavr darajasi",
+      ru: "Бакалавриат по информационной безопасности"
+    },
+    "edu.tuit.date": { en: "2024 – Present", uz: "2024 – hozirgacha", ru: "2024 – настоящее время" },
+    "edu.tuit.desc": {
+      en: "Currently pursuing a Bachelor's degree in Information Security, focusing on cybersecurity, network security, cryptography, digital forensics, secure software development, and enterprise information protection.",
+      uz: "Hozirda Axborot xavfsizligi yo'nalishi bo'yicha bakalavriatda tahsil olmoqdaman — kiberxavfsizlik, tarmoq xavfsizligi, kriptografiya, raqamli forensika, xavfsiz dasturiy ta'minot ishlab chiqish va korporativ axborotni himoya qilishga e'tibor qaratilgan.",
+      ru: "В настоящее время обучаюсь на бакалавриате по информационной безопасности, с фокусом на кибербезопасность, сетевую безопасность, криптографию, цифровую криминалистику, безопасную разработку программного обеспечения и защиту корпоративной информации."
+    },
+
+    "edu.pdp.org": { en: "PDP University", uz: "PDP University", ru: "PDP University" },
+    "edu.pdp.degree": {
+      en: "Foundation Programme in Cyber Security",
+      uz: "Kiberxavfsizlik yo'nalishidagi Foundation Programme",
+      ru: "Foundation Programme по кибербезопасности"
+    },
+    "edu.pdp.date": { en: "2022 – 2024", uz: "2022 – 2024", ru: "2022 – 2024" },
+    "edu.pdp.desc": {
+      en: "Completed a two-year Foundation Programme in Cyber Security, where I studied university-level coursework instead of the traditional 10th and 11th grades. This programme established a solid academic and practical foundation in computer science, networking, Linux systems, and cybersecurity.",
+      uz: "Kiberxavfsizlik yo'nalishidagi ikki yillik Foundation Programme'ni tamomladim — bu davrda an'anaviy 10- va 11-sinflar o'rniga universitet darajasidagi dasturni o'zlashtirdim. Ushbu dastur kompyuter fanlari, tarmoqlar, Linux tizimlari va kiberxavfsizlik bo'yicha mustahkam akademik va amaliy poydevor yaratdi.",
+      ru: "Завершил двухлетнюю Foundation Programme по кибербезопасности, в рамках которой вместо традиционных 10 и 11 классов изучал программу университетского уровня. Эта программа заложила прочную академическую и практическую основу в информатике, сетях, системах Linux и кибербезопасности."
     },
 
     "values.1": { en: "Integrity", uz: "Halollik", ru: "Честность" },

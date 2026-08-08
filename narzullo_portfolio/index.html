@@ -30,7 +30,7 @@
 
 <header class="nav">
   <div class="container nav-row">
-    <a class="brand" href="#top">narzullo<span class="cursor">@</span>oscp<span class="cursor">:~$</span></a>
+    <a class="brand" href="#top"><img class="nav-logo" src="assets/logo.webp" alt="" aria-hidden="true" />narzullo<span class="cursor">@</span>oscp<span class="cursor">:~$</span></a>
     <ul class="nav-links">
       <li><a href="#about" data-i18n="nav.about">about</a></li>
       <li><a href="#experience" data-i18n="nav.experience">experience</a></li>
@@ -51,6 +51,11 @@
 <section class="hero" id="top">
   <div class="hero-canvas-wrap" aria-hidden="true" style="position:absolute; inset:0;">
     <canvas class="hero-canvas" data-net-graph></canvas>
+  </div>
+  <div class="brand-mark-dock" aria-hidden="true">
+    <div class="brand-mark" data-brand-mark>
+      <img src="assets/logo.webp" alt="" />
+    </div>
   </div>
   <div class="container hero-inner">
     <div>
@@ -126,7 +131,7 @@
 <section id="experience">
   <div class="container">
     <p class="eyebrow" data-i18n="eyebrow.experience">experience</p>
-    <div class="exp-card reveal scan-hover">
+    <div class="exp-card reveal tilt-card scan-hover">
       <div class="exp-head">
         <p class="role mono" data-i18n="exp.role">IT Systems Engineer</p>
         <p class="org" data-i18n="exp.org">Infrastructure &amp; Security</p>
@@ -150,7 +155,7 @@
   <div class="container">
     <p class="eyebrow" data-i18n="eyebrow.certifications">certifications</p>
 
-    <div class="cert-card reveal scan-hover">
+    <div class="cert-card reveal tilt-card scan-hover">
       <div class="cert-media">
         <a href="assets/oscp-full.png" target="_blank" rel="noopener" data-i18n-attr="aria-label:aria.oscpFull" aria-label="Open full-resolution OSCP certificate in a new tab">
           <img src="assets/oscp-preview.jpg" data-i18n-attr="alt:alt.oscpCert" alt="Offensive Security Certified Professional certificate awarded to Narzullo Muhammad Ali Nazirjonovich, issued July 2, 2026" loading="lazy" />
@@ -174,7 +179,29 @@
       </div>
     </div>
 
-    <div class="cert-card reveal scan-hover">
+    <div class="cert-card reveal tilt-card scan-hover">
+      <div class="cert-media">
+        <a href="assets/pdp-grant.jpg" target="_blank" rel="noopener" data-i18n-attr="aria-label:aria.grantFull" aria-label="Open full-resolution PDP University grant certificate in a new tab">
+          <img src="assets/pdp-grant.jpg" data-i18n-attr="alt:alt.grantCert" alt="PDP University Grant certificate awarded to Narzullo Muhammad Ali — 12,000,000 so'm" loading="lazy" />
+        </a>
+        <span class="view mono" data-i18n="cert.viewFull">view full resolution &#8599;</span>
+      </div>
+      <div class="cert-body">
+        <div>
+          <p class="cert-name mono">PDP Grant <span class="scale">12,000,000 so'm</span></p>
+          <p class="cert-issuer" data-i18n="cert.grant.issuer">Republic Mathematics Olympiad, Selection Stage &mdash; PDP University</p>
+          <p class="cert-date mono" data-i18n="cert.grant.date">Issued February 7, 2023</p>
+        </div>
+        <p data-i18n="cert.grant.desc">Awarded a full merit grant for a top result in the Republic Mathematics Olympiad selection stage, covering winter admission to PDP University's Foundation Programme.</p>
+        <ul class="check-list">
+          <li data-i18n="cert.grant.check1">Republic Mathematics Olympiad — Selection Stage</li>
+          <li data-i18n="cert.grant.check2">12,000,000 so'm merit grant</li>
+          <li data-i18n="cert.grant.check3">Winter admission, Foundation Programme</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="cert-card reveal tilt-card scan-hover">
       <div class="cert-media">
         <a href="assets/sat-score.jpg" target="_blank" rel="noopener" data-i18n-attr="aria-label:aria.satFull" aria-label="Open full-resolution SAT score report in a new tab">
           <img src="assets/sat-score.jpg" data-i18n-attr="alt:alt.satCert" alt="SAT Score Report — Total Score 1270 out of 1600" loading="lazy" />
@@ -197,26 +224,25 @@
       </div>
     </div>
 
-    <div class="cert-card reveal scan-hover">
+    <div class="cert-card reveal tilt-card scan-hover">
       <div class="cert-media">
-        <a href="assets/ielts-score.jpg" target="_blank" rel="noopener" data-i18n-attr="aria-label:aria.ieltsFull" aria-label="Open full-resolution IELTS Test Report Form in a new tab">
-          <img src="assets/ielts-score.jpg" data-i18n-attr="alt:alt.ieltsCert" alt="IELTS Test Report Form — Overall Band Score 8.0, CEFR C1" loading="lazy" />
+        <a href="assets/dtm-admission.jpg" target="_blank" rel="noopener" data-i18n-attr="aria-label:aria.dtmFull" aria-label="Open full-resolution national admission test results in a new tab">
+          <img src="assets/dtm-admission.jpg" data-i18n-attr="alt:alt.dtmCert" alt="National university entrance examination results — recommended for admission to Tashkent University of Information Technologies (TUIT)" loading="lazy" />
         </a>
         <span class="view mono" data-i18n="cert.viewFull">view full resolution &#8599;</span>
       </div>
       <div class="cert-body">
         <div>
-          <p class="cert-name mono">IELTS <span class="scale">Band 8.0 &middot; C1</span></p>
-          <p class="cert-issuer" data-i18n="cert.ielts.issuer">International English Language Testing System &mdash; British Council / IDP / Cambridge Assessment English</p>
-          <p class="cert-date mono" data-i18n="cert.ielts.date">Issued November 2024</p>
+          <p class="cert-name mono">DTM <span class="scale">183.60</span></p>
+          <p class="cert-issuer" data-i18n="cert.dtm.issuer">National University Entrance Examination &mdash; Agency for Assessment of Knowledge and Skills</p>
+          <p class="cert-date mono" data-i18n="cert.dtm.date">Issued July 19, 2024</p>
         </div>
-        <p data-i18n="cert.ielts.desc">Internationally recognized proof of advanced English proficiency &mdash; enabling clear communication with international clients, teams, and the wider security community, along with confident technical reading and report writing in English.</p>
+        <p data-i18n="cert.dtm.desc">State admission test results, recommended for enrollment at Tashkent University of Information Technologies (TUIT).</p>
         <ul class="check-list">
-          <li data-i18n="cert.ielts.check1">Listening — 8.5</li>
-          <li data-i18n="cert.ielts.check2">Reading — 7.5</li>
-          <li data-i18n="cert.ielts.check3">Writing — 8.0</li>
-          <li data-i18n="cert.ielts.check4">Speaking — 7.5</li>
-          <li data-i18n="cert.ielts.check5">Overall Band Score — 8.0 (CEFR C1)</li>
+          <li data-i18n="cert.dtm.check1">Overall score — 183.60</li>
+          <li data-i18n="cert.dtm.check2">Mandatory subjects</li>
+          <li data-i18n="cert.dtm.check3">Mathematics</li>
+          <li data-i18n="cert.dtm.check4">Physics</li>
         </ul>
       </div>
     </div>
@@ -228,7 +254,7 @@
   <div class="container">
     <p class="eyebrow" data-i18n="eyebrow.skills">skills</p>
     <div class="skills-grid">
-      <div class="skill-group reveal scan-hover">
+      <div class="skill-group reveal tilt-card scan-hover">
         <h3 data-i18n="skills.group1">Offensive Security</h3>
         <div class="tag-row">
           <span class="tag">Penetration Testing</span>
@@ -242,7 +268,7 @@
           <span class="tag">Security Research</span>
         </div>
       </div>
-      <div class="skill-group reveal scan-hover">
+      <div class="skill-group reveal tilt-card scan-hover">
         <h3 data-i18n="skills.group2">Programming</h3>
         <div class="tag-row">
           <span class="tag">Python</span>
@@ -251,7 +277,7 @@
           <span class="tag">Bash</span>
         </div>
       </div>
-      <div class="skill-group reveal scan-hover">
+      <div class="skill-group reveal tilt-card scan-hover">
         <h3 data-i18n="skills.group3">Operating Systems</h3>
         <div class="tag-row">
           <span class="tag">Linux</span>
@@ -259,7 +285,7 @@
           <span class="tag">Windows Server</span>
         </div>
       </div>
-      <div class="skill-group reveal scan-hover">
+      <div class="skill-group reveal tilt-card scan-hover">
         <h3 data-i18n="skills.group4">Networking</h3>
         <div class="tag-row">
           <span class="tag">TCP/IP</span>
@@ -270,7 +296,7 @@
           <span class="tag">Switching</span>
         </div>
       </div>
-      <div class="skill-group reveal scan-hover">
+      <div class="skill-group reveal tilt-card scan-hover">
         <h3 data-i18n="skills.group5">Tools</h3>
         <div class="tag-row">
           <span class="tag">Burp Suite</span>
@@ -295,29 +321,36 @@
 
 <section id="timeline">
   <div class="container">
-    <p class="eyebrow" data-i18n="eyebrow.timeline">career timeline</p>
+    <p class="eyebrow" data-i18n="eyebrow.timeline">my journey</p>
+    <p class="lead measure reveal" data-i18n="journey.intro">From replacing high school with university-level cybersecurity education at PDP University, to earning the OSCP certification and pursuing a Bachelor's degree in Information Security at TUIT, my journey has been driven by one principle: never stop learning. Every milestone represents not only an achievement but also a commitment to becoming a better security professional.</p>
     <div class="timeline reveal measure">
       <div class="tl-item">
         <p class="tl-year mono">2022</p>
-        <p class="tl-title" data-i18n="tl.2022">Started programming journey</p>
+        <p class="tl-title"><span class="trophy">&#127891;</span><span data-i18n="tl.2022.title">PDP University</span></p>
+        <p class="tl-desc" data-i18n="tl.2022.desc">Started the Foundation Programme in Cyber Security, replacing the traditional 10th and 11th grades with university-level education. During this period, I built a strong foundation in programming, networking, Linux, cybersecurity fundamentals, and computer science.</p>
       </div>
       <div class="tl-item">
         <p class="tl-year mono">2023</p>
-        <p class="tl-title" data-i18n="tl.2023">Python development &amp; automation</p>
-        <p class="tl-title"><span class="trophy">&#127942;</span><span data-i18n="tl.2023.sat">SAT — 1270</span></p>
+        <p class="tl-title"><span class="trophy">&#127942;</span><span data-i18n="tl.2023.title">SAT — 1270</span></p>
+        <p class="tl-desc" data-i18n="tl.2023.desc">Successfully achieved a 1270 SAT score, demonstrating strong analytical thinking, mathematical reasoning, and problem-solving skills.</p>
       </div>
       <div class="tl-item">
         <p class="tl-year mono">2024</p>
-        <p class="tl-title" data-i18n="tl.2024">Cyber security &amp; penetration testing</p>
-        <p class="tl-title"><span class="trophy">&#127942;</span><span data-i18n="tl.2024.ielts">IELTS — Band 8.0</span></p>
-      </div>
-      <div class="tl-item">
-        <p class="tl-year mono">2025</p>
-        <p class="tl-title" data-i18n="tl.2025">Advanced offensive security training</p>
+        <p class="tl-title"><span class="trophy">&#127891;</span><span data-i18n="tl.2024.diploma.title">Foundation Diploma</span></p>
+        <p class="tl-desc" data-i18n="tl.2024.diploma.desc">Successfully completed the two-year Foundation Programme in Cyber Security at PDP University and earned my Foundation Diploma.</p>
+        <p class="tl-arrow" aria-hidden="true">&#8595;</p>
+        <p class="tl-title"><span class="trophy">&#127891;</span><span data-i18n="tl.2024.tuit.title">Tashkent University of Information Technologies (TUIT)</span></p>
+        <p class="tl-desc" data-i18n="tl.2024.tuit.desc">Admitted to the Bachelor's programme in Information Security, where I continue to deepen my expertise in cybersecurity, secure systems, cryptography, network defense, and modern information protection technologies.</p>
       </div>
       <div class="tl-item">
         <p class="tl-year mono">2026</p>
-        <p class="tl-title"><span class="trophy">&#127942;</span><span data-i18n="tl.2026">Offensive Security Certified Professional (OSCP)</span></p>
+        <p class="tl-title"><span class="trophy">&#127942;</span><span data-i18n="tl.2026.title">Offensive Security Certified Professional (OSCP)</span></p>
+        <p class="tl-desc" data-i18n="tl.2026.desc">Earned the internationally recognized OSCP certification on July 2, 2026, demonstrating practical expertise in real-world penetration testing, Active Directory security, privilege escalation, web application security, and professional penetration testing methodologies.</p>
+      </div>
+      <div class="tl-item">
+        <p class="tl-year mono" data-i18n="tl.present.label">Present</p>
+        <p class="tl-title"><span class="trophy">&#128188;</span><span data-i18n="tl.present.title">IT Systems Engineer</span></p>
+        <p class="tl-desc" data-i18n="tl.present.desc">Working as an IT Systems Engineer while continuously improving my skills in offensive security, enterprise infrastructure, penetration testing, and security research.</p>
       </div>
       <div class="tl-item future">
         <p class="tl-year mono">future</p>
@@ -328,6 +361,26 @@
           <span class="tag">CRTO</span>
           <span class="tag">CISSP</span>
         </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="education">
+  <div class="container">
+    <p class="eyebrow" data-i18n="eyebrow.education">education</p>
+    <div class="edu-grid">
+      <div class="edu-card reveal tilt-card scan-hover">
+        <p class="edu-org mono" data-i18n="edu.tuit.org">Tashkent University of Information Technologies (TUIT)</p>
+        <p class="edu-degree mono" data-i18n="edu.tuit.degree">Bachelor's Degree in Information Security</p>
+        <p class="edu-date mono" data-i18n="edu.tuit.date">2024 &ndash; Present</p>
+        <p data-i18n="edu.tuit.desc">Currently pursuing a Bachelor's degree in Information Security, focusing on cybersecurity, network security, cryptography, digital forensics, secure software development, and enterprise information protection.</p>
+      </div>
+      <div class="edu-card reveal tilt-card scan-hover">
+        <p class="edu-org mono" data-i18n="edu.pdp.org">PDP University</p>
+        <p class="edu-degree mono" data-i18n="edu.pdp.degree">Foundation Programme in Cyber Security</p>
+        <p class="edu-date mono" data-i18n="edu.pdp.date">2022 &ndash; 2024</p>
+        <p data-i18n="edu.pdp.desc">Completed a two-year Foundation Programme in Cyber Security, where I studied university-level coursework instead of the traditional 10th and 11th grades. This programme established a solid academic and practical foundation in computer science, networking, Linux systems, and cybersecurity.</p>
       </div>
     </div>
   </div>
@@ -352,11 +405,11 @@
 
 <section id="mission-vision">
   <div class="container mv-grid">
-    <div class="mv-card reveal scan-hover">
+    <div class="mv-card reveal tilt-card scan-hover">
       <p class="eyebrow" data-i18n="eyebrow.mission">mission</p>
       <p data-i18n="mv.mission">To help organizations strengthen their cybersecurity posture through practical offensive security, continuous learning, and ethical responsibility.</p>
     </div>
-    <div class="mv-card reveal scan-hover">
+    <div class="mv-card reveal tilt-card scan-hover">
       <p class="eyebrow" data-i18n="eyebrow.vision">vision</p>
       <p data-i18n="mv.vision">To become a globally recognized Offensive Security Engineer, contributing to innovative technologies, protecting critical infrastructures, and advancing cybersecurity through research and practical expertise.</p>
     </div>
@@ -377,7 +430,7 @@
     <p class="eyebrow" data-i18n="eyebrow.contact">contact</p>
     <p class="contact-cmd reveal mono"><span class="prompt">$</span> contact --list<span class="res" data-i18n="contact.resolved">5 channels resolved &#10003;</span></p>
 
-    <div class="contact-card reveal scan-hover">
+    <div class="contact-card reveal tilt-card scan-hover">
       <div class="contact-id">
         <div class="contact-avatar">
           <img src="assets/profile.jpg" width="200" height="200" data-i18n-attr="alt:alt.profileContact" alt="Narzullo Muhammad Ali" loading="lazy" />
