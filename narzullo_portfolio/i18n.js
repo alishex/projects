@@ -3,14 +3,14 @@
 
   var STRINGS = {
     "meta.title": {
-      en: "Narzullo Muhammad Ali — Cyber Security Engineer (OSCP)",
-      uz: "Narzullo Muhammad Ali — Kiberxavfsizlik muhandisi (OSCP)",
-      ru: "Narzullo Muhammad Ali — Инженер по кибербезопасности (OSCP)"
+      en: "Narzullo Muhammad Ali Narzullayev — Cyber Security Engineer (OSCP)",
+      uz: "Narzullo Muhammad Ali Narzullayev — Kiberxavfsizlik muhandisi (OSCP)",
+      ru: "Narzullo Muhammad Ali Narzullayev — Инженер по кибербезопасности (OSCP)"
     },
     "meta.description": {
-      en: "Narzullo Muhammad Ali — OSCP-certified Cyber Security Engineer, Penetration Tester and IT Systems Engineer. Offensive security, Active Directory, network security, and infrastructure.",
-      uz: "Narzullo Muhammad Ali — OSCP sertifikatiga ega kiberxavfsizlik muhandisi, penetration tester va IT tizimlar muhandisi. Hujumkor xavfsizlik, Active Directory, tarmoq xavfsizligi va infratuzilma.",
-      ru: "Narzullo Muhammad Ali — сертифицированный OSCP инженер по кибербезопасности, пентестер и инженер IT-систем. Наступательная безопасность, Active Directory, сетевая безопасность и инфраструктура."
+      en: "Narzullo Muhammad Ali Narzullayev — OSCP-certified Cyber Security Engineer, Penetration Tester and IT Systems Engineer. Offensive security, Active Directory, network security, and infrastructure.",
+      uz: "Narzullo Muhammad Ali Narzullayev — OSCP sertifikatiga ega kiberxavfsizlik muhandisi, penetration tester va IT tizimlar muhandisi. Hujumkor xavfsizlik, Active Directory, tarmoq xavfsizligi va infratuzilma.",
+      ru: "Narzullo Muhammad Ali Narzullayev — сертифицированный OSCP инженер по кибербезопасности, пентестер и инженер IT-систем. Наступательная безопасность, Active Directory, сетевая безопасность и инфраструктура."
     },
     "meta.ogDescription": {
       en: "Think Like an Attacker. Protect Like an Engineer.",
