@@ -1,0 +1,413 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="description" content="Moxa Parfume rasmiy havolalar sahifasi: Telegram, Instagram va Intim Shop do'koni." />
+<meta property="og:title" content="Moxa Parfume" />
+<meta property="og:description" content="Moxa Parfume rasmiy havolalar sahifasi." />
+<meta property="og:image" content="https://moxa.intimshop.net/avatar.jpg" />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://moxa.intimshop.net/" />
+<link rel="icon" href="avatar.jpg" />
+<link rel="apple-touch-icon" href="avatar.jpg" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Jost:wght@400;500;600&display=swap" rel="stylesheet" />
+<title>Moxa Parfume</title>
+<style>
+
+
+:root{
+  --wine-deep:#170404;
+  --wine:#260000;
+  --wine-raise:#330909;
+  --line:#4a1917;
+  --gold:#c98a2c;
+  --gold-bright:#e8b65c;
+  --gold-soft:rgba(201,138,44,.13);
+  --gold-line:rgba(201,138,44,.32);
+  --ivory:#f3e7da;
+  --smoke:#ad8f87;
+  --shadow:0 25px 60px -25px rgba(0,0,0,.8);
+  --radius-sm:4px;
+  --radius-md:8px;
+  --font-display:'Moxa Display','Playfair Display',Georgia,'Times New Roman',serif;
+  --font-body:'Moxa Sans','Jost',ui-sans-serif,system-ui,sans-serif;
+}
+
+*{box-sizing:border-box}
+html{background:var(--wine-deep)}
+body{
+  margin:0;
+  min-height:100vh;
+  background:var(--wine-deep);
+  background-image:
+    radial-gradient(ellipse 600px 420px at 50% -8%, rgba(201,138,44,.10), transparent 60%),
+    radial-gradient(ellipse 900px 700px at 50% 110%, rgba(51,9,9,.9), transparent 65%);
+  color:var(--ivory);
+  font-family:var(--font-body);
+  font-weight:400;
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+}
+
+a{color:inherit;text-decoration:none}
+a:focus-visible,button:focus-visible{outline:1.5px solid var(--gold-bright);outline-offset:3px;border-radius:var(--radius-sm)}
+
+.page{
+  max-width:448px;
+  margin:0 auto;
+  padding:4.5rem 1.5rem 3.5rem;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+}
+
+.hero{
+  position:relative;
+  width:100%;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  padding-bottom:1.75rem;
+}
+
+.mist-stage{
+  position:absolute;
+  top:-3.75rem;
+  left:50%;
+  transform:translateX(-50%);
+  width:320px;
+  height:320px;
+  pointer-events:none;
+}
+.mist-stage canvas{width:100%;height:100%;display:block}
+
+.medallion{
+  position:relative;
+  width:124px;
+  height:124px;
+  border-radius:50%;
+  padding:5px;
+  background:conic-gradient(from 180deg,var(--gold) 0deg,rgba(201,138,44,.25) 120deg,var(--gold) 230deg,rgba(201,138,44,.25) 310deg,var(--gold) 360deg);
+  box-shadow:var(--shadow), 0 0 50px -8px rgba(201,138,44,.35);
+}
+.medallion-inner{
+  width:100%;height:100%;border-radius:50%;
+  overflow:hidden;
+  background:var(--wine);
+  border:3px solid var(--wine-deep);
+}
+.medallion-inner img{width:100%;height:100%;object-fit:cover;display:block}
+
+.wordmark{
+  margin-top:1.75rem;
+  text-align:center;
+}
+.wordmark .moxa{
+  font-family:var(--font-display);
+  font-weight:900;
+  font-size:clamp(2.5rem,7vw + 1rem,3.1rem);
+  line-height:.92;
+  letter-spacing:.005em;
+  color:var(--ivory);
+  text-wrap:balance;
+}
+.wordmark .parfume{
+  display:block;
+  margin-top:.6rem;
+  font-family:var(--font-body);
+  font-weight:500;
+  font-size:.8rem;
+  letter-spacing:.46em;
+  color:var(--gold);
+  text-indent:.46em;
+}
+
+.rule{
+  margin-top:1.5rem;
+  width:38px;
+  height:1px;
+  background:linear-gradient(90deg,transparent,var(--gold),transparent);
+}
+
+.age{
+  margin-top:1.5rem;
+  display:inline-flex;
+  align-items:center;
+  gap:.5rem;
+  padding:.5rem .9rem;
+  border:1px solid var(--line);
+  border-radius:999px;
+  background:rgba(0,0,0,.18);
+  color:var(--smoke);
+  font-size:.76rem;
+  font-weight:400;
+  letter-spacing:.01em;
+}
+.age svg{width:15px;height:15px;color:var(--gold);flex-shrink:0}
+
+.links{
+  width:100%;
+  margin-top:2.75rem;
+  display:flex;
+  flex-direction:column;
+  gap:.85rem;
+}
+
+.card{
+  --rx:0deg;--ry:0deg;
+  position:relative;
+  display:flex;
+  align-items:center;
+  gap:.9rem;
+  padding:.95rem 1.05rem;
+  border:1px solid var(--line);
+  border-radius:var(--radius-md);
+  background:linear-gradient(180deg,rgba(255,255,255,.015),transparent 40%) ,var(--wine);
+  box-shadow:var(--shadow);
+  transform:perspective(600px) rotateX(var(--rx)) rotateY(var(--ry));
+  transition:border-color .25s ease, transform .12s ease, background .25s ease;
+}
+.card:hover{border-color:var(--gold-line);background:linear-gradient(180deg,rgba(255,255,255,.025),transparent 40%),var(--wine-raise)}
+.card:active{transform:perspective(600px) rotateX(var(--rx)) rotateY(var(--ry)) scale(.985)}
+
+.card-icon{
+  flex-shrink:0;
+  width:40px;height:40px;
+  border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  border:1px solid var(--gold-line);
+  background:var(--gold-soft);
+  color:var(--gold-bright);
+}
+.card-icon svg{width:19px;height:19px}
+
+.card-text{flex:1;min-width:0}
+.card-title{
+  font-family:var(--font-body);
+  font-weight:600;
+  font-size:.98rem;
+  color:var(--ivory);
+}
+.card-sub{
+  margin-top:.15rem;
+  font-size:.78rem;
+  color:var(--smoke);
+  font-variant-numeric:tabular-nums;
+}
+
+.card-go{flex-shrink:0;color:var(--smoke);opacity:.7;transition:transform .2s ease,opacity .2s ease}
+.card-go svg{width:16px;height:16px}
+.card:hover .card-go{transform:translateX(2px);opacity:1;color:var(--gold-bright)}
+
+.card.primary{
+  border-color:var(--gold-line);
+  background:linear-gradient(180deg,rgba(201,138,44,.10),transparent 55%),var(--wine);
+}
+.card.primary .card-icon{background:var(--gold);color:var(--wine-deep);border-color:var(--gold)}
+.card.primary:hover{border-color:var(--gold-bright)}
+
+.divider{
+  display:flex;align-items:center;gap:.7rem;
+  margin:.35rem 0;
+  color:var(--gold-line);
+}
+.divider .line{flex:1;height:1px;background:var(--line)}
+.divider .dot{width:5px;height:5px;background:var(--gold);transform:rotate(45deg);flex-shrink:0}
+
+.sign{
+  margin-top:3rem;
+  width:30px;height:30px;
+  border-radius:50%;
+  border:1px solid var(--line);
+  display:flex;align-items:center;justify-content:center;
+  color:var(--gold);
+  opacity:.55;
+}
+.sign svg{width:13px;height:13px}
+
+@media (prefers-reduced-motion:no-preference){
+  .reveal{opacity:0;animation:reveal .9s cubic-bezier(.16,.8,.3,1) forwards}
+  .medallion{animation-delay:.05s}
+  .wordmark{animation-delay:.2s}
+  .rule{animation-delay:.32s}
+  .age{animation-delay:.4s}
+  .links .card:nth-child(1){animation-delay:.5s}
+  .links .card:nth-child(2){animation-delay:.58s}
+  .links .card:nth-child(3){animation-delay:.66s}
+  .links .divider{animation-delay:.72s}
+  .links .card.primary{animation-delay:.8s}
+  .sign{animation-delay:.92s}
+  @keyframes reveal{
+    from{opacity:0;transform:translateY(14px) scale(.98)}
+    to{opacity:1;transform:translateY(0) scale(1)}
+  }
+}
+
+@media (hover:none){
+  .card{transform:none !important}
+}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="hero">
+    <div class="mist-stage"><canvas id="mist" width="320" height="320"></canvas></div>
+    <div class="medallion reveal">
+      <div class="medallion-inner"><img src="avatar.jpg" alt="Moxa Parfume" width="124" height="124" /></div>
+    </div>
+    <div class="wordmark reveal">
+      <span class="moxa">Moxa</span>
+      <span class="parfume">Parfume</span>
+    </div>
+  </div>
+
+  <div class="rule reveal"></div>
+
+  <div class="age reveal">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v6" stroke-linecap="round"/><circle cx="12" cy="16.3" r=".9" fill="currentColor" stroke="none"/></svg>
+    <span>Faqat 18 yoshdan kattalar uchun</span>
+  </div>
+
+  <div class="links">
+    <a class="card reveal" href="https://t.me/moxaparfume1" target="_blank" rel="noopener noreferrer">
+      <span class="card-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 3 2.5 10.6l6.4 2.2M21 3l-3.2 17-6-4.4M21 3 9 14.4m0 0 .3 5.4"/></svg>
+      </span>
+      <span class="card-text">
+        <span class="card-title">Telegram</span>
+        <span class="card-sub">@moxaparfume1</span>
+      </span>
+      <span class="card-go"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
+    </a>
+
+    <a class="card reveal" href="https://instagram.com/moxaparfume" target="_blank" rel="noopener noreferrer">
+      <span class="card-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="18" height="18" rx="5.5"/><circle cx="12" cy="12" r="4.2"/><circle cx="17.3" cy="6.7" r=".6" fill="currentColor" stroke="none"/></svg>
+      </span>
+      <span class="card-text">
+        <span class="card-title">Instagram</span>
+        <span class="card-sub">@moxaparfume</span>
+      </span>
+      <span class="card-go"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
+    </a>
+
+    <a class="card reveal" href="https://t.me/moxaparfume" target="_blank" rel="noopener noreferrer">
+      <span class="card-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 3 2.5 10.6l6.4 2.2M21 3l-3.2 17-6-4.4M21 3 9 14.4m0 0 .3 5.4"/></svg>
+      </span>
+      <span class="card-text">
+        <span class="card-title">Telegram kanal</span>
+        <span class="card-sub">@moxaparfume</span>
+      </span>
+      <span class="card-go"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
+    </a>
+
+    <div class="divider reveal"><span class="line"></span><span class="dot"></span><span class="line"></span></div>
+
+    <a class="card primary reveal" href="https://intimshop.net/" target="_blank" rel="noopener noreferrer">
+      <span class="card-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><path d="M3 12h18"/></svg>
+      </span>
+      <span class="card-text">
+        <span class="card-title">Intim Shop • Moxa Parfume</span>
+        <span class="card-sub">intimshop.net</span>
+      </span>
+      <span class="card-go"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
+    </a>
+  </div>
+
+  <div class="sign reveal">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 16V9.5a3 3 0 0 1 6 0M13 16V9.5a3 3 0 0 1 6 0"/><path d="M5 16h4M15 16h4"/></svg>
+  </div>
+</div>
+
+<script>
+(function(){
+  var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var canvas = document.getElementById('mist');
+  var ctx = canvas.getContext('2d');
+  var dpr = Math.min(window.devicePixelRatio || 1, 2);
+  var W = 320, H = 320;
+  canvas.width = W*dpr; canvas.height = H*dpr;
+  ctx.scale(dpr,dpr);
+
+  function particle(){
+    return {
+      x: W/2 + (Math.random()-0.5)*170,
+      y: H*0.65 + Math.random()*60,
+      r: 10 + Math.random()*22,
+      speed: 0.10 + Math.random()*0.22,
+      drift: (Math.random()-0.5)*0.18,
+      alphaMax: 0.05 + Math.random()*0.10,
+      phase: Math.random()*Math.PI*2
+    };
+  }
+  var N = reduced ? 0 : 22;
+  var particles = [];
+  for(var i=0;i<N;i++){
+    var p = particle();
+    p.y = Math.random()*H;
+    particles.push(p);
+  }
+
+  function drawStatic(){
+    ctx.clearRect(0,0,W,H);
+    var g = ctx.createRadialGradient(W/2,H*0.62,4,W/2,H*0.62,150);
+    g.addColorStop(0,'rgba(201,138,44,0.16)');
+    g.addColorStop(1,'rgba(201,138,44,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0,0,W,H);
+  }
+
+  if(reduced){ drawStatic(); return; }
+
+  var hidden = false;
+  document.addEventListener('visibilitychange', function(){ hidden = document.hidden; });
+
+  function tick(t){
+    if(!hidden){
+      ctx.clearRect(0,0,W,H);
+      for(var i=0;i<particles.length;i++){
+        var p = particles[i];
+        p.y -= p.speed;
+        p.x += p.drift + Math.sin(t*0.0006 + p.phase)*0.12;
+        if(p.y < -30){ Object.assign(p, particle()); p.y = H + 20; }
+        var edge = Math.min(1, (H - p.y)/40, p.y/60);
+        var a = Math.max(0, Math.min(1,edge)) * p.alphaMax;
+        var g = ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,p.r);
+        g.addColorStop(0,'rgba(232,182,92,'+a+')');
+        g.addColorStop(1,'rgba(232,182,92,0)');
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+        ctx.fill();
+      }
+    }
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+})();
+
+(function(){
+  if(!window.matchMedia('(hover:hover) and (pointer:fine)').matches) return;
+  var cards = document.querySelectorAll('.card');
+  cards.forEach(function(card){
+    card.addEventListener('mousemove', function(e){
+      var r = card.getBoundingClientRect();
+      var px = (e.clientX - r.left)/r.width - 0.5;
+      var py = (e.clientY - r.top)/r.height - 0.5;
+      card.style.setProperty('--ry', (px*5)+'deg');
+      card.style.setProperty('--rx', (py*-5)+'deg');
+    });
+    card.addEventListener('mouseleave', function(){
+      card.style.setProperty('--ry','0deg');
+      card.style.setProperty('--rx','0deg');
+    });
+  });
+})();
+</script>
+</body>
+</html>
