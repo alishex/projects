@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 400">
+  <defs><radialGradient id="pg" cx="48%" cy="38%" r="60%"><stop offset="0%" stop-color="#ffb3c2" stop-opacity=".8"/><stop offset="100%" stop-color="#fdeaea" stop-opacity="0"/></radialGradient></defs>
+  <ellipse cx="150" cy="170" rx="150" ry="180" fill="url(#pg)"/>
+  <g transform="translate(150,10)" fill="none" stroke="#2a1118" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M -34,-4 C -40,18 -36,40 -24,56 C -20,60 -16,62 -12,62"/>
+    <path d="M -24,30 C -34,24 -40,10 -34,-4 C -28,-16 -12,-20 0,-14 C 12,-9 16,2 12,14 C 10,20 6,24 2,26"/>
+    <path d="M -8,10 C -20,6 -26,18 -24,30 C -23,38 -18,44 -12,46"/>
+    <path d="M -12,46 C -10,54 -8,60 -6,64"/>
+    <path d="M -6,64 C 2,70 14,72 26,70"/>
+    <path d="M -6,64 C -14,82 -20,110 -22,140"/>
+    <path d="M 26,70 C 22,100 18,140 22,180"/>
+    <path d="M -22,140 C -4,150 16,149 24,140"/>
+    <path d="M -22,140 C -28,180 -30,230 -26,270" stroke-width="2.6"/>
+    <path d="M 22,180 C 30,214 34,250 28,286" stroke-width="2.6"/>
+    <path d="M -10,150 C -6,190 -4,230 -6,260" stroke-width="1.5" opacity=".5"/>
+    <path d="M 10,155 C 14,190 14,224 8,254" stroke-width="1.5" opacity=".5"/>
+    <path d="M 26,70 C 38,78 44,92 42,108 C 40,120 32,128 24,132"/>
+    <path d="M -6,260 C -8,290 -10,320 -14,344"/>
+    <path d="M -6,260 C -2,292 2,322 2,346"/>
+    <path d="M 28,286 C 24,310 20,330 18,346"/>
+  </g>
+</svg>
