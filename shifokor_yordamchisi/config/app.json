@@ -1,0 +1,19 @@
+{
+  "version": "1.0.0",
+  "stage": 1,
+  "testMode": false,
+  "paymentsEnabled": false,
+  "aiEnabled": true,
+  "requireDoctorVerification": true,
+  "defaultLanguage": "uz",
+  "supportedLanguages": [
+    "uz",
+    "ru",
+    "en"
+  ],
+  "defaultTheme": "system",
+  "defaultPlan": "free",
+  "adminLimits": {
+    "maxDeviationPct": 20
+  }
+}
