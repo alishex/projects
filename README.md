@@ -1,49 +1,74 @@
 # ALLMAX Projects
 
-**ALLMAX** (erkaklar kiyim-kechak chakana savdo brendi, Fix Price uslubida) kompaniyasining barcha avtomatlashtirish loyihalari — Telegram botlar, Instagram integratsiya, CRM alertlar, AI yordamchilar, HR tizimi va ichki dashboard.
+**ALLMAX** (erkaklar kiyim-kechak chakana savdo brendi, Fix Price uslubida) kompaniyasining barcha avtomatlashtirish loyihalari — Telegram botlar, Instagram integratsiya, CRM alertlar, AI yordamchilar, HR tizimi va ichki dashboard. **Shu bilan birga, server egasining bir nechta shaxsiy (ALLMAXga aloqasi yo'q) loyihasi ham shu serverda joylashgan** — portfolio sayt, fitness app backend, shaxsiy moliya trekeri, ikkita onlayn-do'kon sahifasi. Pastda ikkalasi ham alohida bo'lim sifatida hujjatlangan.
 
-**Server:** DigitalOcean VPS "tools" — Ubuntu 24.04 — `209.38.239.245` — 4 vCPU / 8 GB RAM (`s-4vcpu-8gb`, 2026-07-20da kattalashtirilgan) — disk 50GB (~25% band)
-**AI:** Anthropic Claude `claude-opus-4-8` (asosiy model, deyarli barcha loyihalarda) — ba'zi eski loyihalarda `claude-sonnet-4-6` fallback sifatida kodda qoldirilgan
-**GitHub:** [alishex/projects](https://github.com/alishex/projects) (**public repo**) — push 2026-08-08dan beri ishlayapti (yangi fine-grained PAT, avvalgi token 07-18dan o'lik edi)
-**Bu hujjat oxirgi to'liq qayta tekshiruv:** 2026-08-08, barcha loyihalar jonli kodni o'qib, systemd holatini tekshirib yozilgan (eski hujjat iyun oyidan beri yangilanmagan va ko'p joyda noto'g'ri edi — pastdagi "Xavfsizlik va tuzatishlar" bo'limiga qarang)
+**Server:** DigitalOcean VPS "tools" — Ubuntu 24.04 — `209.38.239.245` — 4 vCPU / 8 GB RAM (`s-4vcpu-8gb`) — disk 33% (16G/48G) — uptime 85+ kun (so'nggi reboot 2026-07-20/21 resize'dan beri yo'q)
+**AI:** Anthropic Claude — umumiy/sherik kalit asosiy modeli loyihaga qarab `claude-opus-4-8` / `claude-sonnet-5` / `claude-haiku-4-5`. **⚠️ 2026-10-13'da yana "credit balance too low" bilan tugagan holatda — pastdagi operatsion ogohlantirishga qarang.** `moliya_bot` bu hisobdan mustaqil, alohida kalit ishlatadi.
+**GitHub:** [alishex/projects](https://github.com/alishex/projects) (**public repo**) — 0 ahead / 0 behind. **2026-10-14'dan beri barcha 17 loyiha git-backed** (avval 5 tasi — jumladan shaxsiy moliya va mijoz ma'lumoti saqlovchi loyihalar — umuman kuzatilmagan edi).
+**Bu hujjat oxirgi to'liq qayta yozilgan sana:** 2026-10-14 — 55 kunlik tanaffusdan keyingi "noldan tubdan" tekshiruv asosida (oldingi to'liq qayta yozish: 2026-08-08). 5 ta yangi loyiha (2026-10) qo'shildi, infratuzilma/xavfsizlik/billing bo'limlari jonli holatga mослаб yangilandi.
 
 ---
 
 ## ⚠️ Xavfsizlik ogohlantirishlari
 
-Bu hujjatni yangilash paytida o'tkazilgan chuqur tekshiruvda 3 ta xavfsizlik muammosi topildi. Ikkitasi **shu kuni tuzatildi** (git tarixidagi kod endi toza), lekin **haqiqiy kalitlarni almashtirish faqat sizning qo'lingizda**:
+2026-08-08'dagi chuqur tekshiruvda topilgan 3 muammo — ikkitasi kod darajasida tuzatildi, lekin **haqiqiy kalitlarni almashtirish hali ham amalga oshirilmagan** (2026-10-14'da qayta tekshirildi — holat o'zgarmagan, pastdagi yangi topilmaga qarang):
 
-1. **`allmax_dashboard/main.py`da login/parol ochiq matnda yozilgan edi** (git orqali kuzatiladigan faylda). ✅ Tuzatildi — endi `.env` fayliga ko'chirildi (git'ga kirmaydi), parolning o'zi o'zgarmadi, dashboard qayta tekshirilib ishlayotgani tasdiqlandi. ⚠️ Eski qiymat hali git tarixida qoladi (`git log -p` orqali ko'rinadi) — **agar to'liq xavfsiz bo'lishni istasangiz, parolni almashtirish tavsiya etiladi**, aytsangiz yordam beraman.
-2. **`bitrix_lead_alert_bot/.env.example` va `marketing_task_control_bot/.env.example` fayllarida HAQIQIY Telegram bot tokenlari va Bitrix24 webhook manzili yozilgan edi** — bu fayllar **public GitHub repo**siga (`alishex/projects`) push qilingan, ya'ni kimdir bu qiymatlarni ko'rgan bo'lishi mumkin. ✅ Tuzatildi — fayllar placeholder qiymatlarga almashtirildi. ⚠️ **Tavsiya: ikkala botning Telegram tokenini @BotFather orqali va Bitrix24 webhookni Bitrix24 panelidan qayta yarating** — eski qiymatlar hali git tarixida ochiq turibdi. Buni ham xohlasangiz, GitHub token yaratishda qilganimdek qadam-baqadam yordam bera olaman.
-3. **`bitrix_lead_alert_bot`ning "real-time webhook"i aslida tashqaridan yetib bo'lmaydi** (8000-port UFW'da yopiq, nginx'da ham marshrut yo'q) — bot kod darajasida webhook qabul qiluvchi bo'lsa-da, amalda faqat **har 60 soniyada backup polling** orqali ishlayapti. Bu ishonchli ishlayapti (1198/1198 lead muvaffaqiyatli yetkazilgan), shunchaki "real-time" degani unchalik to'g'ri emas — atigi ~1 daqiqagacha kechikish bor. Agar chinakam real-time kerak bo'lsa, nginx+UFW'da atayin ochish kerak bo'ladi (xavfsizlik nuqtai nazaridan ongli qaror talab qiladi, shuning uchun o'zim hal qilmadim).
+1. **`allmax_dashboard/main.py`da login/parol ochiq matnda yozilgan edi** (git orqali kuzatiladigan faylda). ✅ Tuzatildi — endi `.env` fayliga ko'chirildi (git'ga kirmaydi), parolning o'zi o'zgarmadi. ⚠️ Eski qiymat hali git tarixida qoladi (`git log -p` orqali ko'rinadi) — **agar to'liq xavfsiz bo'lishni istasangiz, parolni almashtirish tavsiya etiladi**.
+2. **`bitrix_lead_alert_bot/.env.example` va `marketing_task_control_bot/.env.example` fayllarida HAQIQIY Telegram bot tokenlari va Bitrix24 webhook manzili yozilgan edi** — public GitHub repoga push qilingan holda. ✅ Fayllar placeholder qiymatlarga almashtirildi. ⚠️ **Tavsiya hamon kuchda: ikkala botning Telegram tokenini @BotFather orqali va Bitrix24 webhookni qayta yarating** — eski qiymatlar hali git tarixida ochiq turibdi.
+   **🆕 2026-10-14 topilma:** `allmax_instagram_agent/.env`dagi ikkita Meta/Instagram access tokeni (shu loyihada hech qachon git'ga tushmagan, repo untracked edi) Graph API orqali tekshirilganda "Session has expired on 2026-06-23" bilan **o'lik ekani tasdiqlandi** — bu tokenlar endi baribir ishlamaydi, amaliy xavf kamaydi, lekin bu bitta aniq misol sifatida ko'rsatadiki, serverda eskirgan/o'lik tokenlar ko'p — qolgan (Bitrix/Telegram) qiymatlarning hali ham amal qilib-qilmasligi alohida tekshirilmagan.
+3. **`bitrix_lead_alert_bot`ning "real-time webhook"i aslida tashqaridan yetib bo'lmaydi** (8000-port UFW'da yopiq) — amalda faqat **60 soniyalik backup polling** orqali ishlaydi. Ishonchli (minglab lead muvaffaqiyatli yetkazilgan), shunchaki "real-time" degani unchalik to'g'ri emas.
 
-Bulardan tashqari, `allmax_dashboard`dagi "Tizim holati" paneli (Faol/Kredit belgilari) **jonli emas — qattiq yozilgan (hardcoded) va hech qachon yangilanmaydi**, faqat 4 ta statistika kartasi, grafik va kontaktlar ro'yxati haqiqatan ham jonli. Bu xavfsizlik muammosi emas, shunchaki chalg'ituvchi — bilib qo'yish kifoya.
+Bulardan tashqari, `allmax_dashboard`dagi "Tizim holati" paneli **jonli emas — qattiq yozilgan (hardcoded)**, faqat stat-kartalar/grafik/kontaktlar ro'yxati haqiqiy.
+
+---
+
+## ⚠️ Operatsion ogohlantirish — umumiy Anthropic balansi
+
+Deyarli barcha ALLMAX botlari **va endi 2 ta shaxsiy loyiha ham** (`ozish_backend`, `shifokor_yordamchisi`) bitta umumiy Anthropic Console hisobidan (`ANTHROPIC_API_KEY`) foydalanadi. Bu hisob kredit tugashi bilan hozirgacha **3 marta** to'xtagan: 2026-07-05, 2026-08-30, va 2026-10-11 (so'nggisi **2026-10-13'da qayta tekshirilganda ham hali tugagan holatda tasdiqlandi** — hozirgacha eng uzoq davom etayotgan holat). Faqat console.anthropic.com orqali, faqat server egasi to'ldira oladi — Claude'ning billing'ga kirish huquqi yo'q. Bu endi faqat ichki botlarni emas, balki sotilishi rejalashtirilgan mahsulotning (`shifokor_yordamchisi`) mijozga ko'rinadigan AI-funksiyasini ham buzmoqda.
+
+**`moliya_bot` bu muammodan butunlay mustaqil** — alohida/ajratilgan Anthropic kaliti ishlatadi, shared billing tugashi unga ta'sir qilmaydi.
+
+**Qoida:** istalgan botning Claude-funksiyasi xato bersa yoki jim qolsa, kod xatosini qidirishdan OLDIN billing holatini tekshiring — bu hozirgacha haqiqiy sabab 3 marta bo'lgan.
 
 ---
 
 ## Loyihalar ro'yxati
 
-| # | Loyiha | Holat | Tavsif | Port | RAM (jonli, 08-08) |
+### ALLMAX biznes loyihalari
+
+| # | Loyiha | Holat | Tavsif | Port | RAM (10-14) |
 |---|---|---|---|---|---|
-| 1 | [allmax_dashboard](#1-allmax_dashboard) | ✅ Faol | Telethon agent statistikasi uchun ichki web dashboard | 8080 (ichki) | ~35 MB |
-| 2 | [allmax_food_order_bot](#2-allmax_food_order_bot) | ✅ Faol | 7 bo'lim uchun kunlik ovqat buyurtma + Owner Panel | — | ~144 MB |
-| 3 | [bitrix_lead_alert_bot](#3-bitrix_lead_alert_bot) | ✅ Faol | Bitrix24 yangi lead → Telegram guruh alert (amalda polling) | 8000 (tashqi yopiq) | ~87 MB |
-| 4 | [feedback_bot](#4-feedback_bot) | ✅ Faol | Mijoz fikr-mulohaza (reyting, media, telefon) yig'ish | — | ~114 MB |
-| 5 | [food_control_bot](#5-food_control_bot) | ✅ Faol | Marketing bo'limi ovqat nazorati (12 xodim faol) | — | ~137 MB |
-| 6 | [marketing_task_control_bot](#6-marketing_task_control_bot) | ✅ Faol | Vazifalar + Eisenhower matritsa grafik hisobot | — | ~92 MB |
+| 1 | [allmax_dashboard](#1-allmax_dashboard) | ✅ Faol | Telethon agent statistikasi uchun ichki web dashboard | 8080 (ichki) | 34 MB |
+| 2 | [allmax_food_order_bot](#2-allmax_food_order_bot) | ✅ Faol | 7 bo'lim uchun kunlik ovqat buyurtma + Owner Panel | — | 145 MB |
+| 3 | [bitrix_lead_alert_bot](#3-bitrix_lead_alert_bot) | ✅ Faol | Bitrix24 yangi lead → Telegram guruh alert (amalda polling) | 8000 (tashqi yopiq) | 72 MB |
+| 4 | [feedback_bot](#4-feedback_bot) | ✅ Faol | Mijoz fikr-mulohaza (reyting, media, telefon) yig'ish | — | 119 MB |
+| 5 | [food_control_bot](#5-food_control_bot) | ✅ Faol | Marketing bo'limi ovqat nazorati (12 xodim faol) | — | 137 MB |
+| 6 | [marketing_task_control_bot](#6-marketing_task_control_bot) | ✅ Faol | Vazifalar + Eisenhower matritsa grafik hisobot | — | 94 MB |
 | 7 | [allmax_telethon](#7-allmax_telethon) | ⏸ To'xtatilgan (07-24) | ALLMAX biznes akkaunt — Community Agent (savdo/support) | — | — |
 | 8 | [telegram_ai_assistant](#8-telegram_ai_assistant) | ⏸ To'xtatilgan (07-08) | Egasining shaxsiy akkaunti uchun Claude yordamchi | — | — |
 | 9 | [allmax_instagram_agent](#9-allmax_instagram_agent) | ⏸ To'xtatilgan (06-28) | Instagram DM Community Agent (telethon'ning egizagi) | 8002 (410 qaytadi) | — |
 | 10 | [allmax_hr_bot](#10-allmax_hr_bot) | ⏸ To'xtatilgan (06-20) | To'liq HR pipeline: ariza → AI intervyu → onboarding | — | — |
 | 11 | [allmax_ai_assistant](#11-allmax_ai_assistant) | 🚫 Hech qachon ishga tushirilmagan | Tashlab qo'yilgan prototip (telegram_ai_assistant fork'i) | — | — |
 | — | [instagram_bitrix_dm_lead_bot](#ochirilgan-loyihalar-tarixi) | 🗑 To'liq o'chirilgan (06-26) | Eski Instagram bot — allmax_instagram_agent bilan almashtirilgan | — | — |
-| 12 | [narzullo_portfolio](#12-narzullo_portfolio) | ✅ Faol (shaxsiy) | **ALLMAXga aloqasi yo'q** — server egasining shaxsiy sayti | 443 (static) | — |
 
-> **Jami RAM (6 faol bot):** ~610 MB / 8 GB. Server umumiy: ~1.2–2.1 GB ishlatilmoqda (vaqt bo'yicha o'zgaradi), disk 25% (12G/48G).
+> **Jami RAM (6 faol ALLMAX bot):** ~601 MB / 8 GB.
+
+### Shaxsiy loyihalar (ALLMAXga aloqasi yo'q)
+
+| # | Loyiha | Holat | Tavsif | Manzil | RAM (10-14) |
+|---|---|---|---|---|---|
+| 12 | [narzullo_portfolio](#12-narzullo_portfolio) | ✅ Faol (static) | Server egasining shaxsiy CV/portfolio sayti | narzullayev.com | — (static) |
+| 13 | [ozish_backend](#13-ozish_backend) | ✅ Faol | Fitness/ozish mobil ilovasi backend (FastAPI) | narzullayev.com/ozish-api/ | 91 MB |
+| 14 | [moliya_bot](#14-moliya_bot) | ✅ Faol | Shaxsiy kirim-chiqim (moliya) trekeri Telegram bot | @meningbugalterimbot | 692 MB |
+| 15 | [intim-shop-parfume](#15-intim-shop-parfume) | ✅ Faol | INTIM SHOP — onlayn do'kon + Telegram admin | intimshop.net | 49 MB |
+| 16 | [shifokor_yordamchisi](#16-shifokor_yordamchisi) | ✅ Faol | Ekhokardiografiya ta'lim/klinik platforma | shifokor.narzullayev.com | 16 MB |
+| 17 | [moxa_taplink](#17-moxa_taplink) | ✅ Faol (static) | "Moxa Parfume" link-in-bio sahifasi | moxa.intimshop.net | — (static) |
+
+> **Jami RAM (barcha 10 faol xizmat, ALLMAX+shaxsiy):** ~1.45 GB / 8 GB. Server umumiy: 2.3Gi/7.8Gi ishlatilmoqda (boshqa xizmatlar — nginx/postgres/redis/OS — bilan birga), disk 33% (16G/48G).
 
 ---
 
-# Faol loyihalar
+# Faol loyihalar — ALLMAX
 
 ## 1. allmax_dashboard
 
@@ -64,9 +89,9 @@ Yagona maqsadli FastAPI ilova: `allmax_telethon/analytics/telegram_dm_log.sqlite
 | `/api/daily` | GET | Oxirgi N kunlik (7/14/30) statistikasi — bar-grafik uchun |
 | `/api/contacts` | GET | Oxirgi N ta kontakt (ism, username, mavzu, "necha vaqt oldin") |
 
-Frontend — vanilla JS + Tailwind (CDN) + Chart.js (CDN), build qadam yo'q, Jinja2 ishlatilmaydi (`FileResponse` orqali statik HTML). Har 30 soniyada avto-yangilanadi. `docs_url=None` — Swagger/ReDoc atayin o'chirilgan.
+Frontend — vanilla JS + Tailwind (CDN) + Chart.js (CDN), build qadam yo'q. Har 30 soniyada avto-yangilanadi. `docs_url=None` — Swagger/ReDoc atayin o'chirilgan.
 
-**Muhim:** "Tizim holati" paneli (allmax-telethon/Anthropic/MoySklad/Bitrix24 belgilari) **statik/qattiq yozilgan — hech qanday backendga ulanmagan**, doim bir xil holatni ko'rsatadi. Faqat 4 ta stat-karta, grafik va kontaktlar ro'yxati jonli.
+**Muhim:** "Tizim holati" paneli (allmax-telethon/Anthropic/MoySklad/Bitrix24 belgilari) **statik/qattiq yozilgan — hech qanday backendga ulanmagan**. Faqat 4 ta stat-karta, grafik va kontaktlar ro'yxati jonli.
 
 ### Texnologiyalar
 
@@ -76,14 +101,12 @@ Frontend — vanilla JS + Tailwind (CDN) + Chart.js (CDN), build qadam yo'q, Jin
 | `uvicorn[standard]` | ASGI server |
 | `python-multipart` | Login form parsing |
 | `aiofiles` | Statik fayllarga async kirish |
-| `python-dotenv` | **(2026-08-08 qo'shildi)** `.env`dan login/parol o'qish |
+| `python-dotenv` | `.env`dan login/parol o'qish |
 
 ### Konfiguratsiya
 
-**2026-08-08gacha `.env` fayli umuman yo'q edi** — EMAIL/PASSWORD `main.py` ichida ochiq matnda edi (xavfsizlik bo'limiga qarang). Endi:
 ```env
-DASHBOARD_EMAIL=...
-DASHBOARD_PASSWORD=...
+DASHBOARD_EMAIL, DASHBOARD_PASSWORD
 ```
 
 ### Fayllar
@@ -92,7 +115,7 @@ DASHBOARD_PASSWORD=...
 allmax_dashboard/
 ├── main.py            — Butun FastAPI ilova (auth + API), ~160 qator
 ├── requirements.txt
-├── .env               — (2026-08-08dan, gitignored)
+├── .env               — (gitignored)
 └── static/
     ├── index.html      — SPA: stat kartalar, grafik, kontaktlar, "tizim holati"
     └── login.html       — Login forma
@@ -115,40 +138,24 @@ nginx:   https://allmax.tizm.uz/dashboard/  →  proxy_pass http://127.0.0.1:808
 ### Nima qiladi
 
 **A) Bo'lim admini / o'rinbosar oqimi:**
-1. Har kuni belgilangan vaqtda (standart **17:00**, DB orqali o'zgartiriladi) scheduler har bo'lim adminiga ertangi menyuni (**3 haftalik** aylanma sikldan, 2026-08-08da Sharqona Cateringning yangi menyusi bilan 2 haftadan kengaytirildi) va "📝 Buyurtma berish" tugmasini yuboradi
+1. Har kuni belgilangan vaqtda (standart **17:00**, DB orqali o'zgartiriladi) scheduler har bo'lim adminiga ertangi menyuni (**3 haftalik** aylanma sikl) va "📝 Buyurtma berish" tugmasini yuboradi
 2. Admin tushlik va kechki ovqat porsiya sonini kiritadi → tasdiqlaydi → `department_orders` jadvaliga yoziladi
 3. `/edit` — tasdiqlangan buyurtmani qayta tahrirlash
 4. **O'rinbosarga yuborish** — admin kunlik so'rovni o'rinbosarga bir martalik topshirishi mumkin
-5. **"Boshliqlar" bo'limi "fixed"** — DBda qayd etilgan doimiy son (hozir 3/2), admin kerak emas, scheduler avtomatik yozadi
-6. Doimiy tugmalar: **"🍽 Yakuniy hisobot"** (video-note bilan qoldiq ovqat isboti, guruhga yuboriladi), **"💬 Fikr-mulohaza"** (barcha Ownerlarga yuboriladi)
-7. Bir foydalanuvchi uchun parallel buyurtma/hisobot/feedback boshlanishini bloklaydigan "conflict guard" + har user uchun alohida `asyncio.Lock`
+5. **"Boshliqlar" bo'limi "fixed"** — DBda qayd etilgan doimiy son (3/2), admin kerak emas, scheduler avtomatik yozadi
+6. Doimiy tugmalar: **"🍽 Yakuniy hisobot"** (video-note bilan qoldiq ovqat isboti), **"💬 Fikr-mulohaza"**
+7. Bir foydalanuvchi uchun parallel buyurtma/hisobot/feedback boshlanishini bloklaydigan "conflict guard"
 
-**B) Owner Panel (`/owner`, faqat `OWNER_IDS`, hozir 2 ta owner):**
-- 📊 Ertangi holat — qaysi bo'lim javob berdi/bermadi, kim va qachon tasdiqladi
-- ✏️ Buyurtma kiritish — istalgan bo'lim uchun to'g'ridan-to'g'ri override
-- 🏢 Bo'limlar — to'liq CRUD: qo'shish/o'chirish, admin/o'rinbosar tayinlash, "kunlik so'ralsin" ↔ "fixed" rejim almashtirish
-- 👑 Ownerlar — qo'shish/o'chirish (oxirgi ownerni o'chirishga yo'l qo'ymaydi)
-- 📝 Menyu — 21 kunlik (3 haftalik) siklni ko'rish/tahrirlash
-- 🔄 Sikl — "bugun siklning qaysi kuni" ni bir bosishda qayta belgilash
-- 🕐 Vaqtlar — so'rov va hisobot vaqtini o'zgartirish (APScheduler `reschedule_job` — restart shart emas)
-- 📋 **Hisobotni hozir olish** (eng yangi funksiya, 2026-08-07 qo'shilgan)
+**B) Owner Panel (`/owner`, faqat `OWNER_IDS`, 2 ta owner):**
+- 📊 Ertangi holat, ✏️ Buyurtma kiritish (override), 🏢 Bo'limlar CRUD, 👑 Ownerlar, 📝 Menyu (21 kunlik sikl), 🔄 Sikl, 🕐 Vaqtlar, 📋 Hisobotni hozir olish
 
-**C) Rejalashtirilgan vazifalar** (`Asia/Tashkent`, `misfire_grace_time=3600`):
-- `send_daily_poll` — standart 17:00, jonli logda tasdiqlangan: "7/7 bo'limga yuborildi"
-- `send_owner_report` — kodda 18:00, lekin **DBda hozir 20:00ga sozlangan** — "2/2 ownerga yuborildi"
+**Muhim dizayn qarori:** `.env`dagi qiymatlar faqat birinchi ishga tushirishda "seed" sifatida ishlatiladi — shundan keyin **baza yagona haqiqat manbai**.
 
-Real hajmlar (08-06/07): WMS 7/7, Marketing 12/9, Umumiy1 6/6, Umumiy2 3/2, Moliya 13/10, Savdo 17/10 + Boshliqlar avtomatik 3/2 — barcha 7 bo'lim barqaror ishlayapti.
-
-**Muhim dizayn qarori:** `.env`dagi qiymatlar faqat birinchi ishga tushirishda "seed" sifatida ishlatiladi — shundan keyin **baza yagona haqiqat manbai**, `.env`ni o'zgartirish hech narsaga ta'sir qilmaydi, hammasi Owner Panel orqali. Bu ataylab shunday qilingan (kodda izoh bilan tasdiqlangan).
+**Menyu:** 2026-08-22'da 1- va 2-hafta "Xasanov" kontaktidan kelgan yangi Sharqona Catering menyusi bilan yangilandi (3-hafta ataylab tegilmadi, hali 08-08'dagi eski taomlar).
 
 ### Texnologiyalar
 
-| Kutubxona | Vazifasi |
-|---|---|
-| `aiogram==3.17.0` | Telegram bot |
-| `apscheduler==3.10.4` | Kunlik so'rov + hisobot |
-| `aiosqlite==0.20.0` | Async SQLite |
-| `pytz==2024.2` | Vaqt zonasi |
+`aiogram==3.17.0`, `apscheduler==3.10.4`, `aiosqlite==0.20.0`, `pytz==2024.2`
 
 ### Konfiguratsiya (faqat birinchi ishga tushirish uchun "seed")
 
@@ -164,19 +171,13 @@ ANCHOR_DATE, ANCHOR_INDEX, DB_PATH
 
 ```
 allmax_food_order_bot/
-├── main.py                — Bot ishga tushirish, ~35 qator
-├── data/orders.db          — Jonli SQLite (5 jadval: menu, settings, department_orders, departments, owners)
+├── main.py                — Bot ishga tushirish
+├── data/orders.db          — Jonli SQLite (menu, settings, department_orders, departments, owners)
 └── app/
-    ├── config.py            — .env seed + runtime DB-config
-    ├── database.py          — Barcha CRUD, avtomigratsiya (~370 qator)
-    ├── keyboards.py         — Barcha klaviaturalar (~370 qator)
-    ├── scheduler.py         — Kunlik so'rov + hisobot job'lari
-    ├── states.py
-    ├── handlers/admin.py    — Admin/o'rinbosar oqimi (~560 qator)
-    ├── handlers/owner.py    — To'liq Owner Panel (~680 qator)
+    ├── config.py, database.py, keyboards.py, scheduler.py, states.py
+    ├── handlers/admin.py, handlers/owner.py
     └── services/menu_service.py, report_service.py
 ```
-~2385 qator ilova kodi — kichik skript emas, to'liq ichki tizim.
 
 ### Systemd
 
@@ -190,37 +191,25 @@ port:    yo'q (long-polling)
 
 ## 3. bitrix_lead_alert_bot
 
-> Bitrix24 CRMga yangi lead tushganda Telegram guruhiga xabar yuboradi. **Amalda faqat 60 soniyalik polling orqali ishlaydi** — real-time webhook yo'li kod darajasida bor, lekin tashqaridan yetib bo'lmaydi (yuqoridagi xavfsizlik bo'limiga qarang).
+> Bitrix24 CRMga yangi lead tushganda Telegram guruhiga xabar yuboradi. **Amalda faqat 60 soniyalik polling orqali ishlaydi.**
 
 ### Nima qiladi
 
-Kod hujjatlar taxmin qilganidan ancha puxtaroq — har lead uchun to'liq holat mashinasi (`pending → sent/skipped/failed`, urinishlar soni, oxirgi xato, WAL rejimi):
+1. **Backup polling** — har 60s Bitrix24 `crm.item.list` so'raladi
+2. **Realtime-baseline himoyasi** — eski leadlar hech qachon xato alert qilinmaydi
+3. **Kontakt boyitish**, **qayta urinish** (5 marta), Telegram tezlik cheklovi
 
-1. **Backup polling** — har `POLL_INTERVAL_SECONDS` (60s) da Bitrix24 `crm.item.list` (yoki eski `crm.lead.list` fallback) so'raladi
-2. **Realtime-baseline himoyasi** — birinchi ishga tushganda saqlangan checkpointga ishonmasdan, Bitrix'dagi eng katta lead ID'ni "boshlanish nuqtasi" deb oladi — eski leadlar hech qachon xato alert qilinmaydi
-3. **Kontakt boyitish** — lead'ga bog'langan contact bo'lsa, ism/telefon/email shu yerdan olinadi
-4. **Qayta urinish** — `RETRY_MAX_ATTEMPTS` (5) marta, ortib boruvchi kechikish bilan, har lead uchun alohida `asyncio.Lock`
-5. Telegram tomonda `TELEGRAM_MIN_DELAY_SECONDS` bilan tezlik cheklovi + 429 `retry_after` bilan ishlash
-
-**Haqiqiy endpoint'lar** (eski hujjatda noto'g'ri `/webhook` deb yozilgan edi):
+**Endpoint'lar:**
 ```
-GET  /health                     — {"ok":true,"stats":{"sent":N,"skipped":N}}
-POST /bitrix/lead                — webhook qabul qiluvchi (form yoki JSON)
-POST /manual/lead/{lead_id}       — qo'lda test uchun (realtime filtrni chetlab o'tadi)
+GET  /health
+POST /bitrix/lead
+POST /manual/lead/{lead_id}
 POST /admin/retry-pending
 ```
 
-Jonli holat (08-08 tekshiruvda `/health` orqali): **1198 ta lead muvaffaqiyatli yuborilgan, 50 ta o'tkazib yuborilgan (eski baseline), 0 xato**.
-
 ### Texnologiyalar
 
-| Kutubxona | Vazifasi |
-|---|---|
-| `fastapi` | Webhook server |
-| `uvicorn[standard]` | ASGI |
-| `apscheduler` | Backup polling |
-| `httpx` | Bitrix24 + Telegram API |
-| `pydantic` | Validatsiya |
+`fastapi`, `uvicorn[standard]`, `apscheduler`, `httpx`, `pydantic`
 
 ### Konfiguratsiya
 
@@ -231,25 +220,22 @@ APP_HOST, APP_PORT, TIMEZONE, LOG_LEVEL, DATABASE_PATH, LOG_FILE,
 POLL_INTERVAL_SECONDS, POLL_LOOKBACK_LIMIT, RETRY_MAX_ATTEMPTS, RETRY_BASE_DELAY_SECONDS,
 REQUEST_TIMEOUT_SECONDS, REALTIME_ONLY_MODE, POLL_SEND_UNKNOWN_ON_START, TELEGRAM_MIN_DELAY_SECONDS
 ```
-*(`.env.example` 2026-08-08gacha haqiqiy qiymatlar bilan git'da edi — endi placeholder, yuqoridagi xavfsizlik bo'limiga qarang.)*
 
 ### Fayllar
 
 ```
 bitrix_lead_alert_bot/
-├── run.py, Dockerfile, docker-compose.yml   (Docker fayllar bor, lekin production systemd+venv orqali ishlaydi)
-├── data/bot.db, logs/bot.log(.1-.5)
+├── run.py, Dockerfile, docker-compose.yml
+├── data/bot.db, logs/bot.log
 ├── scripts/get_chat_id.py
-└── app/
-    ├── main.py, bitrix.py, telegram_client.py, processor.py
-    ├── scheduler.py, database.py, config.py, lead_utils.py, logger.py
+└── app/ main.py, bitrix.py, telegram_client.py, processor.py, scheduler.py, database.py, config.py
 ```
 
 ### Systemd
 
 ```
 service: bitrix-lead-alert-bot
-port:    8000 (localhost, tashqaridan YOPIQ — UFW + nginx marshrutsiz)
+port:    8000 (localhost, tashqaridan YOPIQ)
 ```
 
 ---
@@ -260,18 +246,13 @@ port:    8000 (localhost, tashqaridan YOPIQ — UFW + nginx marshrutsiz)
 
 ### Nima qiladi
 
-Oqim (eski hujjatda "reyting birinchi" deb noto'g'ri yozilgan edi — **aslida aksincha**):
-1. `/start` → "📝 Fikr qoldirish" (reply-klaviatura)
-2. Foydalanuvchi **avval kontent yuboradi** — matn (min 5 belgi) yoki rasm/video/video-note/ovoz
-3. Keyin **1–5 yulduz** so'raladi (reply-klaviatura tugmalari, inline emas)
-4. Keyin **telefon raqami** so'raladi (ixtiyoriy — "share contact" yoki "⏭ O'tkazib yuborish")
-5. Yakunda barcha ma'lumot birlashtirilib `ADMIN_CHAT_ID`ga yuboriladi (media guruh + alohida ovoz/video-note xabarlari)
-6. **Hujjatlashtirilmagan xususiyat:** har foydalanuvchi tarixi saqlanadi (oxirgi 50 matn, 10 media) — yangi fikr kelganda bot **admin guruhidagi eski xabarini o'chirib, yangilangan yig'ma xulosani qayta yuboradi** (xabarlar oqimi emas, bitta yangilanuvchi karta)
-7. Saqlash atomik (`feedbacks.json.tmp` → `os.replace()`, `asyncio.Lock` ostida)
-
-Jonli holat: 10 ta noyob foydalanuvchi fikr qoldirgan (5★×6, 2★×3, 1★×1).
-
-**Tuzatilgan tarixiy bug (commit `ca3f35b`, 06-17):** "O'tkazib yuborish" tugmasi qayrilgan tirnoq (’) ishlatgan, handler esa oddiy tirnoqni (') tekshirgan — mos kelmagani uchun tugma ishlamas edi. Hozir ikkalasi ham to'g'ri, tasdiqlangan.
+1. `/start` → "📝 Fikr qoldirish"
+2. Foydalanuvchi avval kontent yuboradi (matn/rasm/video/ovoz)
+3. 1–5 yulduz so'raladi
+4. Telefon raqami so'raladi (ixtiyoriy)
+5. Barcha ma'lumot `ADMIN_CHAT_ID`ga yuboriladi
+6. Har foydalanuvchi tarixi saqlanadi — yangi fikr kelganda admin guruhidagi eski xabar o'chirilib, yangilangan yig'ma karta qayta yuboriladi
+7. Saqlash atomik (`feedbacks.json.tmp` → `os.replace()`)
 
 ### Texnologiyalar
 
@@ -308,16 +289,14 @@ bot:     @allmax_feedback_bot (id 8629969732)
 
 ### Nima qiladi
 
-1. **Menyu yuborish** (scheduler, DB-konfiguratsiya qilinadigan vaqt, **jonlida hozir 13:30** Toshkent — eski hujjatda 17:30 deb yozilgan edi, bu eskirgan) — **21 kunlik (3 haftalik)** aylanma sikldan ertangi menyu (2026-08-08da 2 haftadan kengaytirildi), inline "1-ovqat/2-ovqat" tugmalari bilan yuboriladi. Ikkala ovqat mahali (1-ovqat/2-ovqat) uchun bir xil taom ko'rsatiladi — yangi menyuda kuniga bitta taom beriladi.
-2. Foydalanuvchi ha/yo'q tanlaydi, tasdiqlaydi → agar **barcha** faol foydalanuvchilar javob bersa, admin avtomatik to'liq hisobotni oladi
-3. **Ovqat eyilgani isboti** — "ha" deganlar uchun "🍽 Ovqat hisoboti" tugmasi, qaysi ovqatligini tanlab **video-note** (dumaloq video) yuboradi — bu admin va guruhga yuboriladi
-4. **Yakuniy hisobot** (DB-konfiguratsiya, hozir 22:00) — kunlik to'liq hisob-kitob (buyurtma/tugatilgan/javob bermagan, "qoldiq ovqat" soni)
+1. **Menyu yuborish** (13:30 Toshkent) — 21 kunlik (3 haftalik) sikldan ertangi menyu, inline tugmalar bilan
+2. Foydalanuvchi javob beradi → barcha faol foydalanuvchilar javob bersa, admin avtomatik hisobot oladi
+3. **Ovqat eyilgani isboti** — video-note orqali
+4. **Yakuniy hisobot** (22:00) — kunlik hisob-kitob
 
-**Admin imkoniyatlari — ikkita parallel interfeys:**
-- Eski matn buyruqlari: `/set_users`, `/set_group`, `/set_menu`, `/set_cycle`, `/report`, `/today`, `/tomorrow`, `/reset_day`
-- **Yangi `/admin` inline panel** (commit `aa9bf55`, 07-13) — bugungi holat, xodimlarni birma-bir qo'shish/o'chirish (12 ta cheklov olib tashlangan), buyurtmalarni ko'rish, **har xodimning buyurtmasini admin to'g'ridan-to'g'ri o'zgartirishi**, menyuni tahrirlash, sikl qayta belgilash, **jadval vaqtlarini jonli o'zgartirish** (restart shart emas), ko'p-adminlilik
+**Admin:** eski matn buyruqlari + yangi `/admin` inline panel (xodimlarni qo'shish/o'chirish, buyurtma o'zgartirish, menyu/sikl/vaqt sozlash, ko'p-adminlilik).
 
-**Jonli tuzatish (bu tekshiruvda topilgan):** hujjatlarda "13 xodim" deb yozilgan, lekin bazada 13tadan **faqat 12tasi hozir faol** (2tasi admin panel orqali soft-remove qilingan, tarix uchun saqlangan). Haqiqiy faol son: **12**, jonli logda ham tasdiqlangan ("Ertangi menyu yuborildi: 12 foydalanuvchiga").
+**Faol xodimlar: 12** (13tadan 2tasi admin panel orqali soft-remove qilingan). **Menyu 2026-08-22'da 1- va 2-hafta uchun "Xasanov" kontaktidan yangilandi** (3-hafta eski, 08-08'dagi Sharqona taomlari).
 
 ### Texnologiyalar
 
@@ -336,7 +315,7 @@ food_control_bot/
 ├── main.py, food_control.db
 └── app/
     ├── config.py, database.py, keyboards.py, scheduler.py, utils.py
-    ├── handlers/  admin.py (847 qator), callbacks.py, user.py
+    ├── handlers/  admin.py, callbacks.py, user.py
     └── services/  menu_service.py, order_service.py, report_service.py, user_service.py
 ```
 
@@ -355,25 +334,21 @@ bot:     @ovqatnazoratiuzbot (id 8816441483)
 
 ### Nima qiladi
 
-1. Admin xodimga vazifa yaratadi (matn + qisqa "grafik nomi" + P1–P4 muhimlik)
-2. Xodim deadline taklif qiladi → admin tasdiqlaydi yoki o'zgartiradi → `ACTIVE`
-3. **Eslatmalar** — 24 soat, 3 soat, 1 soat qolganda (1 soatlik eslatma adminga ham boradi), har eslatma turi DBda belgilanadi (restart'da qaytalanmaydi)
-4. **Muddati o'tsa** — avtomatik `OVERDUE`ga o'tadi, ikkalasiga ham ogohlantirish, grafik qizil rangda "KECHIKKAN" belgisi bilan qayta chiziladi
-5. Xodim "yakunlangan" deb belgilaydi → admin o'z vaqtida/kech bajarilgani haqida xabar oladi
-6. **Grafik hisobot** (Pillow) — 1890×1063 shablon nusxasidan (asl fayl hech qachon o'zgarmaydi), har vazifa matni tegishli katakka avto word-wrap bilan yoziladi, 5tadan ortiq vazifa bo'lsa qo'shimcha sahifa
-
-Muhimlik hisoblash: statik P1=400...P4=100 ball + muddat yaqinligiga qarab bonus (+80 <24s, +50 <3k, +20 <7k) + kechikkanlarga +1000 jarima. Ruxsat — qattiq allowlist middleware, faqat admin yoki tayinlangan xodim botdan foydalana oladi.
+1. Admin xodimga vazifa yaratadi (P1–P4 muhimlik)
+2. Xodim deadline taklif qiladi → admin tasdiqlaydi → `ACTIVE`
+3. Eslatmalar — 24s/3s/1s qolganda, muddati o'tsa avtomatik `OVERDUE`
+4. Xodim yakunlaydi → admin xabar oladi
+5. **Grafik hisobot** (Pillow) — shablon asosida, har vazifa auto word-wrap bilan
 
 ### Texnologiyalar
 
-`aiogram>=3.7,<4`, `aiosqlite`, `apscheduler>=3.10,<4`, `Pillow`, `pytest`/`pytest-asyncio` (2 test fayli bor)
+`aiogram>=3.7,<4`, `aiosqlite`, `apscheduler>=3.10,<4`, `Pillow`, `pytest`
 
 ### Konfiguratsiya
 
 ```env
 BOT_TOKEN, ADMIN_ID, TIMEZONE, DATABASE_PATH, LOG_LEVEL
 ```
-*(`.env.example` 2026-08-08gacha haqiqiy tokenga o'xshash qiymat bilan git'da edi — endi placeholder.)*
 
 ### Fayllar
 
@@ -385,7 +360,7 @@ marketing_task_control_bot/
 ├── services/  cleanup_service, matrix_image_service, notification_service, priority_service, reminder_service, task_service
 ├── middlewares/ auth_middleware.py
 ├── assets/    toliq_ish_vazifalar_template.png
-└── tests/     test_matrix_image_service.py, test_priority_service.py
+└── tests/
 ```
 
 ### Systemd
@@ -397,33 +372,29 @@ bot:     @allmax_vazifalarbot (id 8061098327)
 
 ---
 
-# To'xtatilgan loyihalar
+# To'xtatilgan loyihalar — ALLMAX
 
-*Kod serverda bor, systemd xizmat ham mavjud, lekin hozir `disabled`+`inactive` — qayta yoqish uchun `systemctl enable --now <service>`, lekin pastdagi har bir izohni o'qib chiqing (ba'zilarida qayta yoqishdan oldin tekshirish kerak bo'lgan narsalar bor).*
+*Kod serverda bor, systemd xizmat ham mavjud, lekin hozir `disabled`+`inactive`. 2026-10-14'da qayta tekshirildi — barchasi hali ham o'zgarishsiz to'xtagan holatda.*
 
 ## 7. allmax_telethon
 
-> ALLMAX biznes Telegram akkaunti (`allmax_cm_session`) nomidan ishlaydigan **Community Agent** — mijozlar bilan avtomatik suhbat, MoySklad stok tekshiruvi, Bitrix24 CRM/Projects integratsiyasi. Eng ko'p ishlab chiqilgan loyiha (30+ commit).
+> ALLMAX biznes Telegram akkaunti nomidan ishlaydigan **Community Agent** — mijozlar bilan avtomatik suhbat, MoySklad stok tekshiruvi, Bitrix24 CRM/Projects integratsiyasi. Eng ko'p ishlab chiqilgan loyiha.
 
 ### To'xtatilgan sana va sababi
 
-**2026-07-24, 09:16** — atayin, toza to'xtatish (jurnal: mijoz ovoz xabarini qayta ishlayotgan payti, keyin `systemd[1]: Stopped ... Deactivated successfully`) — halokat emas.
+**2026-07-24, 09:16** — atayin, toza to'xtatish.
 
 ### Nima qiladi
 
-- Telethon orqali ALLMAX akkauntiga kelgan DM'larni (matn/ovoz/video/rasm/GIF/stiker) qabul qiladi, ketma-ket xabarlarni 1.8s burst-collector bilan birlashtiradi
-- Claude (`community_agent.py`) oxirgi 30 kunlik tarixni ko'rib javob beradi — til avtomatik aniqlanadi (UZ/RU/EN)
-- **Operator ustuvorligi** — inson operator xabar yozsa, agent shu foydalanuvchi uchun jim bo'lib qoladi (jonli logda tasdiqlangan)
-- `check_stock` (MoySklad, 600s cache, sinonim/fuzzy qidiruv: "remen"→kamar, "ochki"→ko'zoynak), `order_complete` (Bitrix24 Lead+Project task), `needs_human`, `share_location` — 4 ta Claude tool, agentik loop (maks 4 iteratsiya)
-- Ism+telefon aniqlansa, to'liq buyurtma kutmasdan Bitrix24 Project task ochiladi
-- Har kuni 00:00 UZTda kunlik hisobot guruhga yuboriladi
-- BTS yetkazib berish uchun 14 viloyat/100+ tuman qamrovi kod ichida (taxminiy, izoh bilan belgilangan)
-- Ovoz/video: faster-whisper (`base`, `language="uz"`), 10 daqiqa harakatsizlikdan keyin avto-unload (~300MB tejash)
+- Telethon orqali kelgan DM'larni (matn/ovoz/video/rasm/GIF/stiker) qabul qiladi, 1.8s burst-collector bilan birlashtiradi
+- Claude oxirgi 30 kunlik tarixni ko'rib javob beradi (UZ/RU/EN avtomatik)
+- **Operator ustuvorligi** — inson operator yozsa, agent jim bo'lib qoladi
+- `check_stock` (MoySklad, 600s cache), `order_complete` (Bitrix24), `needs_human`, `share_location`
+- Har kuni 00:00 UZTda kunlik hisobot
 
 ### Texnologiyalar
 
-`telethon`, `anthropic`, `faster-whisper`, `ffmpeg` (OGG/WebM magic-byte aniqlash), `sqlite3`, `requests`
-**⚠️ `requirements.txt` bu loyihada YO'Q** — muhitni noldan qayta tiklash uchun jonli venv'dan versiyalarni chiqarish kerak bo'ladi.
+`telethon`, `anthropic`, `faster-whisper`, `ffmpeg`, `sqlite3`, `requests` — ⚠️ `requirements.txt` bu loyihada YO'Q.
 
 ### Konfiguratsiya (asosiylari)
 
@@ -433,18 +404,17 @@ COMMUNITY_AGENT_ENABLE, COMMUNITY_HISTORY_LIMIT, COMMUNITY_HISTORY_DAYS, COMMUNI
 COMMUNITY_WORK_START, COMMUNITY_WORK_END, LEAD_GROUP, MESSAGE_BURST_WINDOW, MAX_BURST_MESSAGES,
 MOYSKLAD_TOKEN, BITRIX_ENABLE, BITRIX_WEBHOOK_URL, BITRIX_PROJECT_* (7 ta qo'shimcha)
 ```
-*(To'liq ro'yxat ~30 ta o'zgaruvchi — eng boy konfiguratsiya sirtiga ega loyiha.)*
 
 ### Fayllar
 
 ```
 allmax_telethon/
-├── main_ready_project.pyw   — Asosiy, 62KB
-├── community_agent.py        — Claude agent, 21KB
-├── media_handler.py          — Whisper + vizual, 16KB
-├── moysklad.py                — Stok tekshiruv, 7KB
+├── main_ready_project.pyw   — Asosiy
+├── community_agent.py        — Claude agent
+├── media_handler.py          — Whisper + vizual
+├── moysklad.py                — Stok tekshiruv
 ├── allmax_cm_session.session
-└── analytics/                 — 4 ta SQLite baza (dm_events, daily_contacts, va h.k.)
+└── analytics/                 — SQLite bazalar
 ```
 
 ### Systemd
@@ -454,35 +424,27 @@ service: allmax-telethon
 holat:   disabled, inactive (2026-07-24dan)
 ```
 
-⚠️ Loyihaning o'zidagi README'da `.env` kalitlari (`API_ID`, `BITRIX24_WEBHOOK_URL`) jonli `.env`dagi haqiqiy nomlardan (`TELEGRAM_API_ID`, `BITRIX_WEBHOOK_URL`) farq qiladi — mahalliy README ham eskirgan.
-
 ---
 
 ## 8. telegram_ai_assistant
 
-> Egasining **shaxsiy** Telegram akkaunti uchun umumiy maqsadli Claude yordamchisi — erkin tilda topshiriq berasiz, bot Telethon orqali sizning akkountingiz nomidan bajaradi.
+> Egasining **shaxsiy** Telegram akkaunti uchun umumiy maqsadli Claude yordamchisi.
 
 ### To'xtatilgan sana va sababi
 
-**2026-07-08, 21:36** — bundan oldin **halokatli tsikl** bo'lgan: `RuntimeError: Telegram session topilmadi yoki tasdiqlanmagan` xatosi bilan systemd har ~5 soniyada qayta urinib, jurnal **9462+ marta** qayta ishga tushirishni qayd etgan. Keyin qo'lda to'xtatilgan. Session fayli hozir tekshirilganda (to'g'ridan-to'g'ri sqlite3 orqali) **haqiqatan ham avtorizatsiyadan o'tgan** ko'rinadi — ya'ni kimdir muammoni aniqlagandan keyin login jarayonini qayta bajargan, lekin shundan beri hech qachon qayta ishga tushirilmagan, shuning uchun bugun ham ishlab ketishi 100% kafolatlanmaydi (avval sinab ko'rish tavsiya etiladi).
+**2026-07-08, 21:36** — oldin halokatli tsikl (9462+ restart) bo'lgan, session avtorizatsiyasi tugab qolgan. Qayta tiklangan ko'rinadi, lekin shundan beri qayta ishga tushirilmagan.
 
 ### Nima qiladi
 
-- Alohida **buyruq boti** (`@Claude_ai_oBot`) orqali OWNER_USER_ID'dan kelgan har qanday xabarni "topshiriq" deb qabul qiladi
-- `claude_agent.py` — Claude agentik tool-use loop (maks 25 qadam), 6 ta tool: `list_dialogs`, `get_chat_history`, `search_messages`, `send_message`, `get_chat_info`, `get_current_datetime`
-- **Eng boy media pipeline (3 loyiha ichida):** ovoz/video/audio (Whisper), **video** (kadr ajratish + Claude Vision + audio transkript birgalikda), rasm, va **HEIC/HEIF** (iPhone fotolar) — boshqa ikkita o'xshash loyihada bu yo'q
-- `file_reader.py` — PDF/Word/Excel/CSV fayllarni o'qib Claude'ga beradi
-- Faqat matn/HTML formatida javob beradi (Telegram-xavfsiz teglar, Markdown emas)
-- Suhbat tarixi JSON faylda (`conversation_history.json`, 60KB — haqiqiy foydalanish tarixi 06-23gacha)
+- `@Claude_ai_oBot` orqali OWNER_USER_ID'dan kelgan xabarni "topshiriq" deb qabul qiladi
+- Claude agentik tool-use loop (maks 25 qadam): `list_dialogs`, `get_chat_history`, `search_messages`, `send_message`, `get_chat_info`, `get_current_datetime`
+- Eng boy media pipeline: ovoz/video/audio, rasm, HEIC/HEIF
+- `file_reader.py` — PDF/Word/Excel/CSV
 
-### Texnologiyalar (`requirements.txt`)
+### Texnologiyalar
 
 ```
-telethon==1.36.0
-anthropic>=0.40.0
-aiogram==3.15.0
-python-dotenv==1.1.1
-faster-whisper>=1.0.0
+telethon==1.36.0, anthropic>=0.40.0, aiogram==3.15.0, python-dotenv==1.1.1, faster-whisper>=1.0.0
 ```
 
 ### Konfiguratsiya
@@ -497,12 +459,9 @@ MAX_AGENT_STEPS, LOG_LEVEL, MAX_TRANSCRIBE_PER_CALL, WHISPER_MODEL_SIZE
 
 ```
 telegram_ai_assistant/
-├── bot.py                — Buyruq bot kirish nuqtasi
-├── claude_agent.py        — Tool-use loop + system prompt
-├── telegram_client.py     — TelegramToolset (Telethon amallar)
-├── media_transcriber.py   — Ovoz/video/rasm/HEIC tushunish
-├── file_reader.py         — PDF/Word/Excel/CSV
-├── memory_store.py, config.py, login_session.py (bir martalik interaktiv login)
+├── bot.py, claude_agent.py, telegram_client.py
+├── media_transcriber.py, file_reader.py
+├── memory_store.py, config.py, login_session.py
 ```
 
 ### Systemd
@@ -517,38 +476,37 @@ holat:   disabled, inactive (2026-07-08dan)
 
 ## 9. allmax_instagram_agent
 
-> `allmax_telethon`ning Instagram egizagi — Claude AI Community Agent, Meta Webhook orqali Instagram DM'larga javob beradi, MoySklad+Bitrix24 bilan integratsiya. **Eski `instagram_bitrix_dm_lead_bot`ning to'liq qayta yozilgan o'rnini bosuvchisi** (2026-06-26, bir xil commit'da eskisi o'chirilib bu qo'shilgan — pastga qarang).
+> `allmax_telethon`ning Instagram egizagi — Claude AI Community Agent, Meta Webhook orqali Instagram DM'larga javob beradi.
 
 ### To'xtatilgan sana va sababi
 
-**~2026-06-27/28** — kaskad xato: Instagram Graph API xabar yuborishda `400 Bad Request` (token eskirgan) + bir vaqtda Anthropic `"credit balance is too low"` xatosi, keyin qo'lda to'xtatilgan.
+**~2026-06-27/28** — Instagram Graph API `400 Bad Request` (token eskirgan) + Anthropic kredit tugashi.
 
 ### Nima qiladi
 
-- FastAPI + Meta Webhook (`GET /webhook` — tasdiqlash handshake, `POST /webhook` — HMAC-SHA256 imzo tekshiruv bilan)
-- Har DM: dublikat tekshiruv (`event_id`) → profil ma'lumot olish → tarix bootstrap → media qayta ishlash (rasm/Reels/video/sticker — Claude Vision yoki matn label) → **Claude Community Agent** javob beradi va Instagramga yuboradi → regex+Claude bilan telefon/ism ajratiladi → Bitrix24 Lead+Project task → Telegram ops guruhiga bildirishnoma
-- 3 ta tool: `check_stock`, `order_complete` (9 maydon), `needs_human`
-- **Target/reklama aniqlash** — Meta payload'dan ad/referral belgilarni topib, shu orqali kelgan leadlarni alohida Bitrix statusda belgilaydi
-- Fon worker (~45s) — Instagram konversatsiyalarini poll qilib, operator qo'lda javob berganini aniqlaydi (operator ustuvorlik patterni, telethon'dagi kabi)
+- FastAPI + Meta Webhook (HMAC-SHA256 imzo tekshiruv)
+- Har DM: dublikat tekshiruv → Claude javob → Instagramga yuborish → telefon/ism ajratish → Bitrix24 Lead+Project → Telegram bildirishnoma
+- Target/reklama aniqlash
 
 ### Nginx marshruti
 
 ```nginx
 location /instagram/ {
-    # allmax_instagram_agent 2026-06-28dan o'chirilgan (8002 tinglamaydi)
-    return 410;
+    return 410;  # backend 06-28dan o'chirilgan
 }
 ```
-Meta hali obunani bekor qilmagan (kuniga ~40-50K so'rov keladi), lekin server endi statik `410 Gone` qaytaradi — proxy urinishi yo'q, log/CPU yuki yo'q. To'liq to'xtatish faqat Meta App Dashboard orqali, foydalanuvchi tomonidan.
 
-### Texnologiyalar (`requirements.txt`)
+**🆕 2026-10-14 — Meta webhook to'foni amalda tugaganga o'xshaydi.** Iyul-avgustda kuniga 40-50K so'rov (barchasi 410 javob) kelib turgan edi — 2026-10-14'dagi 7.6 soatlik namunada atigi 31 ta so'rov chiqdi (~99.8% pasayish, taxminan ~100/kun). To'liq 24 soatlik namuna bilan hali rasman tasdiqlanmagan, lekin kuchli signal.
+
+**🆕 2026-10-14 — ikkala Meta access token (`META_IG_USER_ACCESS_TOKEN`, `META_PAGE_ACCESS_TOKEN`) Graph API orqali tekshirilganda o'lik (muddati 2026-06-23'da tugagan) ekani tasdiqlandi.** Qayta yoqishdan oldin bari bir yangi token olish shart bo'lar edi.
+
+### Texnologiyalar
 
 ```
-fastapi==0.115.8, uvicorn[standard]==0.34.0, httpx==0.28.1,
-pydantic==2.10.6, anthropic>=0.40.0
+fastapi==0.115.8, uvicorn[standard]==0.34.0, httpx==0.28.1, pydantic==2.10.6, anthropic>=0.40.0
 ```
 
-### Konfiguratsiya (qisqartirilgan — to'liq ro'yxat ~45 ta o'zgaruvchi)
+### Konfiguratsiya (qisqartirilgan — ~45 o'zgaruvchi)
 
 ```env
 META_API_MODE, META_VERIFY_TOKEN, META_APP_SECRET, META_IG_USER_ACCESS_TOKEN, META_PAGE_ACCESS_TOKEN,
@@ -560,14 +518,12 @@ TARGET_VIDEO_*, COMMUNITY_AGENT_ENABLE, COMMUNITY_WORK_START/END, MOYSKLAD_TOKEN
 
 ```
 allmax_instagram_agent/
-├── run.py, Dockerfile, docker-compose.yml (production aslida systemd+venv orqali ishlaydi)
-├── README.md / README_RU.md / README_UZ.md
+├── run.py, Dockerfile, docker-compose.yml
 └── app/
     ├── main.py, config.py, database.py, models.py, logger.py
     ├── routes/webhook.py
     ├── services/ community_agent.py, moysklad.py, bitrix_service.py, instagram_service.py,
-    │             telegram_service.py, duplicate_service.py, target_detector.py, meta_signature.py,
-    │             openai_parser.py  (⚠️ nomi "openai" lekin aslida Anthropic Claude chaqiradi)
+    │             telegram_service.py, duplicate_service.py, target_detector.py, meta_signature.py
     └── workers/conversation_sync.py
 ```
 
@@ -578,7 +534,7 @@ service: allmax-instagram-agent
 holat:   disabled, inactive (~2026-06-27/28dan)
 ```
 
-⚠️ **Qayta yoqishdan oldin:** Instagram access token va Anthropic kredit balansini tekshiring — ikkalasi ham to'xtash sababi edi. Shuningdek `app/main.py`dagi FastAPI title/root endpoint hali eski loyihaning nomini (`instagram_bitrix_dm_lead_bot`) ko'rsatadi — funksional emas, faqat kosmetik.
+⚠️ **Qayta yoqishdan oldin:** yangi Instagram access token (eskisi o'lik, tasdiqlangan) va Anthropic kredit balansini (hali tugagan) tekshiring.
 
 ---
 
@@ -588,28 +544,23 @@ holat:   disabled, inactive (~2026-06-27/28dan)
 
 ### To'xtatilgan sana
 
-**2026-06-20, 13:03** — qo'lda SIGTERM (halokat emas, jurnalda xato ko'rinmaydi).
+**2026-06-20, 13:03** — qo'lda SIGTERM.
 
 ### Nima qiladi
 
-1. **Ariza** — til tanlash (UZ/RU) → vakansiyalar ro'yxati → **23 savolli** to'liq anketa (ism, tug'ilgan sana, telefon, viloyat/tuman, oilaviy holat, talaba ma'lumoti, ta'lim, UZ/RU/EN til darajasi, kompyuter savodxonligi, ish jadvali, maosh kutilmasi, manba, kuchli/zaif tomonlar, motivatsiya, ishga chiqish sanasi) → ixtiyoriy **10 tagacha ish tajribasi** yozuvi → rasm → rozilik → **draft-resume** tizimi (tugallanmagan arizani keyin davom ettirish mumkin)
-2. **AI intervyu** — vakansiya+reglamentga mos savollar (standart 10 ta) generatsiya qilinadi, javoblar 0–100 ball, `low/medium/excellent` daraja, admin tavsiyasi (`reject/review/invite_interview`) — AI ishlamasa **heuristik zaxira baholovchi** bor, pipeline hech qachon to'xtamaydi
-3. **PDF eksport** — har nomzod uchun to'liq dossier (ReportLab), adminlarga avtomatik yuboriladi
-4. **Follow-up** — botning o'zi keyinroq "intervyu qanday o'tdi?" deb yozadi, javobni AI tasniflaydi (`accepted/rejected/waiting/unclear`)
-5. **7 kunlik onboarding** — aniq **7 kunga taqsimlangan 20 ta dars**, har biridan keyin AI generatsiya qilgan 10 savolli test, <60% yoki >80% natijada adminga avtomatik ogohlantirish, 20-darsdan keyin 30 savolli yakuniy test
-6. **Clockster integratsiyasi** — faqat stajirovka+yakuniy test tugagandan KEYIN yoqiladi, xodimlarni ism bo'yicha fuzzy-matching bilan bog'laydi
-7. **Excel eksport** — to'liq pipeline jadvali (openpyxl)
-8. **Dinamik admin panel** (`dynamic_admin.py`, 726 qator — loyihadagi eng katta fayl) — vakansiyalar, reglament hujjatlari (DOCX/PDF/TXT, **versiyalash+rollback**), material AI-regeneratsiya (draft→tasdiq→faollashtirish), dars/test tahrirlash, to'liq audit log — HAMMASI kod o'zgartirmasdan
+1. **Ariza** — 23 savolli anketa → tajriba → rasm → rozilik → draft-resume
+2. **AI intervyu** — javoblar 0–100 ball, admin tavsiyasi, AI ishlamasa heuristik zaxira
+3. **PDF eksport**, **Follow-up**, **7 kunlik onboarding** (20 dars + testlar)
+4. **Clockster integratsiyasi** — stajirovka tugagandan keyin
+5. **Dinamik admin panel** — kod o'zgartirmasdan vakansiya/reglament/dars boshqaruvi
 
 ### ⚠️ Muhim topilma: qayta joylashtirish "tuzoq"i
 
-`requirements.txt`da `openai>=1.30,<2` yozilgan va **`anthropic` umuman yo'q**, lekin jonli kod (`app/services/openai_service.py`) haqiqatda faqat `anthropic.AsyncAnthropic` chaqiradi — kodning hech bir joyida `openai` paketi ishlatilmaydi. `.env` ham faqat `ANTHROPIC_API_KEY`/`ANTHROPIC_MODEL` o'qiydi, `OPENAI_API_KEY` uchun sozlama umuman yo'q. Jonli venv'da ikkalasi ham qo'lda o'rnatilgan (`anthropic-0.109.2` va ishlatilmaydigan `openai-1.109.1`), lekin **agar kimdir `pip install -r requirements.txt` bilan noldan o'rnatsa, bot import xatosi bilan ishga tushmaydi** — bu OpenAI→Claude migratsiyasidan (06-16 sessiyasi) qolgan iz. README ham hali `OPENAI_API_KEY`/`OPENAI_MODEL=gpt-5.5` sozlashni aytadi — bu ham eskirgan.
-
-**Kichik topilma:** `app/services/docx_reader.py` — hech qayerda chaqirilmaydigan o'lik kod (Dynamic Admin Panel qayta yozuvidan qolgan), xavfsiz o'chirsa bo'ladi.
+`requirements.txt`da `openai` bor, `anthropic` YO'Q — lekin kod faqat Anthropic chaqiradi. Noldan o'rnatilsa import xatosi bilan ishga tushmaydi.
 
 ### Texnologiyalar (haqiqatda kerak bo'lganlari)
 
-`aiogram>=3.4,<4`, `anthropic` (requirements.txt'da yo'q — qo'lda qo'shish kerak!), `python-dotenv`, `python-docx`, `reportlab`, `openpyxl`, `apscheduler`, `pypdf`
+`aiogram>=3.4,<4`, `anthropic` (requirements.txt'da yo'q!), `python-dotenv`, `python-docx`, `reportlab`, `openpyxl`, `apscheduler`, `pypdf`
 
 ### Konfiguratsiya
 
@@ -619,7 +570,6 @@ DEFAULT_SHOP_ADDRESS, DEFAULT_BRANCH, TIMEZONE, REGULATIONS_DIR, START_IMAGE_PAT
 CLOCKSTER_ENABLED, CLOCKSTER_API_BASE, CLOCKSTER_API_TOKEN, CLOCKSTER_EMPLOYEES_ENDPOINTS,
 CLOCKSTER_ATTENDANCE_ENDPOINTS, CLOCKSTER_SYNC_INTERVAL_MINUTES, CLOCKSTER_LOOKBACK_DAYS, CLOCKSTER_MATCH_THRESHOLD
 ```
-*(`CLOCKSTER_API_TOKEN` bot o'chiq bo'lsa ham boshqa joyda alohida ishlatiladi — [[clockster_api_write]] xotira yozuviga qarang.)*
 
 ### Fayllar
 
@@ -630,9 +580,9 @@ allmax_hr_bot/
     ├── bot.py, config.py, database.py (1363 qator, 27 jadval), states.py
     ├── handlers/  admin.py, dynamic_admin.py (726 qator), followup.py, interview.py,
     │              onboarding.py, resume.py, start.py, vacancies.py
-    ├── services/  clockster_service, docx_reader (o'lik), dynamic_service, excel_service,
-    │              lesson_service, material_service, openai_service (aslida Claude), pdf_service, scheduler_service
-    ├── keyboards/, reglamentlar/ (12 hujjat + uploads/), exports/ (5 namuna PDF)
+    ├── services/  clockster_service, dynamic_service, excel_service, lesson_service,
+    │              material_service, openai_service (aslida Claude), pdf_service, scheduler_service
+    ├── keyboards/, reglamentlar/, exports/
 ```
 
 ### Systemd
@@ -645,32 +595,16 @@ holat:   disabled, inactive (2026-06-20dan)
 
 ---
 
-# Joylashtirilmagan prototip
+# Joylashtirilmagan prototip — ALLMAX
 
 ## 11. allmax_ai_assistant
 
-> ⚠️ **Bu hech qachon systemd xizmati sifatida ishga tushirilmagan** — "to'xtatilgan xizmat" emas, balki bir marta yozilib tashlab qo'yilgan prototip kod.
+> ⚠️ **Bu hech qachon systemd xizmati sifatida ishga tushirilmagan** — bir marta yozilib tashlab qo'yilgan prototip kod.
 
-### Nima uchun bu bo'lim boshqacha
-
-`/etc/systemd/system/`da bu nom bilan hech qanday unit fayl yo'q va hech qachon bo'lmagan — butun fayl tizimi bo'ylab qidiruv, `journalctl`ning to'liq (vaqt bilan cheklanmagan) tarixi ham buni tasdiqladi: **nol yozuv**. Agar systemd biror marta bu xizmatni boshqargan bo'lsa, journald hech bo'lmasa "Started/Stopped" qatorini saqlab qolar edi — boshqa ikkita shunga o'xshash loyiha uchun bo'lgani kabi. To'liq yo'qlik — bu hech qachon ishga tushirilmagan degani.
-
-### Nima uchun yaratilgan
-
-Bitta commit (`b2ee176`, 2026-06-17, xabari: *"Telegram AI assistant for @allmax_claude_aiBot that controls allmax_telethon account... Uses modified Telethon with tmp_auth_key support"*) — `telegram_ai_assistant`ning aynan bir kunlik nusxasi (fork), lekin **ALLMAX biznes akkauntiga** (`telegram_ai_assistant`dagi kabi shaxsiy akkaunt o'rniga) yo'naltirilgan holda. Maqsad — xuddi shu "erkin tilda buyruq ber" patternini ALLMAXning asosiy Telegram akkaunti ustida ham qo'llash edi.
-
-**Nega ehtimol ishga tushirilmagan (kuzatuvga asoslangan xulosa):** bir xil Telegram akkauntga ikkinchi parallel Telethon ulanish ochish MTProto sessiya to'qnashuvi/majburiy uzilishga olib kelishi mumkin — va aynan shu davrda jamoa `allmax_telethon`da shunga o'xshash bug bilan kurashayotgan edi (`receive_updates=False` tuzatishi ko'p o'tmay qo'shilgan). Jonli mijozlarga xizmat ko'rsatayotgan botni beqarorlashtirib qo'ymaslik uchun bu prototipni faqat sinab ko'rib, javonga qo'yib qo'yishgan degan xulosa eng izchil izoh.
-
-**Dalil:** session fayli (`allmax_ai_session.session`) haqiqatda avtorizatsiyadan o'tgan (bir marta qo'lda login qilingan), lekin `conversation_history.json` atigi 1.1KB va commit vaqtidan beri o'zgarmagan — bir marta sinab ko'rilgan, keyin qaytib ishlatilmagan. Kod `telegram_ai_assistant`ning ancha soddaroq/erta versiyasi — foto/hujjat handler yo'q, video/HEIC tahlili yo'q, keyinroq qo'shilgan barqarorlik tuzatishlari yo'q.
-
-### Xulosa
-
-Bu "yoqish" kerak bo'lgan xizmat emas — agar kelajakda ALLMAX akkaunti uchun shunga o'xshash yordamchi kerak bo'lsa, bu kod boshlang'ich nuqta sifatida ishlatilishi mumkin, lekin avval `allmax_telethon` bilan bir vaqtda ishlash xavfsizligini (sessiya to'qnashuvi) hal qilish kerak bo'ladi.
-
-### Systemd
+Bitta commit (`b2ee176`, 2026-06-17) — `telegram_ai_assistant`ning ALLMAX biznes akkauntiga yo'naltirilgan fork'i. Ehtimol bir xil akkauntga ikkinchi parallel Telethon ulanish sessiya to'qnashuviga olib kelishi xavfi tufayli javonga qo'yib qo'yilgan. Kelajakda kerak bo'lsa boshlang'ich nuqta sifatida ishlatilishi mumkin.
 
 ```
-Yo'q — hech qachon bo'lmagan.
+Systemd: yo'q — hech qachon bo'lmagan.
 ```
 
 ---
@@ -681,81 +615,336 @@ Bu loyihalar serverda endi umuman yo'q (kod o'chirilgan). Faqat tarixiy kontekst
 
 | Loyiha | O'chirilgan sana | Nima bo'lgan |
 |---|---|---|
-| `instagram_bitrix_dm_lead_bot` | 2026-06-26 | `allmax_instagram_agent` bilan **bir xil commit'da** almashtirildi (rename+rewrite). Faqat zararsiz, disabled, "orphan" systemd unit fayli qoladi (`instagram-dm-lead-bot.service`) — mavjud bo'lmagan papkaga ishora qiladi, ishga tushirilsa ham darhol xato beradi. |
-| AllmaxHamkor (CTV platform) | 2026-08-08 (bugun, shu kundan oldinroq) | Foydalanuvchi so'rovi bilan to'liq o'chirildi. To'liq backup (kod+DB+config) serverda saqlanmoqda. |
-| Allmax LinkBio | 2026-07-18 | Foydalanuvchi so'rovi bilan o'chirildi, backup saqlangan. |
-| Asilbek Finance Bot | 2026-07-18 | Foydalanuvchining eski shaxsiy loyihasi, crash-loop holida topilib o'chirilgan. |
-| `allmax_xm_trading_bot` | 2026-07-18 | Wine/MetaTrader orqali XM broker integratsiyasi urinishi, "kerak emas" deyilib to'liq tozalangan (Wine paketlari ham olib tashlangan, ~2GB bo'shatilgan). |
+| `instagram_bitrix_dm_lead_bot` | 2026-06-26 | `allmax_instagram_agent` bilan bir xil commit'da almashtirildi |
+| AllmaxHamkor (CTV platform) | 2026-08-08 | Foydalanuvchi so'rovi bilan to'liq o'chirildi, backup saqlanmoqda |
+| Allmax LinkBio | 2026-07-18 | Foydalanuvchi so'rovi bilan o'chirildi, backup saqlangan |
+| Asilbek Finance Bot | 2026-07-18 | Eski shaxsiy loyiha, crash-loop holida topilib o'chirilgan |
+| `allmax_xm_trading_bot` | 2026-07-18 | Wine/MetaTrader XM broker urinishi, "kerak emas" deyilib tozalangan |
 
 ---
 
-# ALLMAXga aloqasi yo'q — shaxsiy loyiha
+# Shaxsiy loyihalar (ALLMAXga aloqasi yo'q)
+
+*Server egasining shaxsiy/mustaqil loyihalari — faqat qulaylik uchun shu serverda joylashgan, ALLMAX biznes tizimlariga hech qanday aloqasi/kirishi yo'q. Hammasi 2026-10-14'dan boshlab git-backed.*
 
 ## 12. narzullo_portfolio
 
-> ⚠️ **Bu ALLMAX boti emas.** Server egasining shaxsiy portfolio sayti — faqat qulaylik uchun shu serverda joylashgan, ALLMAX biznes tizimlariga hech qanday aloqasi/kirishi yo'q.
+> Server egasining shaxsiy portfolio sayti — "Narzullo Muhammad Ali", Cyber Security Engineer, OSCP sertifikatlangan.
 
 ### Nima bu
 
-"Narzullo Muhammad Ali" — Cyber Security Engineer, OSCP sertifikatlangan (2026-yil 2-iyul) — uchun shaxsiy CV/portfolio sayti. Bo'limlar: bosh sahifa (terminal-uslub, animatsion tarmoq fon), professional xulosa, tajriba, sertifikatlar (OSCP, PDP grant, SAT, DTM — har biri to'liq rasm bilan), ko'nikmalar (Burp Suite, Nmap, Metasploit, Wireshark, BloodHound va h.k.), karyera vaqt chizig'i, ta'lim, aloqa (Telegram/Instagram/GitHub/email/xarita).
+CV/portfolio sayti: bosh sahifa (terminal-uslub, animatsion tarmoq fon), professional xulosa, tajriba, sertifikatlar (OSCP, PDP grant, SAT, DTM), ko'nikmalar, karyera vaqt chizig'i, ta'lim, aloqa. To'liq uch tilli (EN/RU/UZ), faqat qorong'i rejim.
 
 ### Texnologiyalar
 
-**Sof HTML/CSS/JS — freymvork yo'q, build jarayoni yo'q.** 4 ta manba fayl: `index.html`, `style.css` (1319 qator), `script.js` (404 qator), `i18n.js` (447 qator — EN/RU/UZ tarjima lug'ati va almashtiruvchi). Shriftlar Google Fonts CDN'dan. Faqat qorong'i rejim (light-theme yo'q).
+Sof HTML/CSS/JS — freymvork yo'q, build jarayoni yo'q. `index.html`, `style.css`, `script.js`, `i18n.js`.
 
 ### Qanday xizmat qilinadi
 
-Nginx **to'g'ridan-to'g'ri statik fayl sifatida** (`root` + `try_files`), backend/baza yo'q. `/etc/nginx/sites-enabled/narzullayev.com` — HTTPS (Let's Encrypt, avto-yangilanadi) + HTTP→HTTPS redirect, `narzullayev.com` va `www.narzullayev.com` ikkalasi ham.
+Nginx to'g'ridan-to'g'ri statik fayl sifatida. `/etc/nginx/sites-enabled/narzullayev.com` — HTTPS (Let's Encrypt, muddati 2026-12-16, avto-yangilanadi) + HTTP→HTTPS redirect.
 
 ### Fayllar
 
 ```
 narzullo_portfolio/
 ├── index.html, style.css, script.js, i18n.js
-└── assets/  profile.jpg, oscp-preview.jpg, oscp-full.png, sat-score.jpg, dtm-admission.jpg, pdp-grant.jpg
+└── assets/  profile.jpg, oscp-*.jpg/png, sat-score.jpg, dtm-admission.jpg, pdp-grant.jpg
 ```
 
 ### Eslatma
 
-Ish daraxti (working tree) hozir commit qilingandan yangiroq (DTM/PDP-grant rasmlari qo'shilgan, IELTS bo'limi olib tashlangan, lekin hali commit qilinmagan) — statik sayt uchun shoshilinch emas, lekin qachondir commit qilib qo'yish tavsiya etiladi.
+Doimiy ravishda ish jarayonida (hozir ham SEO/sitemap bo'yicha uncommitted o'zgarish bor) — statik sayt uchun shoshilinch emas.
+
+---
+
+## 13. ozish_backend
+
+> "Ozish" — shaxsiy ozish/fitness native mobil ilovasi (Expo/React Native, mobil qism serverda emas, mahalliy `~/ozish-app/`da) uchun backend. 2026-08-30'da qurilgan.
+
+### Nima qiladi
+
+- **Autentifikatsiya** — JWT (email+parol, bcrypt)
+- **Ovqat kundaligi** — Claude Haiku orqali ovqat tavsifidan avtomatik kaloriya/BJU ajratish (tool-use)
+- **Vazn/progress grafik**, **mashq jurnali**, **kunlik eslatmalar** — APScheduler har daqiqa `reminders.time_of_day`ni tekshirib, Expo push (`https://exp.host/--/api/v2/push/send`) yuboradi
+- **AI murabbiy chat** — Claude Sonnet 5 orqali suhbat
+- Ikkala Claude chaqiruvi ham **graceful degradation** bilan o'ralgan — billing tugasa ovqat kundaligi AI'siz ham saqlanadi, murabbiy toza 503 qaytaradi (2026-08-30'da birinchi kunning o'zida kerak bo'lgan)
+
+### Texnologiyalar
+
+```
+fastapi==0.115.6, uvicorn[standard]==0.32.1, sqlalchemy==2.0.36, psycopg2-binary==2.9.10,
+passlib[bcrypt]==1.7.4, python-jose[cryptography]==3.3.0, pydantic[email]==2.10.3,
+anthropic==0.109.2, httpx==0.28.1, apscheduler==3.10.4
+```
+
+### Konfiguratsiya
+
+```env
+DATABASE_URL, JWT_SECRET, JWT_EXPIRE_MINUTES, ANTHROPIC_API_KEY, CLAUDE_FAST_MODEL, CLAUDE_COACH_MODEL
+```
+
+### Fayllar
+
+```
+ozish_backend/
+├── requirements.txt
+└── app/
+    ├── __init__.py, auth.py, config.py, database.py, main.py, models.py, schemas.py
+    ├── routers/  auth.py, coach.py, food.py, push.py, reminders.py, weight.py, workouts.py
+    └── services/ claude_client.py, push_service.py, scheduler.py
+```
+
+### Ma'lumotlar bazasi
+
+Umumiy serverdagi Postgres instansiyasida alohida/izolyatsiyalangan: baza `ozish_app`, rol `ozish_user`.
+
+### Systemd va tarmoq
+
+```
+service: ozish-backend
+port:    127.0.0.1:8010 (uvicorn)
+nginx:   https://narzullayev.com/ozish-api/  →  mavjud narzullayev.com vhost'iga qo'shilgan location bloki
+```
+
+---
+
+## 14. moliya_bot
+
+> Shaxsiy (ALLMAXga aloqasi yo'q) kirim-chiqim trekeri Telegram bot — `@meningbugalterimbot`. 2026-10-11'da ishga tushirilgan.
+
+### Nima qiladi
+
+- Xarajat/daromad/qarz kuzatuvi — summalar **INTEGER tiyin**da saqlanadi (float emas, tin-tinigacha aniqlik)
+- UZS + USD, tabiiy format tushunadi ("50000"/"1.5 mln"/"50 ming"/"$100")
+- Naqd/karta alohida + umumiy jami
+- Kunlik/haftalik/oylik dashboard, kategoriya limiti (🟢🟡🔴), oylik limit ogohlantirishi
+- Qarz (berish/olish/yopish) moduli
+- **Ovozli+erkin matnli kiritish** — faster-whisper (lokal, "small" model) transkripsiya → Claude Haiku strukturaga o'giradi → har doim ✅/❌ tasdiqlash bilan
+- CSV hisobot eksport (utf-8-sig, Excel'da kirill to'g'ri ochiladi)
+
+**⚠️ RAM: ~692 MB — serverdagi eng og'ir shaxsiy loyiha** (faster-whisper + onnxruntime kutubxonalari jarayon ichida yuklanadi).
+
+**Muhim:** `OWNER_ID` (`5033652594`) — bu ALLMAX/narzullo_portfolio egasining asosiy Telegram akkaunti (`8889307131`, @the_narzullayev) **EMAS**, alohida/boshqa akkaunt.
+
+### Texnologiyalar
+
+```
+aiogram==3.13.1, aiosqlite==0.20.0, pytz==2024.1, anthropic>=0.40.0, faster-whisper>=1.0.3
+```
+
+### Konfiguratsiya
+
+```env
+BOT_TOKEN, OWNER_ID, ANTHROPIC_API_KEY (mustaqil/alohida kalit), NLU_MODEL, DB_PATH, TIMEZONE, WHISPER_MODEL_SIZE
+```
+
+### Fayllar
+
+```
+moliya_bot/
+├── main.py, requirements.txt, moliya.db
+└── app/
+    ├── __init__.py, categories.py, config.py, database.py, keyboards.py, utils.py
+    ├── handlers/  expense, income, debt, dashboard, list_tx, report, settings, freeform, start
+    └── services/  debt_service, fx_service, nlu_service, tx_service, voice_service
+```
+
+### Systemd
+
+```
+service: moliya-bot
+bot:     @meningbugalterimbot (id 8972499267)
+port:    yo'q (long-polling)
+```
+
+---
+
+## 15. intim-shop-parfume
+
+> **INTIM SHOP** — kattalar/intim mahsulotlari (vibratorlar, o'yinchoqlar, lubrikant) uchun to'liq onlayn-do'kon + Telegram admin. 2026-10-09'da qurilgan.
+
+### Nima qiladi
+
+- 20 kategoriyali katalog, razmer/rang variant modeli
+- **Server-tomonli narxlash**, idempotent buyurtmalar, tranzaksion stok, sanab bo'lmaydigan (non-enumerable) kuzatuv tokenlari
+- **To'lov:** faqat yetkazib berilganda naqd — saytda hech qanday to'lov matni yo'q (ataylab, call-center orqali tushuntiriladi)
+- Geolokatsiya (brauzer native API) → Telegram'ga real xarita sifatida yuboriladi
+- **Ikkita admin interfeys, bir-biriga sinxron:** veb (`/admin`, to'liq mahsulot CRUD) + Telegram bot (`@moxaparfume_bot` — buyurtmalar/mahsulotlar/statistika, inline menyu)
+- Webhook xavfsizligi — tasodifiy sir har server qayta ishga tushganda yangilanadi (`setWebhook`)
+- UZ/RU/EN uch tilli vitrina, admin UZ-only
+
+### Texnologiyalar
+
+Sof Node.js 24 (`node:sqlite`, **0 npm dependency**) + vanilla JS/HTML/CSS. Dedikatsiyalangan `/opt/node24/` binary orqali ishlaydi (tizim node'i faqat v22). 15 avtomatik test (`npm test`).
+
+### Konfiguratsiya
+
+```env
+PORT, HOST, PUBLIC_URL, ADMIN_EMAIL, ADMIN_PASSWORD, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, DEMO_MODE, TRUST_PROXY, COOKIE_SECURE
+```
+
+### Fayllar
+
+```
+intim-shop-parfume/
+├── server.mjs, package.json, migrations/001_initial.sql
+├── .gitignore         — (.env, node_modules/, data/, coverage/ chetlab o'tadi)
+├── lib/  bot.mjs, store.mjs, telegram.mjs
+├── public/  index.html, admin.html, app.js, admin.js, style.css, admin.css, assets/*.svg
+├── scripts/  reset-admin.mjs
+├── tests/  bot.test.mjs, http.test.mjs, store.test.mjs
+└── data/  store.sqlite (gitignored, jonli baza)
+```
+
+### Systemd va tarmoq
+
+```
+service: intim-shop-parfume
+port:    127.0.0.1:8020
+nginx:   https://intimshop.net (+www) — asosiy domen, SSL muddati 2027-01-07
+         https://intimshop.narzullayev.com — eski manzil, endi faqat 301 redirect intimshop.net'ga
+admin:   https://intimshop.net/admin
+```
+
+---
+
+## 16. shifokor_yordamchisi
+
+> "Шифокор ёрдамчиси" — ekhokardiografiya (yurak UTT) bo'yicha ta'lim/klinik-yordamchi platforma: shifokorlar, rezidentlar, tibbiyot talabalari uchun. Sotilishi rejalashtirilgan mahsulot. 2026-10-10/11'da qurilgan.
+
+### Nima qiladi
+
+- Kalkulyatorlar, qoidaga asoslangan qoralama xulosa + ixtiyoriy shifokor-tasdiqlash oqimi (`requireDoctorVerification` flag — admin panel orqali yoqilib/o'chirilishi mumkin, kod o'zgartirish shart emas)
+- AI yordamchi chat (Claude) — **hozir ishlamayapti, umumiy Anthropic balansi tugagan**
+- Obuna tariflari (UZS, hali narxlanmagan), to'liq UZ/RU/EN, WCAG AA dizayn-token tizimi
+- **Admin override tizimi** — `config/app.json`dagi istalgan statik flag (testMode, paymentsEnabled, aiEnabled va h.k.) admin panel orqali jonli o'zgartirilishi mumkin, `GET /api/overrides` har doim HAQIQIY joriy holatni ko'rsatadi
+
+### Texnologiyalar
+
+Frontend: sof HTML/CSS/JS, build yo'q. Backend (`server/`): **0 npm dependency**, faqat Node built-in'lar (`node:http`, `fetch`, `node:crypto` WebCrypto PBKDF2), qo'lda yozilgan router/cookie/JSON-parser.
+
+### Xavfsizlik
+
+Alohida imtiyozsiz tizim useri `shifokor` (uid 999, root emas), systemd hardening (`NoNewPrivileges`, `ProtectSystem=strict`). Ma'lumotlar (parol xeshlari) **repo papkasidan tashqarida**, `/opt/shifokor_data/` (700/600 ruxsat, nginx web-root'dan tashqarida, `/server/` yo'liga `deny all`). HttpOnly+Secure+SameSite=Lax cookie sessiyalar, IP-asosli rate-limit.
+
+**⚠️ Admin bootstrap qoidasi:** `cli.mjs` FAQAT server to'xtatilganda ishlatilishi kerak (`systemctl stop shifokor-server && node server/cli.mjs grant-admin <email> && systemctl start shifokor-server`) — ikkalasi bir vaqtda ishlasa, keyingi yozuv avvalgisini jim-jit ezib yuboradi (fayl-asosli store).
+
+### Konfiguratsiya
+
+`.env` repo papkasida YO'Q — server sirlari `/opt/shifokor_data/server.env`da:
+```env
+PORT, DATA_DIR, ANTHROPIC_API_KEY, ANTHROPIC_MODEL
+```
+
+### Fayllar
+
+```
+shifokor_yordamchisi/
+├── index.html
+├── css/  base.css, tokens.css
+├── js/
+│   ├── app.js, theme-init.js
+│   ├── core/  calc.js, config.js, policy.js, rules.js, service.js, store.js, thresholds.js, ...
+│   ├── api/, ui/, views/
+├── data/  cases/, formulas/, i18n/, navigation.json, parameters.json, plans.json,
+│          providers.json, rules.json, sources.json, specialties.json, thresholds.json
+├── config/app.json
+├── assets/  diagrams/, icons/
+└── server/  cli.mjs, context.mjs, index.mjs
+```
+
+### Systemd va tarmoq
+
+```
+service: shifokor-server
+port:    127.0.0.1:8030 (node, user=shifokor)
+nginx:   https://shifokor.narzullayev.com — SSL muddati 2027-01-08
+```
+
+---
+
+## 17. moxa_taplink
+
+> "Moxa Parfume" brendi uchun link-in-bio sahifa — `taplink.cc/moxaparfume`ning o'rnini bosuvchi, xuddi shu brend/egasi (`intim-shop-parfume`dagi @moxaparfume1/@moxaparfume bilan bir xil). 2026-10-13'da qurilgan.
+
+### Nima qiladi
+
+Statik sahifa: Telegram/Instagram/Telegram kanal/intimshop.net havolalari, "18+" ogohlantirish. Vino-qizil+oltin dizayn (Playfair Display+Jost shriftlar, haqiqiy brend logotipi asosida), ambient "mist" canvas animatsiyasi, faqat qorong'i rejim.
+
+### Texnologiyalar
+
+Sof statik HTML/CSS/JS — backend, dependency, build jarayoni yo'q.
+
+### Fayllar
+
+```
+moxa_taplink/
+├── index.html
+└── avatar.jpg
+```
+
+### Tarmoq
+
+```
+nginx: https://moxa.intimshop.net — SSL muddati 2027-01-10, systemd xizmat shart emas (statik)
+```
 
 ---
 
 # Infratuzilma
 
-## Server holati (2026-08-08 jonli tekshiruv)
+## Server holati (2026-10-14 jonli tekshiruv)
 
-| Servis | Holat | Port | Bot / Foydalanuvchi | RAM |
+| Servis | Holat | Port | Bot / Domen | RAM |
 |---|---|---|---|---|
-| `allmax-dashboard` | ✅ active, 0 restart | 8080 (ichki) | — | ~35 MB |
-| `allmax-food-order-bot` | ✅ active, 0 restart | — | @food_control_rBot | ~144 MB |
-| `bitrix-lead-alert-bot` | ✅ active, 0 restart | 8000 (tashqi yopiq) | — | ~87 MB |
-| `feedback-bot` | ✅ active, 0 restart | — | @allmax_feedback_bot | ~114 MB |
-| `food-control-bot` | ✅ active, 0 restart | — | @ovqatnazoratiuzbot | ~137 MB |
-| `marketing-task-control-bot` | ✅ active, 0 restart | — | @allmax_vazifalarbot | ~92 MB |
+| `allmax-dashboard` | ✅ active, 0 restart | 8080 (ichki) | — | 34 MB |
+| `allmax-food-order-bot` | ✅ active, 0 restart | — | @food_control_rBot | 145 MB |
+| `bitrix-lead-alert-bot` | ✅ active, 0 restart | 8000 (tashqi yopiq) | — | 72 MB |
+| `feedback-bot` | ✅ active, 0 restart | — | @allmax_feedback_bot | 119 MB |
+| `food-control-bot` | ✅ active, 0 restart | — | @ovqatnazoratiuzbot | 137 MB |
+| `marketing-task-control-bot` | ✅ active, 0 restart | — | @allmax_vazifalarbot | 94 MB |
+| `ozish-backend` | ✅ active, 0 restart | 127.0.0.1:8010 | narzullayev.com/ozish-api/ | 91 MB |
+| `moliya-bot` | ✅ active, 0 restart | — | @meningbugalterimbot | 692 MB |
+| `intim-shop-parfume` | ✅ active, 0 restart | 127.0.0.1:8020 | intimshop.net | 49 MB |
+| `shifokor-server` | ✅ active, 0 restart | 127.0.0.1:8030 | shifokor.narzullayev.com | 16 MB |
 | `allmax-telethon` | ⏸ disabled, inactive | — | @allmaxshaxsiy (biznes) | — |
 | `telegram-ai-assistant` | ⏸ disabled, inactive | — | @Claude_ai_oBot | — |
 | `allmax-instagram-agent` | ⏸ disabled, inactive | 8002 | — | — |
 | `allmax-hr-bot` | ⏸ disabled, inactive | — | @allmax_jbot | — |
 | `instagram-dm-lead-bot` | 🗑 orphan unit, papka yo'q | — | — | — |
 
-Barchasi (`allmax-hr-bot`dan tashqari — u ham `enable`, lekin qo'lda `disable` qilingan) `systemctl enable`, `Restart=always` — server reboot bo'lsa faol xizmatlar avtomatik qayta ishga tushadi.
+Barchasi `systemctl enable`, `Restart=always` (allmax-hr-bot bundan mustasno). `systemctl --failed` — toza. `systemctl list-unit-files --state=enabled` to'liq filtrsiz ro'yxatda begona xizmat yo'q.
 
-**6 faol xizmat 2026-07-31, 06:09 UTCdan beri barqaror ishlayapti** (`unattended-upgrades` avtomatik yangilanish tufayli birgalikda qayta ishga tushirilgan, halokat emas) — barchasi 0 restart.
-
-## Nginx (allmax.tizm.uz va narzullayev.com)
+## Nginx (6 ta domen)
 
 | URL | Backend | Holat |
 |---|---|---|
 | `allmax.tizm.uz/dashboard/` | `127.0.0.1:8080` | ✅ Jonli, `allmax_dashboard`ga proxy |
-| `allmax.tizm.uz/instagram/` | — | `410 Gone` (statik, Meta hali so'rov yubormoqda ~40-50K/kun) |
-| `allmax.tizm.uz/tirox/` | — | O'lik portga proxy, lekin kuniga ~2 ta so'rov, muhim emas |
-| `narzullayev.com` | Statik fayllar | ✅ Jonli, `narzullo_portfolio` |
-| — | port 8000 (bitrix_lead_alert_bot) | Marshrut yo'q, UFW ham yopgan — faqat localhost |
+| `allmax.tizm.uz/instagram/` | — | `410 Gone` (statik, so'rov hajmi ~99.8% pasaygan) |
+| `allmax.tizm.uz/tirox/` | — | O'lik portga proxy, kuniga ~2 so'rov, muhim emas |
+| `narzullayev.com` (+www) | Statik fayllar | ✅ `narzullo_portfolio` |
+| `narzullayev.com/ozish-api/` | `127.0.0.1:8010` | ✅ `ozish_backend`ga proxy |
+| `intimshop.net` (+www) | `127.0.0.1:8020` | ✅ `intim-shop-parfume`ga proxy |
+| `intimshop.narzullayev.com` | — | 301 → `intimshop.net` (eski manzil, faqat link buzilmasligi uchun) |
+| `moxa.intimshop.net` | Statik fayllar | ✅ `moxa_taplink` |
+| `shifokor.narzullayev.com` | `127.0.0.1:8030` | ✅ `shifokor-server`ga proxy |
+
+`nginx -t` — toza.
+
+## SSL sertifikatlari (Let's Encrypt, certbot.timer orqali avto-yangilanadi)
+
+| Domen | Muddati |
+|---|---|
+| allmax.tizm.uz | 2027-01-04 |
+| intimshop.narzullayev.com | 2027-01-07 |
+| intimshop.net (+www) | 2027-01-07 |
+| moxa.intimshop.net | 2027-01-10 |
+| narzullayev.com (+www) | 2026-12-16 |
+| shifokor.narzullayev.com | 2027-01-08 |
 
 ## Firewall (UFW)
 
-Faol, default-deny incoming: faqat 22 (SSH), 80, 443 (nginx) ochiq. Boshqa barcha port (8000, 8080 kiritilgan) faqat localhost orqali ishlaydi.
+Faol, default-deny incoming: faqat 22 (SSH), 80, 443 ochiq. Boshqa barcha port — eski (8000, 8080) va yangi (8010, 8020, 8030) — faqat `127.0.0.1`da tinglaydi, tashqaridan UFW+bind-address ikkalasi bilan yopiq.
 
 ## Git / GitHub
 
@@ -765,7 +954,7 @@ git add <fayllar>
 git commit -m "o'zgarish tavsifi"
 git push origin master
 ```
-Repo **public**: [github.com/alishex/projects](https://github.com/alishex/projects). Push 2026-08-08dan beri ishlayapti (fine-grained PAT, faqat shu repo uchun, Contents: Read&write). **Muhim: `.env.example` fayllariga hech qachon haqiqiy qiymat yozmang** — bu fayllar odatda git'ga tushadi va public repoga push bo'ladi (2026-08-08da ikkita loyihada aynan shu xato topilib tuzatildi, yuqoridagi xavfsizlik bo'limiga qarang).
+Repo **public**: [github.com/alishex/projects](https://github.com/alishex/projects). 0 ahead/0 behind. **2026-10-14'dan boshlab barcha 17 loyiha git-backed** (5 tasi — `intim-shop-parfume`, `moliya_bot`, `moxa_taplink`, `ozish_backend`, `shifokor_yordamchisi` — shu kungacha umuman kuzatilmagan edi). **Muhim: `.env.example` fayllariga hech qachon haqiqiy qiymat yozmang** — bu fayllar odatda git'ga tushadi va public repoga push bo'ladi (2026-08-08'da ikkita loyihada aynan shu xato topilgan, hali ham to'liq tuzatilmagan — yuqoridagi xavfsizlik bo'limiga qarang). **Bu repoga yaratiladigan commit'larga hech qachon "Co-Authored-By: Claude" yoki shunga o'xshash trailer qo'shilmasin** — bu standart amaliyot (2026-08-08'da butun git tarixi aynan shu sababdan qayta yozilgan).
 
 ## Loglarni ko'rish
 
@@ -779,13 +968,14 @@ grep Accepted /var/log/auth.log          # SSH login tarixi (last -a ISHONCHSIZ,
 
 ```bash
 systemctl restart allmax-dashboard allmax-food-order-bot bitrix-lead-alert-bot \
-  feedback-bot food-control-bot marketing-task-control-bot
+  feedback-bot food-control-bot marketing-task-control-bot \
+  ozish-backend moliya-bot intim-shop-parfume shifokor-server
 ```
 
 ## Deploy qilish (yangi/yangilangan loyiha)
 
 ```bash
-rsync -avz --exclude venv --exclude __pycache__ --exclude .env --exclude "*.session" \
+rsync -avz --exclude venv --exclude __pycache__ --exclude .env --exclude "*.session" --exclude node_modules \
   ./loyiha/ root@209.38.239.245:/opt/AllmaxProjects/loyiha/
 ssh allmaxhamkor-do "cd /opt/AllmaxProjects/loyiha && venv/bin/pip install -r requirements.txt && systemctl restart <service>"
 ```
@@ -799,4 +989,4 @@ ssh allmaxhamkor-do "cd /opt/AllmaxProjects/loyiha && venv/bin/pip install -r re
 
 ---
 
-*ALLMAX — Avtomatlashtirish va raqamli transformatsiya. Bu hujjat 2026-08-08da jonli server holati asosida to'liq qayta yozildi (5 ta parallel chuqur tekshiruv orqali) — oldingi versiya iyun oyidan beri yangilanmagan va bir qator joyda (Instagram loyiha almashinuvi, allmax_ai_assistant holati, food_control_bot/feedback_bot oqimlari, bitrix_lead_alert_bot endpoint'lari) noto'g'ri edi.*
+*ALLMAX — Avtomatlashtirish va raqamli transformatsiya. Bu hujjat 2026-10-14'da jonli server holati asosida to'liq qayta yozildi — 55 kunlik tanaffusdan keyingi "noldan tubdan" tekshiruv asosida (oldingi to'liq qayta yozish: 2026-08-08). Asosiy o'zgarishlar: 5 ta yangi shaxsiy loyiha hujjatlandi va git'ga qo'shildi (`ozish_backend`, `moliya_bot`, `intim-shop-parfume`, `shifokor_yordamchisi`, `moxa_taplink`), umumiy Anthropic balansi yana tugagani va Instagram webhook to'foni deyarli tugagani qayd etildi, barcha RAM/port/SSL/nginx ma'lumotlari jonli holatga yangilandi. Oldingi versiyalar singari, bu hujjat ham vaqt o'tishi bilan eskiradi — load-bearing tafsilotlarni doim jonli kod/systemd/git holati bilan solishtirib tekshiring.*
