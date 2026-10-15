@@ -935,8 +935,7 @@ allmax-fixprice/
 ```
 service: allmax-fixprice — ✅ active, 0 restart, ~37 MB RAM
          ExecStart=/opt/node24/bin/node server.mjs, 127.0.0.1:8040 (tashqaridan yopiq)
-nginx:   fixprice.org + www.fixprice.org → proxy_pass http://127.0.0.1:8040/
-         ⚠️ HOZIRCHA FAQAT HTTP — SSL/certbot hali o'rnatilmagan (bo'lim 19dagi subdomen'dan farqli)
+nginx:   https://fixprice.org (+www) → proxy_pass http://127.0.0.1:8040/, SSL muddati 2027-01-13
 ```
 
 ---
@@ -976,7 +975,7 @@ nginx: https://allmax.fixprice.org — SSL muddati 2027-01-13, systemd xizmat sh
 
 | Servis | Holat | Port | Bot / Domen | RAM |
 |---|---|---|---|---|
-| `allmax-fixprice` | ✅ active, 0 restart | 127.0.0.1:8040 | fixprice.org (SSL yo'q) | 37 MB |
+| `allmax-fixprice` | ✅ active, 0 restart | 127.0.0.1:8040 | fixprice.org | 37 MB |
 | `allmax-dashboard` | ✅ active, 0 restart | 8080 (ichki) | — | 34 MB |
 | `allmax-food-order-bot` | ✅ active, 0 restart | — | @food_control_rBot | 145 MB |
 | `bitrix-lead-alert-bot` | ✅ active, 0 restart | 8000 (tashqi yopiq) | — | 72 MB |
@@ -999,7 +998,7 @@ Barchasi `systemctl enable`, `Restart=always` (allmax-hr-bot bundan mustasno). `
 
 | URL | Backend | Holat |
 |---|---|---|
-| `fixprice.org` (+www) | `127.0.0.1:8040` | ✅ Jonli, `allmax-fixprice`ga proxy — ⚠️ HTTP only, SSL yo'q |
+| `fixprice.org` (+www) | `127.0.0.1:8040` | ✅ Jonli, `allmax-fixprice`ga proxy |
 | `allmax.fixprice.org` | Statik fayllar | ✅ `allmax_taplink` |
 | `allmax.tizm.uz/dashboard/` | `127.0.0.1:8080` | ✅ Jonli, `allmax_dashboard`ga proxy |
 | `allmax.tizm.uz/instagram/` | — | `410 Gone` (statik, so'rov hajmi ~99.8% pasaygan) |
@@ -1015,11 +1014,10 @@ Barchasi `systemctl enable`, `Restart=always` (allmax-hr-bot bundan mustasno). `
 
 ## SSL sertifikatlari (Let's Encrypt, certbot.timer orqali avto-yangilanadi)
 
-> ⚠️ `fixprice.org` (+www) — tub domen hali SSL'siz, faqat HTTP (bo'lim 18ga qarang).
-
 | Domen | Muddati |
 |---|---|
 | allmax.fixprice.org | 2027-01-13 |
+| fixprice.org (+www) | 2027-01-13 |
 | allmax.tizm.uz | 2027-01-04 |
 | intimshop.narzullayev.com | 2027-01-07 |
 | intimshop.net (+www) | 2027-01-07 |
