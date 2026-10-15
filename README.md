@@ -4,8 +4,9 @@
 
 **Server:** DigitalOcean VPS "tools" — Ubuntu 24.04 — `209.38.239.245` — 4 vCPU / 8 GB RAM (`s-4vcpu-8gb`) — disk 33% (16G/48G) — uptime 85+ kun (so'nggi reboot 2026-07-20/21 resize'dan beri yo'q)
 **AI:** Anthropic Claude — umumiy/sherik kalit asosiy modeli loyihaga qarab `claude-opus-4-8` / `claude-sonnet-5` / `claude-haiku-4-5`. **⚠️ 2026-10-13'da yana "credit balance too low" bilan tugagan holatda — pastdagi operatsion ogohlantirishga qarang.** `moliya_bot` bu hisobdan mustaqil, alohida kalit ishlatadi.
-**GitHub:** [alishex/projects](https://github.com/alishex/projects) (**public repo**) — 0 ahead / 0 behind. **2026-10-14'dan beri barcha 17 loyiha git-backed** (avval 5 tasi — jumladan shaxsiy moliya va mijoz ma'lumoti saqlovchi loyihalar — umuman kuzatilmagan edi).
+**GitHub:** [alishex/projects](https://github.com/alishex/projects) (**public repo**) — 0 ahead / 0 behind. **2026-10-15'dan beri barcha 19 loyiha git-backed** (avval 5 tasi — jumladan shaxsiy moliya va mijoz ma'lumoti saqlovchi loyihalar — umuman kuzatilmagan edi).
 **Bu hujjat oxirgi to'liq qayta yozilgan sana:** 2026-10-14 — 55 kunlik tanaffusdan keyingi "noldan tubdan" tekshiruv asosida (oldingi to'liq qayta yozish: 2026-08-08). 5 ta yangi loyiha (2026-10) qo'shildi, infratuzilma/xavfsizlik/billing bo'limlari jonli holatga mослаб yangilandi.
+**2026-10-15 qo'shimcha (to'liq qayta yozish emas, faqat qo'shish):** 2 ta yangi ALLMAX biznes loyihasi — `allmax-fixprice` (to'liq onlayn-do'kon, bo'lim 18) va `allmax_taplink` (link-in-bio sahifa, `allmax.fixprice.org`, bo'lim 19) — hujjatlandi; Server holati / Nginx / SSL jadvallari mos ravishda yangilandi, qolgan 17 bo'lim tegilmadi.
 
 ---
 
@@ -50,8 +51,10 @@ Deyarli barcha ALLMAX botlari **va endi 2 ta shaxsiy loyiha ham** (`ozish_backen
 | 10 | [allmax_hr_bot](#10-allmax_hr_bot) | ⏸ To'xtatilgan (06-20) | To'liq HR pipeline: ariza → AI intervyu → onboarding | — | — |
 | 11 | [allmax_ai_assistant](#11-allmax_ai_assistant) | 🚫 Hech qachon ishga tushirilmagan | Tashlab qo'yilgan prototip (telegram_ai_assistant fork'i) | — | — |
 | — | [instagram_bitrix_dm_lead_bot](#ochirilgan-loyihalar-tarixi) | 🗑 To'liq o'chirilgan (06-26) | Eski Instagram bot — allmax_instagram_agent bilan almashtirilgan | — | — |
+| 18 | [allmax-fixprice](#18-allmax-fixprice) | ✅ Faol (10-15, yengil tekshirilgan) | To'liq onlayn-do'kon — katalog, buyurtma, admin | 8040 (ichki) | 37 MB |
+| 19 | [allmax_taplink](#19-allmax_taplink) | ✅ Faol (static) | Allmax Fix Price link-in-bio sahifasi | allmax.fixprice.org | — (static) |
 
-> **Jami RAM (6 faol ALLMAX bot):** ~601 MB / 8 GB.
+> **Jami RAM (7 faol ALLMAX bot/xizmat):** ~638 MB / 8 GB.
 
 ### Shaxsiy loyihalar (ALLMAXga aloqasi yo'q)
 
@@ -64,7 +67,7 @@ Deyarli barcha ALLMAX botlari **va endi 2 ta shaxsiy loyiha ham** (`ozish_backen
 | 16 | [shifokor_yordamchisi](#16-shifokor_yordamchisi) | ✅ Faol | Ekhokardiografiya ta'lim/klinik platforma | shifokor.narzullayev.com | 16 MB |
 | 17 | [moxa_taplink](#17-moxa_taplink) | ✅ Faol (static) | "Moxa Parfume" link-in-bio sahifasi | moxa.intimshop.net | — (static) |
 
-> **Jami RAM (barcha 10 faol xizmat, ALLMAX+shaxsiy):** ~1.45 GB / 8 GB. Server umumiy: 2.3Gi/7.8Gi ishlatilmoqda (boshqa xizmatlar — nginx/postgres/redis/OS — bilan birga), disk 33% (16G/48G).
+> **Jami RAM (barcha 11 faol xizmat, ALLMAX+shaxsiy):** ~1.49 GB / 8 GB. Server umumiy: 2.0Gi/7.8Gi ishlatilmoqda (boshqa xizmatlar — nginx/postgres/redis/OS — bilan birga), disk 33% (16G/48G), uptime 86+ kun.
 
 ---
 
@@ -891,12 +894,89 @@ nginx: https://moxa.intimshop.net — SSL muddati 2027-01-10, systemd xizmat sha
 
 ---
 
+## 18. allmax-fixprice
+
+> To'liq onlayn-do'kon — ALLMAX Fix Price erkaklar kiyim-kechak katalogi, buyurtma va Telegram bot admin. `intim-shop-parfume` (bo'lim 15) bilan bir xil arxitektura/andoza. 2026-10-15'da qurilgan va shu kuni domeni (`fixprice.org`, Namecheap, `addPeriod` ichida ro'yxatdan o'tgan) ulangan — **bu session tomonidan emas**, serverda tayyor holda topilgan (git tarixi + fayl vaqt belgilari buni tasdiqlaydi). ⚠️ **Bu bo'lim boshqa 17 tasidan YENGILROQ tekshiruv asosida yozilgan** — kod qator-baqator o'qilmagan, faqat tuzilma/konfiguratsiya/systemd tashqaridan tekshirilgan. Keyingi chuqur tekshiruvda to'liq qayta tasdiqlang.
+
+### Nima qiladi
+
+Mahsulot katalogi (14 kategoriya: kurtka, ko'ylak, kardigan, futbolka, shim, kostyum, dvoyka, gilet, oyoq-kiyim, remen, hamyon, sumka, aksessuar, vetrovka), savat/buyurtma oqimi, admin panel (`/admin`) va Telegram bot orqali mahsulot/buyurtma boshqaruvi.
+
+⚠️ **Nomuvofiqlik topildi:** `.env`da `DEMO_MODE=false`, lekin repodagi `ASSETS.md` hali ham "barcha mahsulot rasmlari — placeholder SVG belgi, haqiqiy foto yo'q" deb yozilgan (xuddi `intim-shop-parfume` o'zining haqiqiy fotolari bilan almashtirilgunga qadar bo'lgani kabi). Demo rejim o'chirilgan, lekin katalogda haqiqiy mahsulot foto bor-yo'qligi `/admin` panelidan tasdiqlanmagan — ehtiyot bo'lib ishlating.
+
+### Texnologiyalar
+
+Sof Node.js 24 (`node:sqlite`, **npm dependency yo'q**) + vanilla JS/HTML/CSS, build jarayoni yo'q — `intim-shop-parfume`ning aynan o'zi uslubida. Dedikatsiyalangan `/opt/node24/` binary orqali ishlaydi.
+
+### Konfiguratsiya
+
+```env
+PORT, HOST, PUBLIC_URL, ADMIN_EMAIL, ADMIN_PASSWORD, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, DEMO_MODE, TRUST_PROXY, COOKIE_SECURE
+```
+
+### Fayllar
+
+```
+allmax-fixprice/
+├── server.mjs, package.json, migrations/001_initial.sql
+├── lib/  store.mjs, telegram.mjs, bot.mjs
+├── scripts/  reset-admin.mjs
+├── tests/  http.test.mjs, bot.test.mjs, store.test.mjs
+├── public/
+│   ├── index.html, app.js, style.css        — mijoz vitrinasi
+│   ├── admin.html, admin.js, admin.css      — admin panel
+│   ├── brand.json                            — ✅ 2026-10-15 kech: haqiqiy Telegram/Instagram/manzil to'ldirildi
+│   └── assets/  mark.png, lockup-on-white.png — haqiqiy ALLMAX logotip fayllari, 14 ta kategoriya SVG ikonkasi
+└── data/  store.sqlite (gitignored, jonli baza)
+```
+
+### Systemd va tarmoq
+
+```
+service: allmax-fixprice — ✅ active, 0 restart, ~37 MB RAM
+         ExecStart=/opt/node24/bin/node server.mjs, 127.0.0.1:8040 (tashqaridan yopiq)
+nginx:   fixprice.org + www.fixprice.org → proxy_pass http://127.0.0.1:8040/
+         ⚠️ HOZIRCHA FAQAT HTTP — SSL/certbot hali o'rnatilmagan (bo'lim 19dagi subdomen'dan farqli)
+```
+
+---
+
+## 19. allmax_taplink
+
+> Allmax Fix Price uchun link-in-bio sahifa — `taplink.cc/allmax.fixprice`ning o'rnini bosuvchi (`moxa_taplink`, bo'lim 17, bilan bir xil g'oya). **18-bo'limdagi `allmax-fixprice` to'liq do'konidan ALOHIDA loyiha** — ikkalasi bir domen oilasida (`fixprice.org`) birga turadi: tub domen = to'liq do'kon, `allmax.` subdomeni = ushbu havolalar sahifasi. 2026-10-15'da shu sessiyada qurilgan.
+
+### Nima qiladi
+
+Statik "narx yorlig'i" (price-tag) dizaynidagi sahifa: logotip medalyoni (haqiqiy ALLMAX "X" belgisi, 3D porlash animatsiyasi va sichqoncha ustida tilt effekti bilan), Telegram/Tik Tok/YouTube/Instagram havolalari, do'kon manzili + 24/7 shtamp-belgisi, Google Xaritalar tugmasi. Barcha kontent (havolalar, manzil, soat) `taplink.cc/allmax.fixprice`ning o'z `window.data` JSON blokidan 1:1 olingan (o'sha manzil/soat ma'lumoti eskirgan deb belgilangan edi — endi shu orqali tasdiqlandi, `company_allmax` xotira faylida yangilandi).
+
+### Texnologiyalar
+
+Sof statik HTML/CSS — backend, dependency, build jarayoni yo'q. Shriftlar (Bebas Neue, Manrope, Oswald) `fonts/`da mahalliy `.woff2` fayllar sifatida (Google Fonts'dan bir martalik yuklab olingan, runtime'da tashqi chaqiruv yo'q).
+
+### Fayllar
+
+```
+allmax_taplink/
+├── index.html
+├── mark.png              — haqiqiy ALLMAX "X" belgisi (allmax-fixprice/public/assets/mark.png bilan bir xil fayl)
+└── fonts/                — 12 ta .woff2 (3 shrift oilasi × vazn × latin/latin-ext)
+```
+
+### Tarmoq
+
+```
+nginx: https://allmax.fixprice.org — SSL muddati 2027-01-13, systemd xizmat shart emas (statik)
+```
+
+---
+
 # Infratuzilma
 
-## Server holati (2026-10-14 jonli tekshiruv)
+## Server holati (2026-10-14 jonli tekshiruv, + 2026-10-15 qo'shimcha qator)
 
 | Servis | Holat | Port | Bot / Domen | RAM |
 |---|---|---|---|---|
+| `allmax-fixprice` | ✅ active, 0 restart | 127.0.0.1:8040 | fixprice.org (SSL yo'q) | 37 MB |
 | `allmax-dashboard` | ✅ active, 0 restart | 8080 (ichki) | — | 34 MB |
 | `allmax-food-order-bot` | ✅ active, 0 restart | — | @food_control_rBot | 145 MB |
 | `bitrix-lead-alert-bot` | ✅ active, 0 restart | 8000 (tashqi yopiq) | — | 72 MB |
@@ -915,10 +995,12 @@ nginx: https://moxa.intimshop.net — SSL muddati 2027-01-10, systemd xizmat sha
 
 Barchasi `systemctl enable`, `Restart=always` (allmax-hr-bot bundan mustasno). `systemctl --failed` — toza. `systemctl list-unit-files --state=enabled` to'liq filtrsiz ro'yxatda begona xizmat yo'q.
 
-## Nginx (6 ta domen)
+## Nginx (8 ta domen)
 
 | URL | Backend | Holat |
 |---|---|---|
+| `fixprice.org` (+www) | `127.0.0.1:8040` | ✅ Jonli, `allmax-fixprice`ga proxy — ⚠️ HTTP only, SSL yo'q |
+| `allmax.fixprice.org` | Statik fayllar | ✅ `allmax_taplink` |
 | `allmax.tizm.uz/dashboard/` | `127.0.0.1:8080` | ✅ Jonli, `allmax_dashboard`ga proxy |
 | `allmax.tizm.uz/instagram/` | — | `410 Gone` (statik, so'rov hajmi ~99.8% pasaygan) |
 | `allmax.tizm.uz/tirox/` | — | O'lik portga proxy, kuniga ~2 so'rov, muhim emas |
@@ -933,8 +1015,11 @@ Barchasi `systemctl enable`, `Restart=always` (allmax-hr-bot bundan mustasno). `
 
 ## SSL sertifikatlari (Let's Encrypt, certbot.timer orqali avto-yangilanadi)
 
+> ⚠️ `fixprice.org` (+www) — tub domen hali SSL'siz, faqat HTTP (bo'lim 18ga qarang).
+
 | Domen | Muddati |
 |---|---|
+| allmax.fixprice.org | 2027-01-13 |
 | allmax.tizm.uz | 2027-01-04 |
 | intimshop.narzullayev.com | 2027-01-07 |
 | intimshop.net (+www) | 2027-01-07 |
@@ -954,7 +1039,7 @@ git add <fayllar>
 git commit -m "o'zgarish tavsifi"
 git push origin master
 ```
-Repo **public**: [github.com/alishex/projects](https://github.com/alishex/projects). 0 ahead/0 behind. **2026-10-14'dan boshlab barcha 17 loyiha git-backed** (5 tasi — `intim-shop-parfume`, `moliya_bot`, `moxa_taplink`, `ozish_backend`, `shifokor_yordamchisi` — shu kungacha umuman kuzatilmagan edi). **Muhim: `.env.example` fayllariga hech qachon haqiqiy qiymat yozmang** — bu fayllar odatda git'ga tushadi va public repoga push bo'ladi (2026-08-08'da ikkita loyihada aynan shu xato topilgan, hali ham to'liq tuzatilmagan — yuqoridagi xavfsizlik bo'limiga qarang). **Bu repoga yaratiladigan commit'larga hech qachon "Co-Authored-By: Claude" yoki shunga o'xshash trailer qo'shilmasin** — bu standart amaliyot (2026-08-08'da butun git tarixi aynan shu sababdan qayta yozilgan).
+Repo **public**: [github.com/alishex/projects](https://github.com/alishex/projects). 0 ahead/0 behind. **2026-10-15'dan boshlab barcha 19 loyiha git-backed** (5 tasi — `intim-shop-parfume`, `moliya_bot`, `moxa_taplink`, `ozish_backend`, `shifokor_yordamchisi` — 2026-10-14'gacha umuman kuzatilmagan edi; `allmax_taplink` shu kuni (10-15) qo'shildi — `allmax-fixprice` 10-15'ning o'zida boshqa joydan allaqachon commit qilingan holda topildi). **Muhim: `.env.example` fayllariga hech qachon haqiqiy qiymat yozmang** — bu fayllar odatda git'ga tushadi va public repoga push bo'ladi (2026-08-08'da ikkita loyihada aynan shu xato topilgan, hali ham to'liq tuzatilmagan — yuqoridagi xavfsizlik bo'limiga qarang). **Bu repoga yaratiladigan commit'larga hech qachon "Co-Authored-By: Claude" yoki shunga o'xshash trailer qo'shilmasin** — bu standart amaliyot (2026-08-08'da butun git tarixi aynan shu sababdan qayta yozilgan).
 
 ## Loglarni ko'rish
 
@@ -968,7 +1053,7 @@ grep Accepted /var/log/auth.log          # SSH login tarixi (last -a ISHONCHSIZ,
 
 ```bash
 systemctl restart allmax-dashboard allmax-food-order-bot bitrix-lead-alert-bot \
-  feedback-bot food-control-bot marketing-task-control-bot \
+  feedback-bot food-control-bot marketing-task-control-bot allmax-fixprice \
   ozish-backend moliya-bot intim-shop-parfume shifokor-server
 ```
 
@@ -989,4 +1074,4 @@ ssh allmaxhamkor-do "cd /opt/AllmaxProjects/loyiha && venv/bin/pip install -r re
 
 ---
 
-*ALLMAX — Avtomatlashtirish va raqamli transformatsiya. Bu hujjat 2026-10-14'da jonli server holati asosida to'liq qayta yozildi — 55 kunlik tanaffusdan keyingi "noldan tubdan" tekshiruv asosida (oldingi to'liq qayta yozish: 2026-08-08). Asosiy o'zgarishlar: 5 ta yangi shaxsiy loyiha hujjatlandi va git'ga qo'shildi (`ozish_backend`, `moliya_bot`, `intim-shop-parfume`, `shifokor_yordamchisi`, `moxa_taplink`), umumiy Anthropic balansi yana tugagani va Instagram webhook to'foni deyarli tugagani qayd etildi, barcha RAM/port/SSL/nginx ma'lumotlari jonli holatga yangilandi. Oldingi versiyalar singari, bu hujjat ham vaqt o'tishi bilan eskiradi — load-bearing tafsilotlarni doim jonli kod/systemd/git holati bilan solishtirib tekshiring.*
+*ALLMAX — Avtomatlashtirish va raqamli transformatsiya. Bu hujjat 2026-10-14'da jonli server holati asosida to'liq qayta yozildi — 55 kunlik tanaffusdan keyingi "noldan tubdan" tekshiruv asosida (oldingi to'liq qayta yozish: 2026-08-08). Asosiy o'zgarishlar: 5 ta yangi shaxsiy loyiha hujjatlandi va git'ga qo'shildi (`ozish_backend`, `moliya_bot`, `intim-shop-parfume`, `shifokor_yordamchisi`, `moxa_taplink`), umumiy Anthropic balansi yana tugagani va Instagram webhook to'foni deyarli tugagani qayd etildi, barcha RAM/port/SSL/nginx ma'lumotlari jonli holatga yangilandi. **2026-10-15: 2 ta yangi bo'lim (18-allmax-fixprice, 19-allmax_taplink) qo'shildi** — bu to'liq qayta yozish emas, faqat qo'shimcha; bo'lim 18 yengilroq tekshiruv asosida yozilgan, belgilab qo'yilgan. Oldingi versiyalar singari, bu hujjat ham vaqt o'tishi bilan eskiradi — load-bearing tafsilotlarni doim jonli kod/systemd/git holati bilan solishtirib tekshiring.*
